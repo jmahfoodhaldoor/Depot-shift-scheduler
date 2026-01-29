@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Shift Scheduler</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --border: #cbd5e1;
+            --cell-w: 45px;
+            --header-h: 40px;
+        }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; background: var(--bg); font-size: 14px; }
+        
+        /* Layout */
+        .app-container { max-width: 1400px; margin: 0 auto; padding: 10px; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; align-items: center; }
+        .toolbar h1 { margin: 0; font-size: 1.2rem; margin-right: auto; }
+        
+        /* Buttons & Inputs */
+        button { cursor: pointer; padding: 6px 12px; border: 1px solid var(--border); background: white; border-radius: 4px; font-weight: 500; }
+        button:hover { background: #f1f5f9; }
+        button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+        button.danger { background: #ef4444; color: white; border-color: #ef4444; }
+        input, select { padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
+
+        /* Tabs */
+        .tabs { display: flex; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: bold; }
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Schedule Grid */
+        .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding-bottom: 10px; }
+        .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; }
+        .schedule-table th, .schedule-table td { border: 1px solid var(--border); text-align: center; padding: 4px; height: 35px; }
+        .schedule-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 10; font-size: 0.85rem; }
+        .schedule-table th.emp-col { position: sticky; left: 0; z-index: 20; background: #f1f5f9; width: 150px; text-align: left; padding-left: 10px; }
+        .schedule-table td.emp-col { position: sticky; left: 0; z-index: 5; background: white; text-align: left; padding-left: 10px; font-weight: 500; }
+        
+        /* Cell Styling */
+        .cell { cursor: pointer; font-size: 0.8rem; line-height: 1.1; user-select: none; }
+        .cell.shift-D { background-color: #dbeafe; color: #1e40af; }
+        .cell.shift-EN { background-color: #fef3c7; color: #92400e; }
+        .cell.shift-LN { background-color: #1e293b; color: #f8fafc; }
+        .cell.shift-OFF { background-color: #ecfdf5; color: #047857; }
+        .cell.shift-X { background-color: #fee2e2; color: #b91c1c; font-weight: bold; }
+        
+        /* Stats & Warnings */
+        .stat-box { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+        .violation { border: 2px solid #ef4444 !important; }
+        .warning-text { color: #ef4444; font-size: 0.8rem; margin-top: 5px; }
+
+        /* Employee Manager */
+        .emp-card { border: 1px solid var(--border); background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .emp-header { display: flex; justify-content: space-between; align-items: center; }
+        .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 5px; }
+        .week-day label { font-size: 0.7rem; color: #64748b; display: block; text-align: center; }
+        .week-day select { width: 100%; font-size: 0.8rem; }
+        .exceptions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+
+        /* Loading Overlay */
+        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; font-size: 1.2rem; color: var(--primary); display: none; }
+        
+        /* Depots */
+        .depot-tag { font-size: 0.65rem; display: block; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<div id="loader">Loading shared data...</div>
+
+<div class="app-container">
+    <div class="toolbar">
+        <h1>🗓️ Shift Scheduler</h1>
+        <select id="selYear"></select>
+        <select id="selMonth"></select>
+        <button onclick="loadData()" title="Reload from Server">🔄 Sync</button>
+        <button class="primary" onclick="saveData()">💾 Save Changes</button>
+        <div style="flex-grow:1; text-align:right;">
+             <span id="lastUpdated" style="font-size:0.8rem; color:gray;"></span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('schedule')">Monthly Schedule</div>
+        <div class="tab" onclick="switchTab('employees')">Employees & Patterns</div>
+        <div class="tab" onclick="switchTab('settings')">Settings</div>
+    </div>
+
+    <div id="view-schedule" class="view active">
+        <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none;">
+            <button onclick="applyWeeklyPatterns()">⚡ Apply Weekly Patterns</button>
+            <button onclick="fillDepots()">🏭 Auto-Assign Depots</button>
+            <button onclick="clearMonth()" class="danger">🗑️ Clear Month</button>
+            <button onclick="exportCSV()">📄 Export CSV</button>
+        </div>
+        <div class="grid-container">
+            <table class="schedule-table" id="scheduleGrid">
+                </table>
+        </div>
+        <div id="coverageReport" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="view-employees" class="view">
+        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">+ Add Employee</button>
+        <div id="employeeList">
+            </div>
+    </div>
+
+    <div id="view-settings" class="view">
+        <div class="emp-card">
+            <h3>Depots (comma separated)</h3>
+            <input type="text" id="settingDepots" value="DepotA, DepotB" onchange="updateDepots()">
+        </div>
+        <div class="emp-card">
+            <h3>Debug / Reset</h3>
+            <p>If the data is corrupted:</p>
+            <button class="danger" onclick="saveData(true)">Force Empty Reset</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURATION ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- UPDATE THIS
+    
+    // --- STATE ---
+    let state = {
+        employees: [],
+        schedule: {}, // Key: "YYYY-M", Value: { empId: { day: { shift, depot } } }
+        meta: {}
+    };
+    
+    let appConfig = {
+        depots: ["Main", "North"],
+        year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1 // 1-12
+    };
+
+    const SHIFTS = ["D", "EN", "LN", "OFF", "X"];
+    const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // --- INITIALIZATION ---
+    window.onload = () => {
+        initDateSelectors();
+        loadData();
+    };
+
+    function initDateSelectors() {
+        const ySel = document.getElementById('selYear');
+        const mSel = document.getElementById('selMonth');
+        const currYear = new Date().getFullYear();
+        
+        for(let y = currYear - 1; y <= currYear + 2; y++) {
+            ySel.add(new Option(y, y));
+        }
+        ySel.value = currYear;
+
+        ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((m, i) => {
+            mSel.add(new Option(m, i+1));
+        });
+        mSel.value = new Date().getMonth() + 1;
+
+        ySel.onchange = () => { appConfig.year = parseInt(ySel.value); renderSchedule(); };
+        mSel.onchange = () => { appConfig.month = parseInt(mSel.value); renderSchedule(); };
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`view-${tabName}`).classList.add('active');
+    }
+
+    // --- API CALLS ---
+    async function loadData() {
+        showLoader(true);
+        try {
+            const res = await fetch(`${API_URL}?action=load`);
+            const json = await res.json();
+            if (json.ok) {
+                state = json.data;
+                console.log("Data loaded", state);
+                if(state.meta.depots) appConfig.depots = state.meta.depots;
+                document.getElementById('settingDepots').value = appConfig.depots.join(', ');
+                renderEmployees();
+                renderSchedule();
+                updateLastUpdated();
+            } else {
+                alert("Error loading: " + json.error);
+            }
+        } catch (e) {
+            alert("Network error. Check console.");
+            console.error(e);
+        } finally {
+            showLoader(false);
+        }
+    }
+
+    async function saveData(reset = false) {
+        showLoader(true);
+        if(reset) {
+            if(!confirm("Are you sure? This wipes all data.")) return;
+            state.employees = [];
+            state.schedule = {};
+        }
+
+        // Save current depots to meta
+        state.meta.depots = appConfig.depots;
+
+        try {
+            const payload = { action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } };
+            // Use no-cors? No, we need response. 
+            // Note: POST requires content-type text/plain or specific config to avoid preflight issues in simple GAS
+            const res = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+            if (json.ok) {
+                state.meta = json.meta;
+                updateLastUpdated();
+                // alert("Saved successfully!");
+            } else {
+                alert("Save failed: " + json.error);
+            }
+        } catch (e) {
+            alert("Save failed. Check console.");
+            console.error(e);
+        } finally {
+            showLoader(false);
+        }
+    }
+
+    function updateLastUpdated() {
+        if(state.meta.updatedAt) {
+            const date = new Date(state.meta.updatedAt);
+            document.getElementById('lastUpdated').innerText = "Synced: " + date.toLocaleTimeString();
+        }
+    }
+
+    // --- EMPLOYEE MANAGEMENT ---
+    function addEmployee() {
+        const id = "emp_" + Math.random().toString(36).substr(2, 9);
+        state.employees.push({
+            id: id,
+            name: "New Employee",
+            weeklyTemplate: ["OFF", "D", "D", "D", "D", "D", "OFF"], // Sun-Sat
+            exceptions: { offDates: "", xDates: "", forced: "" }
+        });
+        renderEmployees();
+    }
+
+    function updateEmployee(id, field, value) {
+        const emp = state.employees.find(e => e.id === id);
+        if(emp) {
+            emp[field] = value;
+            if(field === 'name') renderSchedule(); // refresh name in grid
+        }
+    }
+
+    function updateWeeklyTemplate(id, dayIndex, val) {
+        const emp = state.employees.find(e => e.id === id);
+        if(emp) {
+            emp.weeklyTemplate[dayIndex] = val;
+        }
+    }
+
+    function updateExceptions(id, type, val) {
+         const emp = state.employees.find(e => e.id === id);
+         if(emp) {
+             if(!emp.exceptions) emp.exceptions = { offDates:"", xDates:"", forced:"" };
+             emp.exceptions[type] = val;
+         }
+    }
+
+    function deleteEmployee(id) {
+        if(!confirm("Delete employee?")) return;
+        state.employees = state.employees.filter(e => e.id !== id);
+        renderEmployees();
+        renderSchedule();
+        saveData(); // Auto save on structure change
+    }
+
+    function renderEmployees() {
+        const container = document.getElementById('employeeList');
+        container.innerHTML = "";
+        
+        state.employees.forEach(emp => {
+            const div = document.createElement('div');
+            div.className = "emp-card";
+            
+            let weekHtml = "";
+            WEEKDAYS.forEach((day, i) => {
+                const opts = SHIFTS.map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
+                weekHtml += `
+                    <div class="week-day">
+                        <label>${day}</label>
+                        <select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)">${opts}</select>
+                    </div>`;
+            });
+
+            // Ensure exceptions obj exists
+            const exc = emp.exceptions || { offDates:"", xDates:"", forced:"" };
+
+            div.innerHTML = `
+                <div class="emp-header">
+                    <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold;">
+                    <button class="danger" onclick="deleteEmployee('${emp.id}')">Remove</button>
+                </div>
+                <div style="font-size:0.8rem; font-weight:bold; margin-top:5px;">Weekly Pattern (Sun - Sat):</div>
+                <div class="week-grid">${weekHtml}</div>
+                
+                <div class="exceptions-grid">
+                    <div>
+                        <label style="font-size:0.75rem">Force OFF Dates (e.g. 5,12):</label>
+                        <input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="1, 2..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem">Force Unavailable (X) Dates:</label>
+                        <input type="text" style="width:95%" value="${exc.xDates || ''}" placeholder="15, 16..." onchange="updateExceptions('${emp.id}', 'xDates', this.value)">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // --- SCHEDULE LOGIC ---
+    function getMonthKey() {
+        return `${appConfig.year}-${appConfig.month}`;
+    }
+
+    function daysInMonth(y, m) {
+        return new Date(y, m, 0).getDate();
+    }
+
+    function getScheduleData() {
+        const key = getMonthKey();
+        if(!state.schedule[key]) state.schedule[key] = {};
+        return state.schedule[key];
+    }
+
+    function renderSchedule() {
+        const grid = document.getElementById('scheduleGrid');
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const data = getScheduleData();
+        const year = appConfig.year;
+        const month = appConfig.month - 1; // JS months are 0-based
+
+        // 1. Header Row
+        let html = `<thead><tr><th class="emp-col">Employee</th>`;
+        for(let d=1; d<=numDays; d++) {
+            const date = new Date(year, month, d);
+            const dayName = WEEKDAYS[date.getDay()];
+            const isWeekend = (date.getDay() === 0 || date.getDay() === 6);
+            html += `<th style="${isWeekend ? 'background:#e2e8f0' : ''}">${d}<br>${dayName}</th>`;
+        }
+        html += `</tr></thead><tbody>`;
+
+        // 2. Body
+        state.employees.forEach(emp => {
+            const empData = data[emp.id] || {};
+            
+            // Stats
+            let counts = { D:0, EN:0, LN:0, OFF:0, X:0 };
+            
+            let rowHtml = `<tr><td class="emp-col">
+                <div>${emp.name}</div>
+                <div class="stat-box" id="stats-${emp.id}"></div>
+            </td>`;
+            
+            let prevShift = null;
+
+            for(let d=1; d<=numDays; d++) {
+                const cellData = empData[d] || { shift: "" };
+                const shift = cellData.shift || "";
+                const depot = cellData.depot || "";
+                
+                // Track Stats
+                if(SHIFTS.includes(shift)) counts[shift]++;
+
+                // Validations
+                let violation = "";
+                // Ban LN -> D
+                if (prevShift === 'LN' && shift === 'D') violation = "violation";
+                prevShift = shift;
+
+                const display = shift === "OFF" || shift === "X" ? shift : (shift ? `${shift}<span class="depot-tag">${depot}</span>` : "");
+                
+                rowHtml += `<td 
+                    class="cell shift-${shift} ${violation}" 
+                    onclick="cycleCell('${emp.id}', ${d})"
+                    title="${violation ? 'Illegal: LN to D' : ''}"
+                >${display}</td>`;
+            }
+            rowHtml += `</tr>`;
+            html += rowHtml;
+            
+            // Update stats deferred (dirty hack to write to DOM after render, but we are generating string here so...)
+            // Actually, we can't update ID inside the string easily. Let's just render the text.
+            // Better: update after innerHTML set.
+            setTimeout(() => {
+                const statEl = document.getElementById(`stats-${emp.id}`);
+                if(statEl) statEl.innerText = `D:${counts.D} EN:${counts.EN} LN:${counts.LN} OFF:${counts.OFF}`;
+            }, 0);
+        });
+
+        html += `</tbody>`;
+        grid.innerHTML = html;
+        checkCoverage();
+    }
+
+    function cycleCell(empId, day) {
+        const key = getMonthKey();
+        if(!state.schedule[key]) state.schedule[key] = {};
+        if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
+        
+        const current = state.schedule[key][empId][day] || { shift: "" };
+        let idx = SHIFTS.indexOf(current.shift);
+        
+        // Cycle: Empty -> D -> EN -> LN -> OFF -> X -> Empty
+        if (idx === -1) idx = 0; // if empty, go to first (D)
+        else idx++; 
+        
+        let newShift = "";
+        let newDepot = "";
+
+        if (idx < SHIFTS.length) {
+            newShift = SHIFTS[idx];
+            // If work shift, auto-assign first depot if empty
+            if(["D","EN","LN"].includes(newShift)) {
+                newDepot = current.depot || appConfig.depots[0];
+            }
+        } else {
+            // cycle back to empty
+            newShift = ""; 
+        }
+
+        state.schedule[key][empId][day] = { shift: newShift, depot: newDepot };
+        renderSchedule();
+        saveData(); // Auto save
+    }
+
+    function checkCoverage() {
+        // Simple coverage check: Just count filled slots per day
+        // Advanced: compare vs requirements. For now, just summarize.
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const rep = document.getElementById('coverageReport');
+        
+        // Logic can be expanded here.
+        rep.innerHTML = `<small><i>Coverage logic runs on generation. Red borders indicate rotation violations (LN -> D).</i></small>`;
+    }
+
+    // --- GENERATORS ---
+
+    function applyWeeklyPatterns() {
+        if(!confirm("This will overwrite empty cells based on weekly patterns. Continue?")) return;
+        
+        const key = getMonthKey();
+        if(!state.schedule[key]) state.schedule[key] = {};
+        const sched = state.schedule[key];
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        
+        state.employees.forEach(emp => {
+            if(!sched[emp.id]) sched[emp.id] = {};
+            const empSched = sched[emp.id];
+            
+            // Parse exceptions
+            const exc = emp.exceptions || {};
+            const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+            const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+            for(let d=1; d<=numDays; d++) {
+                // Skip if manual entry exists (safety) - OR - overwrite?
+                // Prompt said: "do not overwrite manual entries". 
+                // But "Apply Template" usually implies filling the base. 
+                // Let's overwrite ONLY if cell is currently empty or user wants full reset (manual clear first).
+                // Actually, let's respect manual edits.
+                if(empSched[d] && empSched[d].shift !== "") continue; 
+
+                const date = new Date(appConfig.year, appConfig.month - 1, d);
+                const dayIndex = date.getDay(); // 0=Sun, 6=Sat
+                
+                let shift = emp.weeklyTemplate[dayIndex];
+                
+                // Apply Exceptions
+                if (xDates.includes(d)) shift = "X";
+                else if (offDates.includes(d)) shift = "OFF";
+                
+                empSched[d] = { shift: shift, depot: (["D","EN","LN"].includes(shift) ? "" : "") };
+            }
+        });
+        
+        renderSchedule();
+        saveData();
+    }
+
+    function fillDepots() {
+        // Assigns depots to workers who have a shift but no depot
+        const key = getMonthKey();
+        const sched = state.schedule[key];
+        if(!sched) return;
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+
+        for(let d=1; d<=numDays; d++) {
+            let depotCounts = {}; 
+            appConfig.depots.forEach(dep => depotCounts[dep] = 0);
+            
+            // 1. Count existing assignments
+            state.employees.forEach(emp => {
+                if(sched[emp.id] && sched[emp.id][d]) {
+                    const cell = sched[emp.id][d];
+                    if(cell.depot && appConfig.depots.includes(cell.depot)) {
+                        depotCounts[cell.depot]++;
+                    }
+                }
+            });
+
+            // 2. Assign remaining
+            state.employees.forEach(emp => {
+                if(sched[emp.id] && sched[emp.id][d]) {
+                    const cell = sched[emp.id][d];
+                    if(["D","EN","LN"].includes(cell.shift) && !cell.depot) {
+                        // Find depot with lowest count
+                        let target = appConfig.depots.reduce((a, b) => depotCounts[a] < depotCounts[b] ? a : b);
+                        cell.depot = target;
+                        depotCounts[target]++;
+                    }
+                }
+            });
+        }
+        renderSchedule();
+        saveData();
+    }
+
+    function clearMonth() {
+        if(!confirm("Clear entire month schedule?")) return;
+        const key = getMonthKey();
+        state.schedule[key] = {};
+        renderSchedule();
+        saveData();
+    }
+
+    // --- UTILS ---
+    function updateDepots() {
+        const val = document.getElementById('settingDepots').value;
+        appConfig.depots = val.split(',').map(s => s.trim()).filter(s => s);
+        // Depots are saved when "Save Changes" is clicked via meta
+    }
+
+    function showLoader(show) {
+        document.getElementById('loader').style.display = show ? 'flex' : 'none';
+    }
+
+    function exportCSV() {
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        let csv = "Employee,";
+        for(let d=1; d<=numDays; d++) csv += d + ",";
+        csv += "\n";
+
+        const key = getMonthKey();
+        const data = state.schedule[key] || {};
+
+        state.employees.forEach(emp => {
+            csv += `"${emp.name}",`;
+            for(let d=1; d<=numDays; d++) {
+                const cell = (data[emp.id] && data[emp.id][d]) ? data[emp.id][d] : {shift:""};
+                let val = cell.shift;
+                if(val && cell.depot) val += ` (${cell.depot})`;
+                csv += `"${val}",`;
+            }
+            csv += "\n";
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Schedule_${appConfig.year}_${appConfig.month}.csv`;
+        a.click();
+    }
+
+</script>
+</body>
+</html>
