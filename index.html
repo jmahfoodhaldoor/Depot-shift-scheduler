@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة الذكي (النسخة الكاملة)</title>
+    <title>نظام الجدولة الذكي (النسخة النهائية + ضبط الجوكر)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -74,6 +74,7 @@
         .report-box { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; border: 1px solid var(--border); }
         .report-item { color: #b91c1c; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
         .report-ok { color: #047857; font-weight: bold; }
+        .report-analysis { background: #fff7ed; border: 1px solid #fdba74; padding: 10px; margin-bottom: 10px; border-radius: 4px; color: #9a3412; font-size: 0.9rem;}
     </style>
 </head>
 <body>
@@ -85,7 +86,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ نظام الجدولة (3 أنواع)</h1>
+        <h1>🗓️ نظام الجدولة (3 أنواع + جوكر نشيط)</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -335,8 +336,8 @@
             } else if (emp.patternType === 'joker') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 وضع الجوكر (تغطية النقص)</div>
-                        <div class="note">ليس لديه نمط محدد. سيغطي النقص مع أولوية لـ (آخر ليل ثم أول ليل). يتجنب النهار قدر الإمكان.</div>
+                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 وضع الجوكر (التغطية الشاملة - حد أقصى 4 إجازات)</div>
+                        <div class="note">سيتم استخدامه لسد النقص (يفضل الليل). إذا وصل إلى 4 أيام إجازة، سيتم إجباره على العمل حتى لو كان الجدول مكتملاً.</div>
                     </div>
                 `;
             } else {
@@ -356,7 +357,7 @@
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
                         <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
                         <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (نمط ثابت - بداية مرنة)</option>
-                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر (أفضلية ليلية)</option>
+                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر (شغيل)</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
                 </div>
@@ -470,7 +471,7 @@
 
             setTimeout(() => {
                 const el = document.getElementById(`stats-${emp.id}`);
-                if(el) el.innerText = `D:${counts.D} EN:${counts.EN} LN:${counts.LN}`;
+                if(el) el.innerText = `D:${counts.D} EN:${counts.EN} LN:${counts.LN} OFF:${counts.OFF}`;
             }, 0);
         });
 
@@ -507,9 +508,9 @@
         saveData();
     }
 
-    // --- GENERATOR LOGIC (UPDATED: JOKER PREFERS NIGHT) ---
+    // --- GENERATOR LOGIC (UPDATED: MAX 4 OFF FOR JOKER) ---
     function generateSchedule() {
-        if(!confirm("سيقوم النظام الآن بتوزيع الشفتات مع مراعاة أن 'الجوكر' يفضل الشفتات الليلية.\nهل تريد الاستمرار؟")) return;
+        if(!confirm("سيقوم النظام الآن بتوزيع الشفتات.\nملاحظة: سيتم إجبار 'الجوكر' على العمل إذا تجاوز 4 أيام إجازة في الشهر.")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -518,7 +519,7 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // 1. حساب إجمالي المطلوب يومياً (Daily Needs)
+        // 1. حساب إجمالي المطلوب يومياً
         let dailyNeeds = {}; 
         
         for(let d=1; d<=numDays; d++) {
@@ -533,7 +534,7 @@
             });
         }
 
-        // 2. تطبيق النوع الأول: الثابت (Weekly) - هم الأساس في النهار
+        // 2. تطبيق النوع الأول: الثابت (Weekly)
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
             
@@ -545,37 +546,46 @@
         });
 
         // 3. تطبيق النوع الثاني: الدوار (Rolling)
-        // سنحاول جعلهم يغطون النهار أيضاً إذا كان نمطهم يسمح بذلك
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
         rollingEmps.forEach(emp => {
             applyRollingSmart(emp, numDays, sched, dailyNeeds);
         });
 
-        // 4. تطبيق النوع الثالث: الجوكر (Joker) - يكره النهار
+        // 4. تطبيق النوع الثالث: الجوكر (Joker) - شغيل (Max 4 OFF)
         const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-        let jokerStatus = {}; 
-        jokerEmps.forEach(e => jokerStatus[e.id] = "OFF");
+        
+        // تتبع حالة الجوكر
+        let jokerStatus = {}; // شفت أمس
+        let jokerOffCounts = {}; // عدد الإجازات
+        
+        jokerEmps.forEach(e => {
+            jokerStatus[e.id] = "OFF";
+            jokerOffCounts[e.id] = 0;
+        });
 
         for(let d=1; d<=numDays; d++) {
-            let todaysNeeds = dailyNeeds[d]; // {D: x, EN: y, LN: z}
+            let todaysNeeds = dailyNeeds[d]; // المتبقي من الحاجة
             
             let availableJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
 
             availableJokers.forEach(emp => {
                 if(checkExceptions(emp, d, sched)) {
-                    jokerStatus[emp.id] = sched[emp.id][d].shift;
+                    let s = sched[emp.id][d].shift;
+                    jokerStatus[emp.id] = s;
+                    if(s === 'OFF' || s === 'X') jokerOffCounts[emp.id]++;
                     return;
                 }
 
                 let prevShift = jokerStatus[emp.id];
-                let assignedShift = "OFF";
                 let canWorkMorning = (prevShift !== "LN");
+                let assignedShift = "OFF";
 
-                // ترتيب الأولويات للجوكر:
-                // 1. غطِّ آخر ليل (LN) أولاً
-                // 2. ثم أول ليل (EN)
-                // 3. النهار (D) ممنوع إلا للضرورة القصوى (آخر الحلول)
-                
+                // هل تجاوز الحد الأقصى للإجازات؟ (4 أيام)
+                // إذا كان عدد إجازاته حتى الآن >= 4، يجب إجباره على العمل اليوم
+                // إلا إذا كان "ممنوعاً" بسبب LN -> D ولا يوجد خيار آخر
+                let forceWork = (jokerOffCounts[emp.id] >= 4);
+
+                // منطق التعيين (الأولوية للحاجة، ثم للإجبار)
                 if (todaysNeeds.LN > 0) {
                     assignedShift = "LN";
                     todaysNeeds.LN--;
@@ -583,19 +593,33 @@
                     assignedShift = "EN";
                     todaysNeeds.EN--;
                 } else if (todaysNeeds.D > 0 && canWorkMorning) {
-                    // هل نعطيه نهار؟ نعم، فقط لضمان اكتمال الجدول
+                    // الجوكر يأخذ نهار إذا فيه حاجة ماسة
                     assignedShift = "D"; 
                     todaysNeeds.D--;
+                } else if (forceWork) {
+                    // --- حالة الإجبار (انتهت الحاجة لكن لازم يشتغل) ---
+                    // نختار له شفت ليلي (أول ليل أو آخر ليل)
+                    if(canWorkMorning) {
+                        // يفضل EN على D
+                        assignedShift = "EN"; 
+                    } else {
+                        // إذا كان أمس LN، اليوم نعطيه LN أيضاً (لأن D و EN ممنوعين)
+                        assignedShift = "LN";
+                    }
+                } else {
+                    // لا حاجة، ولم يصل للحد الأقصى -> إجازة
+                    assignedShift = "OFF";
                 }
 
                 sched[emp.id][d] = { shift: assignedShift, depot: "" };
                 jokerStatus[emp.id] = assignedShift;
+                if(assignedShift === 'OFF') jokerOffCounts[emp.id]++;
             });
         }
         
         renderSchedule();
         saveData();
-        alert("تم التوزيع! الجوكر الآن يركز على الشفتات الليلية.");
+        alert("تم التوزيع! تم ضبط الجوكر بحيث لا يتجاوز 4 أيام إجازة.");
     }
 
     // --- Helpers for Generator ---
@@ -626,9 +650,8 @@
         if(pattern.length === 0) pattern = ["OFF"];
         const pLen = pattern.length;
 
-        // تجربة كل الإزاحات الممكنة واختيار الأفضل (التي تغطي أكبر احتياج)
         let bestOffset = 0;
-        let bestScore = -Infinity; // الأعلى هو الأفضل
+        let bestScore = -Infinity; 
 
         for(let offset = 0; offset < pLen; offset++) {
             let currentScore = 0;
@@ -637,7 +660,6 @@
                 let proposedShift = pattern[pIndex];
                 
                 if (["D","EN","LN"].includes(proposedShift)) {
-                    // إذا كان الشفت مطلوباً بشدة، نزيد النقاط
                     if (dailyNeeds[d][proposedShift] > 0) currentScore += 10;
                     else currentScore -= 2; 
                 }
@@ -684,7 +706,7 @@
     }
 
 
-    // --- DEPOT DISTRIBUTOR ---
+    // --- DEPOT DISTRIBUTOR (CORRECTED & CLEAN) ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
@@ -700,15 +722,18 @@
         });
 
         if(totalReqs === 0) {
-            alert("تنبيه: يرجى إدخال الأعداد المطلوبة في الإعدادات أولاً.");
+            alert("تنبيه: الأعداد المطلوبة صفر! تأكد من إدخال الأعداد وحفظها في الإعدادات.");
             return;
         }
 
-        if(!confirm("سيتم توزيع المواقع بدقة حسب العدد المطلوب.")) return;
+        if(!confirm("سيتم إعادة توزيع المواقع بدقة حسب العدد المطلوب وتصحيح الأسماء.\nهل أنت متأكد؟")) return;
 
         for(let d=1; d<=numDays; d++) {
             let currentCounts = {}; 
-            cleanDepots.forEach(dep => { currentCounts[dep] = { D:0, EN:0, LN:0 }; });
+            cleanDepots.forEach(dep => {
+                currentCounts[dep] = { D:0, EN:0, LN:0 };
+            });
+
             let unassigned = { D: [], EN: [], LN: [] };
 
             state.employees.forEach(emp => {
@@ -737,7 +762,6 @@
                     }
                 });
 
-                // الفائض
                 while (workers.length > 0) {
                     let targetDepot = cleanDepots.reduce((a, b) => 
                         currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
@@ -751,12 +775,12 @@
         
         renderSchedule();
         saveData();
+        alert("تم توزيع المواقع وتصحيح الأسماء!");
     }
 
     // --- FIX: CLEAR MONTH ---
     function clearMonth() {
         if(!confirm("هل أنت متأكد من مسح جدول هذا الشهر بالكامل؟")) return;
-        
         const key = getMonthKey();
         state.schedule[key] = {}; 
         renderSchedule();         
@@ -788,19 +812,27 @@
             let dailyCounts = {}; 
             cleanDepots.forEach(dep => dailyCounts[dep] = {D:0, EN:0, LN:0});
 
+            let totalAvailableWorkers = 0;
             state.employees.forEach(emp => {
                 const cell = (sched[emp.id] && sched[emp.id][d]) ? sched[emp.id][d] : null;
-                if(cell && cell.shift && cell.depot) {
-                    let cellDepot = cell.depot.trim(); 
-                    if(dailyCounts[cellDepot] && dailyCounts[cellDepot][cell.shift] !== undefined) {
-                        dailyCounts[cellDepot][cell.shift]++;
-                    }
+                if(cell) {
+                     if(cell.shift !== 'OFF' && cell.shift !== 'X' && cell.shift !== '') {
+                         totalAvailableWorkers++;
+                         if(cell.depot) {
+                            let cellDepot = cell.depot.trim(); 
+                            if(dailyCounts[cellDepot] && dailyCounts[cellDepot][cell.shift] !== undefined) {
+                                dailyCounts[cellDepot][cell.shift]++;
+                            }
+                         }
+                     }
                 }
             });
 
+            let dailyReqTotal = 0;
             cleanDepots.forEach(dep => {
                 let req = requirements[dep] || requirements[dep.trim()];
                 if(!req) return;
+                dailyReqTotal += (req.D||0) + (req.EN||0) + (req.LN||0);
 
                 ["D","EN","LN"].forEach(shift => {
                     const required = req[shift] || 0;
@@ -810,13 +842,18 @@
                     }
                 });
             });
+            
+            if (dailyReqTotal > totalAvailableWorkers && issues.some(i => i.includes(`يوم ${d}`))) {
+                issues.push(`<span style="color:#d97706; font-size:0.85rem;">⚠️ تشخيص يوم ${d}: أنت تطلب ${dailyReqTotal} شفت، ولكن المتوفرين للعمل فقط ${totalAvailableWorkers} موظفين (الباقي إجازات). هذا عجز حقيقي.</span>`);
+            }
         }
 
         if(issues.length === 0) {
             report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%) - لا يوجد نقص.</div>`;
         } else {
-            report.innerHTML = `<h4 style="margin:0 0 10px 0;">⚠️ تقرير النقص الحقيقي (Missing Staff):</h4>` + 
-                issues.map(i => `<div class="report-item">❌ ${i}</div>`).join('');
+            report.innerHTML = `<div class="report-analysis">💡 تلميح: رسائل "عجز حقيقي" تعني أن عدد الموظفين المداومين اليوم لا يكفي لتغطية الطلب.</div>` + 
+                `<h4 style="margin:10px 0 10px 0;">⚠️ تقرير النقص:</h4>` + 
+                issues.map(i => `<div class="report-item" style="${i.includes('تشخيص') ? 'margin-bottom:10px; margin-right:15px;' : ''}">${i.includes('تشخيص') ? '' : '❌ '}${i}</div>`).join('');
         }
     }
 
