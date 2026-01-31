@@ -619,13 +619,26 @@
         alert("تم توزيع الشفتات الدوارة بناءً على الحاجة بدقة.\nاضغط الآن على زر 'توزيع المواقع' لتثبيت الأماكن.");
     }
 
-    // --- DEPOT DISTRIBUTOR (STRICT) ---
+    // --- DEPOT DISTRIBUTOR (NUCLEAR OPTION) ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
         if(!sched) return;
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const reqs = state.meta.requirements || {};
+
+        // التأكد من أن المستخدم أدخل أرقاماً
+        let totalReqs = 0;
+        appConfig.depots.forEach(d => {
+            if(reqs[d]) totalReqs += (reqs[d].D||0) + (reqs[d].EN||0) + (reqs[d].LN||0);
+        });
+
+        if(totalReqs === 0) {
+            alert("تنبيه: جدول 'العدد المطلوب' في الإعدادات كله أصفار!\nيرجى تحديد الأعداد المطلوبة وحفظها أولاً لكي يعمل التوزيع بشكل صحيح.");
+            return;
+        }
+
+        if(!confirm("سيتم إعادة توزيع جميع المواقع (Depots) للشفتات الموجودة بناءً على الأعداد المطلوبة.\nسيتم تجاهل التوزيع الحالي.")) return;
 
         for(let d=1; d<=numDays; d++) {
             // 1. تصفير العدادات اليومية
@@ -634,40 +647,31 @@
                 currentCounts[dep] = { D:0, EN:0, LN:0 };
             });
 
-            // حساب المثبت يدوياً
-            state.employees.forEach(emp => {
-                if(sched[emp.id] && sched[emp.id][d]) {
-                    const cell = sched[emp.id][d];
-                    if(cell.depot && appConfig.depots.includes(cell.depot) && cell.shift) {
-                         if(!currentCounts[cell.depot]) currentCounts[cell.depot] = { D:0, EN:0, LN:0 };
-                         if(currentCounts[cell.depot][cell.shift] !== undefined) {
-                            currentCounts[cell.depot][cell.shift]++;
-                         }
-                    }
-                }
-            });
-
-            // 2. تجميع الموظفين الذين يحتاجون توزيع
+            // 2. جمع كل الموظفين المداومين ومسح مواقعهم الحالية لإعادة توزيعها بعدالة
             let unassigned = { D: [], EN: [], LN: [] };
 
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d]) {
                     const cell = sched[emp.id][d];
-                    if(["D","EN","LN"].includes(cell.shift) && !cell.depot) {
+                    // نأخذ أي شخص عنده شفت عمل (وليس إجازة)
+                    if(["D","EN","LN"].includes(cell.shift)) {
+                        // مسح الموقع القديم لضمان إعادة التوزيع
+                        cell.depot = ""; 
                         unassigned[cell.shift].push(cell);
                     }
                 }
             });
 
-            // 3. التوزيع الدقيق
+            // 3. التوزيع الدقيق (الصرامة في الأرقام)
             ["D", "EN", "LN"].forEach(shiftType => {
                 let workers = unassigned[shiftType];
                 if(workers.length === 0) return;
 
-                // أ) تعبئة النقص (الأولوية)
+                // أ) تعبئة الاحتياج الأساسي أولاً (Fill Requirements)
                 appConfig.depots.forEach(dep => {
                     const needed = (reqs[dep] && reqs[dep][shiftType]) ? reqs[dep][shiftType] : 0;
                     
+                    // طالما الموقع يحتاج، والموظفون موجودون -> عبئ الموقع
                     while (workers.length > 0 && currentCounts[dep][shiftType] < needed) {
                         let cell = workers.pop(); 
                         cell.depot = dep;      
@@ -675,8 +679,10 @@
                     }
                 });
 
-                // ب) توزيع الفائض بالتساوي
+                // ب) توزيع الفائض (Balance Overflow)
+                // إذا بقي موظفون (أكثر من الحاجة)، وزعهم بالتساوي على المواقع
                 while (workers.length > 0) {
+                    // ابحث عن الموقع الذي يحتوي على أقل عدد حالياً
                     let targetDepot = appConfig.depots.reduce((a, b) => 
                         currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
                     );
@@ -690,8 +696,9 @@
         
         renderSchedule();
         saveData();
+        alert("تم توزيع المواقع بنجاح!");
     }
-
+    
     function clearMonth() {
         if(!confirm("هل أنت متأكد من مسح جدول هذا الشهر بالكامل؟")) return;
         const key = getMonthKey();
@@ -784,3 +791,4 @@
 </script>
 </body>
 </html>
+
