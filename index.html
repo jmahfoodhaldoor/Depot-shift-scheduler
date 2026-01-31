@@ -200,7 +200,7 @@
         document.getElementById(`view-${tabName}`).classList.add('active');
     }
 
-    // --- API CALLS ---
+    // --- API CALLS (UPDATED FOR SETTINGS PERSISTENCE) ---
     async function loadData() {
         showLoader(true);
         try {
@@ -208,19 +208,32 @@
             const json = await res.json();
             if (json.ok) {
                 state = json.data;
-                // Defaults
-                if(!state.meta.requirements) state.meta.requirements = {};
-                if(state.meta.depots) appConfig.depots = state.meta.depots;
                 
-                // Migrate patterns if needed
+                // --- إصلاح مشكلة عدم حفظ الإعدادات ---
+                
+                // 1. استرجاع المواقع (Depots)
+                if (state.meta && state.meta.depots && state.meta.depots.length > 0) {
+                    appConfig.depots = state.meta.depots;
+                } else {
+                    // إذا لم توجد بيانات محفوظة، نستخدم الافتراضي
+                    appConfig.depots = ["Budaiya", "IsaTown"]; 
+                }
+
+                // 2. استرجاع الأعداد المطلوبة (Requirements)
+                if (!state.meta) state.meta = {};
+                if (!state.meta.requirements) state.meta.requirements = {};
+
+                // 3. تحديث واجهة المستخدم (Input) بالبيانات المسترجعة
+                document.getElementById('settingDepots').value = appConfig.depots.join(', ');
+                
+                // 4. معالجة البيانات القديمة للموظفين
                 state.employees.forEach(emp => {
                     if(!emp.patternType) emp.patternType = 'weekly';
                     if(!emp.rollingPattern) emp.rollingPattern = "D,D,EN,EN,LN,LN,OFF,OFF"; 
                 });
 
-                document.getElementById('settingDepots').value = appConfig.depots.join(', ');
                 renderEmployees();
-                renderRequirementsTable();
+                renderRequirementsTable(); // إعادة رسم جدول الأعداد بناءً على البيانات المحفوظة
                 renderSchedule();
                 updateLastUpdated();
             } else {
@@ -240,10 +253,12 @@
             if(!confirm("تحذير: سيتم مسح كل شيء! هل أنت متأكد؟")) { showLoader(false); return; }
             state.employees = [];
             state.schedule = {};
-            state.meta = { requirements: {} };
+            state.meta = { requirements: {}, depots: [] };
         }
 
-        state.meta.depots = appConfig.depots;
+        // --- ضمان حفظ الإعدادات الحالية قبل الإرسال ---
+        state.meta.depots = appConfig.depots; 
+        // ملاحظة: requirements يتم تحديثها مباشرة في state.meta عند تغيير الأرقام في الجدول
 
         try {
             const payload = { action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } };
@@ -253,9 +268,10 @@
             });
             const json = await res.json();
             if (json.ok) {
-                state.meta = json.meta;
+                // تحديث الـ Meta فقط (الوقت)
+                state.meta.updatedAt = json.meta.updatedAt;
                 updateLastUpdated();
-                renderSchedule(); // Refresh report
+                // alert("تم الحفظ بنجاح!"); // اختياري
             } else {
                 alert("فشل الحفظ: " + json.error);
             }
@@ -791,4 +807,5 @@
 </script>
 </body>
 </html>
+
 
