@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول الشفتات الذكي (النسخة الكاملة)</title>
+    <title>نظام الجدولة الذكي (3 أنواع)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -85,7 +85,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ جدول الشفتات الذكي</h1>
+        <h1>🗓️ نظام الجدولة (3 أنواع)</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -104,7 +104,7 @@
     <div id="view-schedule" class="view active">
         <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
             <div>
-                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (ذكي)</button>
+                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (الخوارزمية الذكية)</button>
                 <button onclick="fillDepots()">🏭 توزيع المواقع (حسب العدد)</button>
             </div>
             <div>
@@ -326,8 +326,17 @@
             if(emp.patternType === 'rolling') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <div class="note" style="color:#2563eb; font-weight:bold;"> وضع "الجوكر" (تغطية النقص):</div>
-                        <div class="note">سيقوم النظام باستخدام هذا الموظف لسد النقص في الجدول (نهار، أول ليل، آخر ليل) حسب الحاجة اليومية.</div>
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">نمط الشفت الدوار:</label>
+                        <input type="text" value="${emp.rollingPattern}" onchange="updateEmployee('${emp.id}', 'rollingPattern', this.value)" style="width:98%; font-family:monospace; letter-spacing:1px;">
+                        <div class="note">مثال: D,D,EN,EN,LN,LN,OFF,OFF</div>
+                        <div class="note" style="color:#2563eb;">* سيقوم البرنامج باختيار <b>يوم البدء</b> الأنسب، ثم يلتزم بالترتيب.</div>
+                    </div>
+                `;
+            } else if (emp.patternType === 'joker') {
+                patternEditorHtml = `
+                    <div class="pattern-editor">
+                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 وضع الجوكر (التغطية الشاملة)</div>
+                        <div class="note">ليس لديه نمط محدد. سيقوم النظام بوضعه في أي مكان يوجد فيه نقص (نهار، ليل، آخر ليل) يوماً بيوم.</div>
                     </div>
                 `;
             } else {
@@ -345,8 +354,9 @@
                 <div class="emp-header">
                     <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold; font-size:1.1rem;">
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
-                        <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>أيام أسبوعية ثابتة</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>شفت دوار (تغطية النقص)</option>
+                        <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
+                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (نمط ثابت - بداية مرنة)</option>
+                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر (تغطية النقص)</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
                 </div>
@@ -497,9 +507,9 @@
         saveData();
     }
 
-    // --- NEW: COVERAGE-FIRST GENERATOR (JOKER MODE) ---
+    // --- GENERATOR LOGIC (THE 3 TYPES ALGORITHM) ---
     function generateSchedule() {
-        if(!confirm("سيقوم النظام الآن بتوزيع 'شفتات التغطية' لسد النقص في الجدول تماماً.\nهل تريد الاستمرار؟")) return;
+        if(!confirm("سيقوم النظام الآن بتوزيع الشفتات بناءً على الأنواع الثلاثة (ثابت، دوار، جوكر).\nهل تريد الاستمرار؟")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -508,7 +518,7 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // 1. حساب إجمالي المطلوب يومياً (المخزون المطلوب)
+        // 1. حساب إجمالي المطلوب يومياً (Daily Needs)
         let dailyNeeds = {}; // { 1: {D:4, EN:2, LN:2}, ... }
         
         for(let d=1; d<=numDays; d++) {
@@ -523,101 +533,157 @@
             });
         }
 
-        // 2. تطبيق الموظفين الثابتين (Weekly) وخصمهم من الاحتياج
+        // 2. تطبيق النوع الأول: الثابت (Weekly)
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
             
-            if (emp.patternType !== 'rolling') {
-                const exc = emp.exceptions || {};
-                const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-                const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-
-                for(let d=1; d<=numDays; d++) {
-                    let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
-                    if (shift === "") {
-                        const date = new Date(appConfig.year, appConfig.month - 1, d);
-                        shift = emp.weeklyTemplate[date.getDay()];
-                        if (xDates.includes(d)) shift = "X";
-                        else if (offDates.includes(d)) shift = "OFF";
-                        
-                        sched[emp.id][d] = { shift: shift, depot: "" };
-                    }
-                    
-                    // خصم من الاحتياج
-                    if (["D","EN","LN"].includes(shift)) {
-                        if(dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
-                    }
-                }
+            // إذا كان ثابت، نطبق جدوله ونخصمه من الحاجة
+            if (emp.patternType === 'weekly' || !emp.patternType) {
+                applyWeekly(emp, numDays, sched, dailyNeeds);
             } else {
-                // تصفير جدول الدوارين بالكامل
-                for(let d=1; d<=numDays; d++) {
-                     sched[emp.id][d] = { shift: "", depot: "" };
-                }
+                // تصفير جدول الباقين (دوار وجوكر)
+                for(let d=1; d<=numDays; d++) sched[emp.id][d] = { shift: "", depot: "" };
             }
         });
 
-        // 3. توزيع موظفي التغطية (Jokers) يوماً بيوم لسد النقص
+        // 3. تطبيق النوع الثاني: الدوار (Rolling) - البحث عن أفضل بداية
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
-        
-        // تتبع حالة الموظفين (ماذا عملوا بالأمس؟)
-        let empStatus = {}; 
-        rollingEmps.forEach(e => empStatus[e.id] = "OFF"); // البداية
+        rollingEmps.forEach(emp => {
+            applyRollingSmart(emp, numDays, sched, dailyNeeds);
+        });
+
+        // 4. تطبيق النوع الثالث: الجوكر (Joker) - سد الثغرات
+        const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
+        // تتبع حالة الجوكر لمنع المخالفات
+        let jokerStatus = {}; 
+        jokerEmps.forEach(e => jokerStatus[e.id] = "OFF");
 
         for(let d=1; d<=numDays; d++) {
-            // خلط الموظفين عشوائياً كل يوم للعدالة في التوزيع
-            let availableWorkers = [...rollingEmps].sort(() => Math.random() - 0.5);
+            let todaysNeeds = dailyNeeds[d]; // {D: x, EN: y, LN: z} (المتبقي)
             
-            // قائمة الاحتياجات المتبقية لهذا اليوم
-            let needs = dailyNeeds[d]; // {D: x, EN: y, LN: z}
+            // خلط الجوكرز عشوائياً للعدالة
+            let availableJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
 
-            availableWorkers.forEach(emp => {
-                // التحقق من الاستثناءات
-                const exc = emp.exceptions || {};
-                const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-                const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-
-                if (xDates.includes(d)) {
-                    sched[emp.id][d] = { shift: "X", depot: "" };
-                    empStatus[emp.id] = "X";
-                    return;
-                }
-                if (offDates.includes(d)) {
-                    sched[emp.id][d] = { shift: "OFF", depot: "" };
-                    empStatus[emp.id] = "OFF";
+            availableJokers.forEach(emp => {
+                // التحقق من الاستثناءات اليدوية
+                if(checkExceptions(emp, d, sched)) {
+                    jokerStatus[emp.id] = sched[emp.id][d].shift;
                     return;
                 }
 
-                // تحديد الشفت المناسب (الأولوية لملء الفراغات)
-                let prevShift = empStatus[emp.id];
+                let prevShift = jokerStatus[emp.id];
                 let assignedShift = "OFF";
-
-                // قاعدة صارمة: إذا كان أمس LN، اليوم إما OFF أو LN (ممنوع D أو EN)
                 let canWorkMorning = (prevShift !== "LN");
-                
-                if (needs.D > 0 && canWorkMorning) {
+
+                if (todaysNeeds.D > 0 && canWorkMorning) {
                     assignedShift = "D";
-                    needs.D--;
-                } else if (needs.EN > 0 && canWorkMorning) {
+                    todaysNeeds.D--;
+                } else if (todaysNeeds.EN > 0 && canWorkMorning) {
                     assignedShift = "EN";
-                    needs.EN--;
-                } else if (needs.LN > 0) {
-                    // الـ LN مسموح للجميع
+                    todaysNeeds.EN--;
+                } else if (todaysNeeds.LN > 0) {
                     assignedShift = "LN";
-                    needs.LN--;
-                } else {
-                    // لا يوجد احتياج، أو الموظف لا يمكنه العمل (بسبب قاعدة LN)
-                    assignedShift = "OFF";
+                    todaysNeeds.LN--;
                 }
 
                 sched[emp.id][d] = { shift: assignedShift, depot: "" };
-                empStatus[emp.id] = assignedShift;
+                jokerStatus[emp.id] = assignedShift;
             });
         }
         
         renderSchedule();
         saveData();
-        alert("تم توزيع الموظفين بنجاح لسد النقص.\nاضغط الآن على زر 'توزيع المواقع' لتثبيت أماكنهم.");
+        alert("تم التوزيع بنجاح!\nالخطوة التالية: اضغط 'توزيع المواقع'.");
     }
+
+    // --- Helpers for Generator ---
+
+    function applyWeekly(emp, numDays, sched, dailyNeeds) {
+        const exc = emp.exceptions || {};
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+        for(let d=1; d<=numDays; d++) {
+            let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
+            if (shift === "") {
+                const date = new Date(appConfig.year, appConfig.month - 1, d);
+                shift = emp.weeklyTemplate[date.getDay()];
+                if (xDates.includes(d)) shift = "X";
+                else if (offDates.includes(d)) shift = "OFF";
+                
+                sched[emp.id][d] = { shift: shift, depot: "" };
+            }
+            if (["D","EN","LN"].includes(shift)) {
+                if(dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
+            }
+        }
+    }
+
+    function applyRollingSmart(emp, numDays, sched, dailyNeeds) {
+        let pattern = emp.rollingPattern.split(',').map(s => s.trim().toUpperCase());
+        if(pattern.length === 0) pattern = ["OFF"];
+        const pLen = pattern.length;
+
+        // تجربة كل الإزاحات الممكنة واختيار الأفضل (التي تغطي أكبر احتياج)
+        let bestOffset = 0;
+        let bestScore = -Infinity; // الأعلى هو الأفضل
+
+        for(let offset = 0; offset < pLen; offset++) {
+            let currentScore = 0;
+            for(let d=1; d<=numDays; d++) {
+                let pIndex = (d - 1 + offset) % pLen; 
+                let proposedShift = pattern[pIndex];
+                
+                // استثناءات بسيطة للتجربة
+                if (["D","EN","LN"].includes(proposedShift)) {
+                    // إذا كان الشفت مطلوباً بشدة، نزيد النقاط
+                    if (dailyNeeds[d][proposedShift] > 0) currentScore += 10;
+                    else currentScore -= 2; // فائض غير مرغوب
+                }
+            }
+            if (currentScore > bestScore) {
+                bestScore = currentScore;
+                bestOffset = offset;
+            }
+        }
+
+        // تطبيق أفضل إزاحة
+        const exc = emp.exceptions || {};
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+        for(let d=1; d<=numDays; d++) {
+            let pIndex = (d - 1 + bestOffset) % pLen;
+            let finalShift = pattern[pIndex];
+            
+            if (xDates.includes(d)) finalShift = "X";
+            else if (offDates.includes(d)) finalShift = "OFF";
+
+            sched[emp.id][d] = { shift: finalShift, depot: "" };
+
+            // خصم من الاحتياج
+            if (["D","EN","LN"].includes(finalShift)) {
+                if(dailyNeeds[d][finalShift] > 0) dailyNeeds[d][finalShift]--;
+            }
+        }
+    }
+
+    function checkExceptions(emp, d, sched) {
+        const exc = emp.exceptions || {};
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        
+        if (xDates.includes(d)) {
+            sched[emp.id][d] = { shift: "X", depot: "" };
+            return true;
+        }
+        if (offDates.includes(d)) {
+            sched[emp.id][d] = { shift: "OFF", depot: "" };
+            return true;
+        }
+        return false;
+    }
+
 
     // --- DEPOT DISTRIBUTOR ---
     function fillDepots() {
@@ -628,7 +694,6 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // التحقق من الإعدادات
         let totalReqs = 0;
         cleanDepots.forEach(d => {
             let r = reqs[d] || reqs[d.trim()];
@@ -694,9 +759,9 @@
         if(!confirm("هل أنت متأكد من مسح جدول هذا الشهر بالكامل؟")) return;
         
         const key = getMonthKey();
-        state.schedule[key] = {}; // تصفير الذاكرة
-        renderSchedule();         // تحديث الشاشة فوراً
-        saveData();               // حفظ في السيرفر
+        state.schedule[key] = {}; 
+        renderSchedule();         
+        saveData();               
     }
 
     // --- UTILS ---
