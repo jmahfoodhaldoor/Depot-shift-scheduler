@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول الشفتات الاحترافي</title>
+    <title>جدول الشفتات الاحترافي (المصحح)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -155,7 +155,7 @@
     let state = {
         employees: [],
         schedule: {}, 
-        meta: { requirements: {} } // requirements structure: { "DepotName": { D: 2, EN: 1, LN: 1 } }
+        meta: { requirements: {} } 
     };
     
     let appConfig = {
@@ -200,7 +200,7 @@
         document.getElementById(`view-${tabName}`).classList.add('active');
     }
 
-    // --- API CALLS (UPDATED FOR SETTINGS PERSISTENCE) ---
+    // --- API CALLS ---
     async function loadData() {
         showLoader(true);
         try {
@@ -209,31 +209,26 @@
             if (json.ok) {
                 state = json.data;
                 
-                // --- إصلاح مشكلة عدم حفظ الإعدادات ---
-                
-                // 1. استرجاع المواقع (Depots)
+                // --- استرجاع الإعدادات المحفوظة ---
                 if (state.meta && state.meta.depots && state.meta.depots.length > 0) {
                     appConfig.depots = state.meta.depots;
                 } else {
-                    // إذا لم توجد بيانات محفوظة، نستخدم الافتراضي
                     appConfig.depots = ["Budaiya", "IsaTown"]; 
                 }
 
-                // 2. استرجاع الأعداد المطلوبة (Requirements)
                 if (!state.meta) state.meta = {};
                 if (!state.meta.requirements) state.meta.requirements = {};
 
-                // 3. تحديث واجهة المستخدم (Input) بالبيانات المسترجعة
                 document.getElementById('settingDepots').value = appConfig.depots.join(', ');
                 
-                // 4. معالجة البيانات القديمة للموظفين
+                // معالجة البيانات القديمة
                 state.employees.forEach(emp => {
                     if(!emp.patternType) emp.patternType = 'weekly';
                     if(!emp.rollingPattern) emp.rollingPattern = "D,D,EN,EN,LN,LN,OFF,OFF"; 
                 });
 
                 renderEmployees();
-                renderRequirementsTable(); // إعادة رسم جدول الأعداد بناءً على البيانات المحفوظة
+                renderRequirementsTable();
                 renderSchedule();
                 updateLastUpdated();
             } else {
@@ -256,9 +251,8 @@
             state.meta = { requirements: {}, depots: [] };
         }
 
-        // --- ضمان حفظ الإعدادات الحالية قبل الإرسال ---
+        // حفظ الإعدادات الحالية لضمان عدم ضياعها
         state.meta.depots = appConfig.depots; 
-        // ملاحظة: requirements يتم تحديثها مباشرة في state.meta عند تغيير الأرقام في الجدول
 
         try {
             const payload = { action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } };
@@ -268,10 +262,9 @@
             });
             const json = await res.json();
             if (json.ok) {
-                // تحديث الـ Meta فقط (الوقت)
                 state.meta.updatedAt = json.meta.updatedAt;
                 updateLastUpdated();
-                // alert("تم الحفظ بنجاح!"); // اختياري
+                renderSchedule(); // لتحديث التقرير
             } else {
                 alert("فشل الحفظ: " + json.error);
             }
@@ -520,7 +513,7 @@
         const sched = state.schedule[key];
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         
-        // 1. حساب إجمالي المطلوب يومياً لكل شفت (تجميع كل المواقع)
+        // 1. حساب إجمالي المطلوب يومياً
         let dailyNeeds = {};
         const reqs = state.meta.requirements || {};
         
@@ -599,7 +592,7 @@
                         let needed = dailyNeeds[d][proposedShift];
                         let have = currentCoverage[d][proposedShift];
                         
-                        // إذا هذا الشفت مطلوب ولسه ما كملنا العدد، نعطي نقاط إيجابية (سكور أقل)
+                        // إذا هذا الشفت مطلوب ولسه ما كملنا العدد، نعطي نقاط إيجابية
                         if (have < needed) {
                             currentScore -= 10; 
                         } else {
@@ -635,7 +628,7 @@
         alert("تم توزيع الشفتات الدوارة بناءً على الحاجة بدقة.\nاضغط الآن على زر 'توزيع المواقع' لتثبيت الأماكن.");
     }
 
-    // --- DEPOT DISTRIBUTOR (NUCLEAR OPTION) ---
+    // --- DEPOT DISTRIBUTOR (CORRECTED & CLEAN) ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
@@ -643,51 +636,52 @@
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const reqs = state.meta.requirements || {};
 
-        // التأكد من أن المستخدم أدخل أرقاماً
+        // تنظيف الأسماء (إزالة المسافات)
+        const cleanDepots = appConfig.depots.map(d => d.trim());
+
         let totalReqs = 0;
-        appConfig.depots.forEach(d => {
-            if(reqs[d]) totalReqs += (reqs[d].D||0) + (reqs[d].EN||0) + (reqs[d].LN||0);
+        cleanDepots.forEach(d => {
+            let r = reqs[d] || reqs[d.trim()];
+            if(r) totalReqs += (r.D||0) + (r.EN||0) + (r.LN||0);
         });
 
         if(totalReqs === 0) {
-            alert("تنبيه: جدول 'العدد المطلوب' في الإعدادات كله أصفار!\nيرجى تحديد الأعداد المطلوبة وحفظها أولاً لكي يعمل التوزيع بشكل صحيح.");
+            alert("تنبيه: الأعداد المطلوبة صفر! تأكد من إدخال الأعداد وحفظها في الإعدادات.");
             return;
         }
 
-        if(!confirm("سيتم إعادة توزيع جميع المواقع (Depots) للشفتات الموجودة بناءً على الأعداد المطلوبة.\nسيتم تجاهل التوزيع الحالي.")) return;
+        if(!confirm("سيتم إعادة توزيع المواقع بدقة حسب العدد المطلوب وتصحيح الأسماء.\nهل أنت متأكد؟")) return;
 
         for(let d=1; d<=numDays; d++) {
-            // 1. تصفير العدادات اليومية
             let currentCounts = {}; 
-            appConfig.depots.forEach(dep => {
+            cleanDepots.forEach(dep => {
                 currentCounts[dep] = { D:0, EN:0, LN:0 };
             });
 
-            // 2. جمع كل الموظفين المداومين ومسح مواقعهم الحالية لإعادة توزيعها بعدالة
+            // تجميع الموظفين ومسح مواقعهم القديمة (لإعادة التوزيع النظيف)
             let unassigned = { D: [], EN: [], LN: [] };
 
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d]) {
                     const cell = sched[emp.id][d];
-                    // نأخذ أي شخص عنده شفت عمل (وليس إجازة)
                     if(["D","EN","LN"].includes(cell.shift)) {
-                        // مسح الموقع القديم لضمان إعادة التوزيع
-                        cell.depot = ""; 
+                        cell.depot = ""; // تصفير الموقع
                         unassigned[cell.shift].push(cell);
                     }
                 }
             });
 
-            // 3. التوزيع الدقيق (الصرامة في الأرقام)
+            // التوزيع
             ["D", "EN", "LN"].forEach(shiftType => {
                 let workers = unassigned[shiftType];
                 if(workers.length === 0) return;
 
-                // أ) تعبئة الاحتياج الأساسي أولاً (Fill Requirements)
-                appConfig.depots.forEach(dep => {
-                    const needed = (reqs[dep] && reqs[dep][shiftType]) ? reqs[dep][shiftType] : 0;
+                // أ) تعبئة العدد المطلوب (Priority)
+                cleanDepots.forEach(dep => {
+                    let needed = 0;
+                    if(reqs[dep]) needed = reqs[dep][shiftType] || 0;
+                    else if(reqs[dep.trim()]) needed = reqs[dep.trim()][shiftType] || 0;
                     
-                    // طالما الموقع يحتاج، والموظفون موجودون -> عبئ الموقع
                     while (workers.length > 0 && currentCounts[dep][shiftType] < needed) {
                         let cell = workers.pop(); 
                         cell.depot = dep;      
@@ -695,14 +689,11 @@
                     }
                 });
 
-                // ب) توزيع الفائض (Balance Overflow)
-                // إذا بقي موظفون (أكثر من الحاجة)، وزعهم بالتساوي على المواقع
+                // ب) توزيع الفائض (إن وجد)
                 while (workers.length > 0) {
-                    // ابحث عن الموقع الذي يحتوي على أقل عدد حالياً
-                    let targetDepot = appConfig.depots.reduce((a, b) => 
+                    let targetDepot = cleanDepots.reduce((a, b) => 
                         currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
                     );
-                    
                     let cell = workers.pop();
                     cell.depot = targetDepot;
                     currentCounts[targetDepot][shiftType]++;
@@ -712,18 +703,10 @@
         
         renderSchedule();
         saveData();
-        alert("تم توزيع المواقع بنجاح!");
-    }
-    
-    function clearMonth() {
-        if(!confirm("هل أنت متأكد من مسح جدول هذا الشهر بالكامل؟")) return;
-        const key = getMonthKey();
-        state.schedule[key] = {};
-        renderSchedule();
-        saveData();
+        alert("تم توزيع المواقع وتصحيح الأسماء!");
     }
 
-    // --- COVERAGE ANALYSIS ---
+    // --- COVERAGE ANALYSIS (CORRECTED & CLEAN) ---
     function analyzeCoverage() {
         const report = document.getElementById('coverageReport');
         const numDays = daysInMonth(appConfig.year, appConfig.month);
@@ -731,22 +714,29 @@
         const sched = state.schedule[key] || {};
         const requirements = state.meta.requirements || {};
         
+        const cleanDepots = appConfig.depots.map(d => d.trim());
         let issues = [];
 
         for(let d=1; d<=numDays; d++) {
             let dailyCounts = {}; 
-            appConfig.depots.forEach(dep => dailyCounts[dep] = {D:0, EN:0, LN:0});
+            cleanDepots.forEach(dep => dailyCounts[dep] = {D:0, EN:0, LN:0});
 
+            // العد الذكي (يتجاهل المسافات)
             state.employees.forEach(emp => {
                 const cell = (sched[emp.id] && sched[emp.id][d]) ? sched[emp.id][d] : null;
-                if(cell && cell.shift && cell.depot && dailyCounts[cell.depot] && dailyCounts[cell.depot][cell.shift] !== undefined) {
-                    dailyCounts[cell.depot][cell.shift]++;
+                if(cell && cell.shift && cell.depot) {
+                    let cellDepot = cell.depot.trim(); 
+                    if(dailyCounts[cellDepot] && dailyCounts[cellDepot][cell.shift] !== undefined) {
+                        dailyCounts[cellDepot][cell.shift]++;
+                    }
                 }
             });
 
-            appConfig.depots.forEach(dep => {
-                const req = requirements[dep];
+            // المقارنة مع المطلوب
+            cleanDepots.forEach(dep => {
+                let req = requirements[dep] || requirements[dep.trim()];
                 if(!req) return;
+
                 ["D","EN","LN"].forEach(shift => {
                     const required = req[shift] || 0;
                     const actual = dailyCounts[dep][shift];
@@ -758,9 +748,9 @@
         }
 
         if(issues.length === 0) {
-            report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة! جميع المواقع والشفتات مكتملة العدد.</div>`;
+            report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%) - لا يوجد نقص.</div>`;
         } else {
-            report.innerHTML = `<h4 style="margin:0 0 10px 0;">⚠️ تقرير النقص (Missing Staff):</h4>` + 
+            report.innerHTML = `<h4 style="margin:0 0 10px 0;">⚠️ تقرير النقص الحقيقي (Missing Staff):</h4>` + 
                 issues.map(i => `<div class="report-item">❌ ${i}</div>`).join('');
         }
     }
@@ -807,5 +797,3 @@
 </script>
 </body>
 </html>
-
-
