@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة الذكي (3 أنواع)</title>
+    <title>نظام الجدولة الذكي (النسخة الكاملة)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -335,8 +335,8 @@
             } else if (emp.patternType === 'joker') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 وضع الجوكر (التغطية الشاملة)</div>
-                        <div class="note">ليس لديه نمط محدد. سيقوم النظام بوضعه في أي مكان يوجد فيه نقص (نهار، ليل، آخر ليل) يوماً بيوم.</div>
+                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 وضع الجوكر (تغطية النقص)</div>
+                        <div class="note">ليس لديه نمط محدد. سيغطي النقص مع أولوية لـ (آخر ليل ثم أول ليل). يتجنب النهار قدر الإمكان.</div>
                     </div>
                 `;
             } else {
@@ -356,7 +356,7 @@
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
                         <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
                         <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (نمط ثابت - بداية مرنة)</option>
-                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر (تغطية النقص)</option>
+                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر (أفضلية ليلية)</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
                 </div>
@@ -507,9 +507,9 @@
         saveData();
     }
 
-    // --- GENERATOR LOGIC (THE 3 TYPES ALGORITHM) ---
+    // --- GENERATOR LOGIC (UPDATED: JOKER PREFERS NIGHT) ---
     function generateSchedule() {
-        if(!confirm("سيقوم النظام الآن بتوزيع الشفتات بناءً على الأنواع الثلاثة (ثابت، دوار، جوكر).\nهل تريد الاستمرار؟")) return;
+        if(!confirm("سيقوم النظام الآن بتوزيع الشفتات مع مراعاة أن 'الجوكر' يفضل الشفتات الليلية.\nهل تريد الاستمرار؟")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -519,7 +519,7 @@
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
         // 1. حساب إجمالي المطلوب يومياً (Daily Needs)
-        let dailyNeeds = {}; // { 1: {D:4, EN:2, LN:2}, ... }
+        let dailyNeeds = {}; 
         
         for(let d=1; d<=numDays; d++) {
             dailyNeeds[d] = { D:0, EN:0, LN:0 };
@@ -533,39 +533,35 @@
             });
         }
 
-        // 2. تطبيق النوع الأول: الثابت (Weekly)
+        // 2. تطبيق النوع الأول: الثابت (Weekly) - هم الأساس في النهار
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
             
-            // إذا كان ثابت، نطبق جدوله ونخصمه من الحاجة
             if (emp.patternType === 'weekly' || !emp.patternType) {
                 applyWeekly(emp, numDays, sched, dailyNeeds);
             } else {
-                // تصفير جدول الباقين (دوار وجوكر)
                 for(let d=1; d<=numDays; d++) sched[emp.id][d] = { shift: "", depot: "" };
             }
         });
 
-        // 3. تطبيق النوع الثاني: الدوار (Rolling) - البحث عن أفضل بداية
+        // 3. تطبيق النوع الثاني: الدوار (Rolling)
+        // سنحاول جعلهم يغطون النهار أيضاً إذا كان نمطهم يسمح بذلك
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
         rollingEmps.forEach(emp => {
             applyRollingSmart(emp, numDays, sched, dailyNeeds);
         });
 
-        // 4. تطبيق النوع الثالث: الجوكر (Joker) - سد الثغرات
+        // 4. تطبيق النوع الثالث: الجوكر (Joker) - يكره النهار
         const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-        // تتبع حالة الجوكر لمنع المخالفات
         let jokerStatus = {}; 
         jokerEmps.forEach(e => jokerStatus[e.id] = "OFF");
 
         for(let d=1; d<=numDays; d++) {
-            let todaysNeeds = dailyNeeds[d]; // {D: x, EN: y, LN: z} (المتبقي)
+            let todaysNeeds = dailyNeeds[d]; // {D: x, EN: y, LN: z}
             
-            // خلط الجوكرز عشوائياً للعدالة
             let availableJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
 
             availableJokers.forEach(emp => {
-                // التحقق من الاستثناءات اليدوية
                 if(checkExceptions(emp, d, sched)) {
                     jokerStatus[emp.id] = sched[emp.id][d].shift;
                     return;
@@ -575,15 +571,21 @@
                 let assignedShift = "OFF";
                 let canWorkMorning = (prevShift !== "LN");
 
-                if (todaysNeeds.D > 0 && canWorkMorning) {
-                    assignedShift = "D";
-                    todaysNeeds.D--;
+                // ترتيب الأولويات للجوكر:
+                // 1. غطِّ آخر ليل (LN) أولاً
+                // 2. ثم أول ليل (EN)
+                // 3. النهار (D) ممنوع إلا للضرورة القصوى (آخر الحلول)
+                
+                if (todaysNeeds.LN > 0) {
+                    assignedShift = "LN";
+                    todaysNeeds.LN--;
                 } else if (todaysNeeds.EN > 0 && canWorkMorning) {
                     assignedShift = "EN";
                     todaysNeeds.EN--;
-                } else if (todaysNeeds.LN > 0) {
-                    assignedShift = "LN";
-                    todaysNeeds.LN--;
+                } else if (todaysNeeds.D > 0 && canWorkMorning) {
+                    // هل نعطيه نهار؟ نعم، فقط لضمان اكتمال الجدول
+                    assignedShift = "D"; 
+                    todaysNeeds.D--;
                 }
 
                 sched[emp.id][d] = { shift: assignedShift, depot: "" };
@@ -593,7 +595,7 @@
         
         renderSchedule();
         saveData();
-        alert("تم التوزيع بنجاح!\nالخطوة التالية: اضغط 'توزيع المواقع'.");
+        alert("تم التوزيع! الجوكر الآن يركز على الشفتات الليلية.");
     }
 
     // --- Helpers for Generator ---
@@ -634,11 +636,10 @@
                 let pIndex = (d - 1 + offset) % pLen; 
                 let proposedShift = pattern[pIndex];
                 
-                // استثناءات بسيطة للتجربة
                 if (["D","EN","LN"].includes(proposedShift)) {
                     // إذا كان الشفت مطلوباً بشدة، نزيد النقاط
                     if (dailyNeeds[d][proposedShift] > 0) currentScore += 10;
-                    else currentScore -= 2; // فائض غير مرغوب
+                    else currentScore -= 2; 
                 }
             }
             if (currentScore > bestScore) {
@@ -647,7 +648,6 @@
             }
         }
 
-        // تطبيق أفضل إزاحة
         const exc = emp.exceptions || {};
         const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
         const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
@@ -661,7 +661,6 @@
 
             sched[emp.id][d] = { shift: finalShift, depot: "" };
 
-            // خصم من الاحتياج
             if (["D","EN","LN"].includes(finalShift)) {
                 if(dailyNeeds[d][finalShift] > 0) dailyNeeds[d][finalShift]--;
             }
