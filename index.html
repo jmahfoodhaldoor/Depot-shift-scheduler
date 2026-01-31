@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول الشفتات الذكي</title>
+    <title>جدول الشفتات الاحترافي</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -85,7 +85,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ جدول الشفتات</h1>
+        <h1>🗓️ جدول الشفتات الاحترافي</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -104,8 +104,8 @@
     <div id="view-schedule" class="view active">
         <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
             <div>
-                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات تلقائياً</button>
-                <button onclick="fillDepots()">🏭 توزيع المواقع (Depots)</button>
+                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (ذكي)</button>
+                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب العدد)</button>
             </div>
             <div>
                 <button onclick="clearMonth()" class="danger">🗑️ مسح الشهر</button>
@@ -136,7 +136,7 @@
 
         <div class="emp-card">
             <h3>2. العدد المطلوب في كل موقع (Requirements)</h3>
-            <p class="note">حدد كم موظف تحتاج في كل شفت.</p>
+            <p class="note">حدد كم موظف تحتاج في كل شفت. (تأكد من الضغط على زر حفظ بعد التعديل)</p>
             <div id="requirementsContainer"></div>
         </div>
 
@@ -149,7 +149,7 @@
 
 <script>
     // --- CONFIGURATION ---
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ضع الرابط هنا
+    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ضع رابط Google Web App هنا
     
     // --- STATE ---
     let state = {
@@ -212,7 +212,7 @@
                 if(!state.meta.requirements) state.meta.requirements = {};
                 if(state.meta.depots) appConfig.depots = state.meta.depots;
                 
-                // Migrate patterns
+                // Migrate patterns if needed
                 state.employees.forEach(emp => {
                     if(!emp.patternType) emp.patternType = 'weekly';
                     if(!emp.rollingPattern) emp.rollingPattern = "D,D,EN,EN,LN,LN,OFF,OFF"; 
@@ -366,6 +366,7 @@
                         <label style="font-weight:bold; display:block; margin-bottom:5px;">تسلسل الشفتات (الدورة):</label>
                         <input type="text" value="${emp.rollingPattern}" onchange="updateEmployee('${emp.id}', 'rollingPattern', this.value)" style="width:98%; font-family:monospace; letter-spacing:1px;">
                         <div class="note">اكتب الشفتات مفصولة بفاصلة. مثال: D,D,EN,EN,LN,LN,OFF,OFF</div>
+                        <div class="note" style="color:#2563eb">سيقوم "توزيع الشفتات" باختيار أفضل بداية لهذا النمط لتغطية النقص تلقائياً.</div>
                     </div>
                 `;
             } else {
@@ -494,53 +495,131 @@
         saveData();
     }
 
-    // --- GENERATOR LOGIC ---
+    // --- GENERATOR LOGIC (SMART STAGGER) ---
     function generateSchedule() {
-        if(!confirm("سيتم تعبئة الخلايا الفارغة بناءً على نمط كل موظف. هل تريد الاستمرار؟")) return;
+        if(!confirm("سيقوم النظام الآن بتوزيع 'الشفتات الدوارة' بذكاء لتغطية النقص بدقة.\nهل تريد الاستمرار؟")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
         const sched = state.schedule[key];
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         
+        // 1. حساب إجمالي المطلوب يومياً لكل شفت (تجميع كل المواقع)
+        let dailyNeeds = {};
+        const reqs = state.meta.requirements || {};
+        
+        for(let d=1; d<=numDays; d++) {
+            dailyNeeds[d] = { D:0, EN:0, LN:0 };
+            appConfig.depots.forEach(dep => {
+                if(reqs[dep]) {
+                    dailyNeeds[d].D += (reqs[dep].D || 0);
+                    dailyNeeds[d].EN += (reqs[dep].EN || 0);
+                    dailyNeeds[d].LN += (reqs[dep].LN || 0);
+                }
+            });
+        }
+
+        // 2. تثبيت الموظفين الثابتين (Weekly) 
+        let currentCoverage = {}; 
+        for(let d=1; d<=numDays; d++) currentCoverage[d] = { D:0, EN:0, LN:0 };
+
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
-            const empSched = sched[emp.id];
             
+            // إذا كان موظف ثابت
+            if (emp.patternType !== 'rolling') {
+                const exc = emp.exceptions || {};
+                const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+                for(let d=1; d<=numDays; d++) {
+                    let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
+                    if (shift === "") {
+                        const date = new Date(appConfig.year, appConfig.month - 1, d);
+                        shift = emp.weeklyTemplate[date.getDay()];
+                        if (xDates.includes(d)) shift = "X";
+                        else if (offDates.includes(d)) shift = "OFF";
+                        
+                        sched[emp.id][d] = { shift: shift, depot: "" };
+                    }
+                    if (["D","EN","LN"].includes(shift)) {
+                        currentCoverage[d][shift]++;
+                    }
+                }
+            } else {
+                // تصفير جدول الدوارين لإعادة التوزيع
+                for(let d=1; d<=numDays; d++) {
+                     sched[emp.id][d] = { shift: "", depot: "" };
+                }
+            }
+        });
+
+        // 3. توزيع الموظفين الدوارين (Rolling) بذكاء
+        const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
+        
+        rollingEmps.forEach(emp => {
+            let pattern = emp.rollingPattern.split(',').map(s => s.trim().toUpperCase());
+            if(pattern.length === 0) pattern = ["OFF"];
+            const pLen = pattern.length;
+
             const exc = emp.exceptions || {};
             const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
             const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
 
-            let rollingSequence = [];
-            if(emp.patternType === 'rolling') {
-                rollingSequence = emp.rollingPattern.split(',').map(s => s.trim().toUpperCase());
-                if(rollingSequence.length === 0) rollingSequence = ["OFF"];
+            // البحث عن أفضل "إزاحة" (Offset) للبدء
+            let bestOffset = 0;
+            let bestScore = Infinity; 
+
+            for(let offset = 0; offset < pLen; offset++) {
+                let currentScore = 0;
+                
+                for(let d=1; d<=numDays; d++) {
+                    let pIndex = (d - 1 + offset) % pLen; 
+                    let proposedShift = pattern[pIndex];
+
+                    if (xDates.includes(d) || offDates.includes(d)) proposedShift = "OFF";
+
+                    if (["D","EN","LN"].includes(proposedShift)) {
+                        let needed = dailyNeeds[d][proposedShift];
+                        let have = currentCoverage[d][proposedShift];
+                        
+                        // إذا هذا الشفت مطلوب ولسه ما كملنا العدد، نعطي نقاط إيجابية (سكور أقل)
+                        if (have < needed) {
+                            currentScore -= 10; 
+                        } else {
+                            currentScore += 5; // فائض
+                        }
+                    }
+                }
+
+                if (currentScore < bestScore) {
+                    bestScore = currentScore;
+                    bestOffset = offset;
+                }
             }
 
+            // تطبيق أفضل إزاحة
             for(let d=1; d<=numDays; d++) {
-                if(empSched[d] && empSched[d].shift !== "") continue; 
+                let pIndex = (d - 1 + bestOffset) % pLen;
+                let finalShift = pattern[pIndex];
+                
+                if (xDates.includes(d)) finalShift = "X";
+                else if (offDates.includes(d)) finalShift = "OFF";
 
-                let shift = "";
+                sched[emp.id][d] = { shift: finalShift, depot: "" };
 
-                if(emp.patternType === 'rolling') {
-                    const index = (d - 1) % rollingSequence.length;
-                    shift = rollingSequence[index];
-                } else {
-                    const date = new Date(appConfig.year, appConfig.month - 1, d);
-                    shift = emp.weeklyTemplate[date.getDay()];
+                if (["D","EN","LN"].includes(finalShift)) {
+                    currentCoverage[d][finalShift]++;
                 }
-                
-                if (xDates.includes(d)) shift = "X";
-                else if (offDates.includes(d)) shift = "OFF";
-                
-                empSched[d] = { shift: shift, depot: (["D","EN","LN"].includes(shift) ? "" : "") };
             }
         });
         
         renderSchedule();
         saveData();
+        alert("تم توزيع الشفتات الدوارة بناءً على الحاجة بدقة.\nاضغط الآن على زر 'توزيع المواقع' لتثبيت الأماكن.");
     }
 
+    // --- DEPOT DISTRIBUTOR (STRICT) ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
@@ -549,13 +628,13 @@
         const reqs = state.meta.requirements || {};
 
         for(let d=1; d<=numDays; d++) {
-            // 1. تصفير العدادات ومعرفة من تم تعيينه مسبقاً
+            // 1. تصفير العدادات اليومية
             let currentCounts = {}; 
             appConfig.depots.forEach(dep => {
                 currentCounts[dep] = { D:0, EN:0, LN:0 };
             });
 
-            // حساب الموظفين الذين لديهم مواقع مثبتة يدوياً
+            // حساب المثبت يدوياً
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d]) {
                     const cell = sched[emp.id][d];
@@ -568,41 +647,36 @@
                 }
             });
 
-            // 2. تجهيز قائمة الموظفين الذين يحتاجون توزيع (عندهم شفت بس ما عندهم موقع)
-            // نقسمهم حسب الشفت عشان نوزع كل شفت بروحه
+            // 2. تجميع الموظفين الذين يحتاجون توزيع
             let unassigned = { D: [], EN: [], LN: [] };
 
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d]) {
                     const cell = sched[emp.id][d];
-                    // نأخذ فقط اللي عندهم دوام وليس لديهم موقع
                     if(["D","EN","LN"].includes(cell.shift) && !cell.depot) {
                         unassigned[cell.shift].push(cell);
                     }
                 }
             });
 
-            // 3. التوزيع الذكي لكل نوع شفت (D, EN, LN)
+            // 3. التوزيع الدقيق
             ["D", "EN", "LN"].forEach(shiftType => {
                 let workers = unassigned[shiftType];
-                if(workers.length === 0) return; // ما في موظفين لهذا الشفت اليوم
+                if(workers.length === 0) return;
 
-                // أ) تعبئة النقص (الأولوية القصوى)
+                // أ) تعبئة النقص (الأولوية)
                 appConfig.depots.forEach(dep => {
                     const needed = (reqs[dep] && reqs[dep][shiftType]) ? reqs[dep][shiftType] : 0;
                     
-                    // طالما في موظفين، والموقع هذا لسه ما اكتمل عدده
                     while (workers.length > 0 && currentCounts[dep][shiftType] < needed) {
-                        let cell = workers.pop(); // خذ موظف
-                        cell.depot = dep;       // حطه في الموقع
+                        let cell = workers.pop(); 
+                        cell.depot = dep;      
                         currentCounts[dep][shiftType]++;
                     }
                 });
 
-                // ب) توزيع الفائض (إذا بقي موظفين زايدين عن الحاجة)
-                // نوزعهم بالتساوي على المواقع عشان ما يصير مكان زحمة ومكان فاضي
+                // ب) توزيع الفائض بالتساوي
                 while (workers.length > 0) {
-                    // نختار الموقع اللي فيه أقل عدد حالياً من هذا الشفت
                     let targetDepot = appConfig.depots.reduce((a, b) => 
                         currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
                     );
@@ -616,7 +690,6 @@
         
         renderSchedule();
         saveData();
-        alert("تم توزيع الموظفين بدقة. \nملاحظة: إذا بقي 'آخر ليل' فارغاً، فهذا يعني أنه لا يوجد موظف لديه شفت LN في هذا اليوم.");
     }
 
     function clearMonth() {
@@ -638,8 +711,7 @@
         let issues = [];
 
         for(let d=1; d<=numDays; d++) {
-            // Count actuals for this day
-            let dailyCounts = {}; // { Depot: { D:0, EN:0, LN:0 } }
+            let dailyCounts = {}; 
             appConfig.depots.forEach(dep => dailyCounts[dep] = {D:0, EN:0, LN:0});
 
             state.employees.forEach(emp => {
@@ -649,7 +721,6 @@
                 }
             });
 
-            // Compare with requirements
             appConfig.depots.forEach(dep => {
                 const req = requirements[dep];
                 if(!req) return;
@@ -664,7 +735,7 @@
         }
 
         if(issues.length === 0) {
-            report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة! لا يوجد نقص في الموظفين حسب الأعداد المطلوبة.</div>`;
+            report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة! جميع المواقع والشفتات مكتملة العدد.</div>`;
         } else {
             report.innerHTML = `<h4 style="margin:0 0 10px 0;">⚠️ تقرير النقص (Missing Staff):</h4>` + 
                 issues.map(i => `<div class="report-item">❌ ${i}</div>`).join('');
@@ -713,4 +784,3 @@
 </script>
 </body>
 </html>
-
