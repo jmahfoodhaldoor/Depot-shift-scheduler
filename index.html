@@ -1,3 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الشفتات الذكي (النسخة الكاملة)</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --border: #cbd5e1;
+            --cell-w: 45px;
+            --header-h: 40px;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); font-size: 14px; direction: rtl; }
+        
+        /* Layout */
+        .app-container { max-width: 1400px; margin: 0 auto; padding: 10px; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; align-items: center; }
+        .toolbar h1 { margin: 0; font-size: 1.2rem; margin-left: auto; }
+        
+        /* Buttons & Inputs */
+        button { cursor: pointer; padding: 6px 12px; border: 1px solid var(--border); background: white; border-radius: 4px; font-weight: 500; font-family: inherit; }
+        button:hover { background: #f1f5f9; }
+        button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+        button.danger { background: #ef4444; color: white; border-color: #ef4444; }
+        input, select { padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; }
+
+        /* Tabs */
+        .tabs { display: flex; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: bold; }
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Schedule Grid */
+        .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding-bottom: 10px; }
+        .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; }
+        .schedule-table th, .schedule-table td { border: 1px solid var(--border); text-align: center; padding: 4px; height: 35px; }
+        .schedule-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 10; font-size: 0.85rem; }
+        .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; background: #f1f5f9; width: 160px; text-align: right; padding-right: 10px; border-left: 2px solid #ddd; }
+        .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 10px; font-weight: 500; border-left: 2px solid #ddd; }
+        
+        /* Cell Styling */
+        .cell { cursor: pointer; font-size: 0.8rem; line-height: 1.1; user-select: none; }
+        .cell.shift-D { background-color: #dbeafe; color: #1e40af; } /* نهار - أزرق */
+        .cell.shift-EN { background-color: #fef3c7; color: #92400e; } /* أول ليل - أصفر */
+        .cell.shift-LN { background-color: #1e293b; color: #f8fafc; } /* آخر ليل - كحلي */
+        .cell.shift-OFF { background-color: #ecfdf5; color: #047857; } /* إجازة - أخضر */
+        .cell.shift-X { background-color: #fee2e2; color: #b91c1c; font-weight: bold; } /* غياب - أحمر */
+        
+        /* Stats & Warnings */
+        .stat-box { font-size: 0.70rem; color: #64748b; margin-top: 2px; display:flex; gap:3px; flex-wrap:wrap;}
+        .violation { border: 3px solid #ef4444 !important; position: relative; }
+        
+        /* Requirements Table */
+        .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .req-table th, .req-table td { border: 1px solid #eee; padding: 8px; text-align: center; }
+        .req-table th { background: #f8fafc; }
+        .req-input { width: 50px; text-align: center; }
+
+        /* Employee Manager */
+        .emp-card { border: 1px solid var(--border); background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .emp-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px;}
+        .pattern-editor { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; }
+        
+        /* Loading Overlay */
+        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; font-size: 1.2rem; color: var(--primary); display: none; flex-direction: column; gap: 10px;}
+        
+        .depot-tag { font-size: 0.65rem; display: block; opacity: 0.8; }
+        .note { font-size: 0.75rem; color: #64748b; margin-top: 5px; }
+
+        /* Report Box */
+        .report-box { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; border: 1px solid var(--border); }
+        .report-item { color: #b91c1c; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+        .report-ok { color: #047857; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="loader">
+    <div>جاري الاتصال بقاعدة البيانات...</div>
+    <div style="font-size:0.9rem; font-weight:normal;">يرجى الانتظار</div>
+</div>
+
+<div class="app-container">
+    <div class="toolbar">
+        <h1>🗓️ جدول الشفتات الذكي</h1>
+        <select id="selYear"></select>
+        <select id="selMonth"></select>
+        <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
+        <button class="primary" onclick="saveData()">💾 حفظ التغييرات</button>
+        <div style="flex-grow:1; text-align:left;">
+             <span id="lastUpdated" style="font-size:0.8rem; color:gray;"></span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('schedule')">الجدول الشهري</div>
+        <div class="tab" onclick="switchTab('employees')">الموظفين والأنماط</div>
+        <div class="tab" onclick="switchTab('settings')">الإعدادات والعدد المطلوب</div>
+    </div>
+
+    <div id="view-schedule" class="view active">
+        <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
+            <div>
+                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (ذكي)</button>
+                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب العدد)</button>
+            </div>
+            <div>
+                <button onclick="clearMonth()" class="danger">🗑️ مسح الشهر</button>
+                <button onclick="exportCSV()">📄 تصدير إكسل (CSV)</button>
+            </div>
+        </div>
+        <div class="grid-container">
+            <table class="schedule-table" id="scheduleGrid">
+                </table>
+        </div>
+        <div id="coverageReport" class="report-box">
+            <p>جاري حساب النقص...</p>
+        </div>
+    </div>
+
+    <div id="view-employees" class="view">
+        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">+ إضافة موظف جديد</button>
+        <div id="employeeList">
+            </div>
+    </div>
+
+    <div id="view-settings" class="view">
+        <div class="emp-card">
+            <h3>1. إدارة المواقع (Depots)</h3>
+            <p class="note">افصل بين الأسماء بفاصلة</p>
+            <input type="text" id="settingDepots" style="width: 100%;" value="موقع 1, موقع 2" onchange="updateDepots()">
+        </div>
+
+        <div class="emp-card">
+            <h3>2. العدد المطلوب في كل موقع (Requirements)</h3>
+            <p class="note">حدد كم موظف تحتاج في كل شفت. (تأكد من الضغط على زر حفظ بعد التعديل)</p>
+            <div id="requirementsContainer"></div>
+        </div>
+
+        <div class="emp-card">
+            <h3>3. الطوارئ</h3>
+            <button class="danger" onclick="saveData(true)">مسح كافة البيانات والبدء من جديد</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- CONFIGURATION ---
     const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ضع رابط Google Web App هنا
@@ -113,7 +262,6 @@
             if (json.ok) {
                 state.meta.updatedAt = json.meta.updatedAt;
                 updateLastUpdated();
-                // لا نحدث الجدول هنا لتجنب وميض الشاشة، التحديث محلي كافٍ
             } else {
                 alert("فشل الحفظ: " + json.error);
             }
@@ -179,7 +327,7 @@
                 patternEditorHtml = `
                     <div class="pattern-editor">
                         <div class="note" style="color:#2563eb; font-weight:bold;"> وضع "الجوكر" (تغطية النقص):</div>
-                        <div class="note">سيقوم النظام بتجاهل النمط الثابت لهذا الموظف واستخدامه لسد النقص في الجدول (نهار، أول ليل، آخر ليل) حسب الحاجة اليومية.</div>
+                        <div class="note">سيقوم النظام باستخدام هذا الموظف لسد النقص في الجدول (نهار، أول ليل، آخر ليل) حسب الحاجة اليومية.</div>
                     </div>
                 `;
             } else {
@@ -349,9 +497,9 @@
         saveData();
     }
 
-    // --- NEW: COVERAGE-FIRST GENERATOR ---
+    // --- NEW: COVERAGE-FIRST GENERATOR (JOKER MODE) ---
     function generateSchedule() {
-        if(!confirm("سيقوم النظام الآن بتوزيع 'الشفتات الدوارة' لسد النقص في الجدول تماماً (سيتجاهل الترتيب المعتاد).\nهل تريد الاستمرار؟")) return;
+        if(!confirm("سيقوم النظام الآن بتوزيع 'شفتات التغطية' لسد النقص في الجدول تماماً.\nهل تريد الاستمرار؟")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -360,7 +508,7 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // 1. حساب إجمالي المطلوب يومياً (Inventory)
+        // 1. حساب إجمالي المطلوب يومياً (المخزون المطلوب)
         let dailyNeeds = {}; // { 1: {D:4, EN:2, LN:2}, ... }
         
         for(let d=1; d<=numDays; d++) {
@@ -408,7 +556,7 @@
             }
         });
 
-        // 3. توزيع الموظفين الدوارين (Rolling) يوماً بيوم لسد النقص
+        // 3. توزيع موظفي التغطية (Jokers) يوماً بيوم لسد النقص
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
         
         // تتبع حالة الموظفين (ماذا عملوا بالأمس؟)
@@ -439,7 +587,7 @@
                     return;
                 }
 
-                // تحديد الشفت المناسب (Greedy Allocation)
+                // تحديد الشفت المناسب (الأولوية لملء الفراغات)
                 let prevShift = empStatus[emp.id];
                 let assignedShift = "OFF";
 
@@ -546,17 +694,9 @@
         if(!confirm("هل أنت متأكد من مسح جدول هذا الشهر بالكامل؟")) return;
         
         const key = getMonthKey();
-        // 1. تصفير الذاكرة المحلية
-        state.schedule[key] = {};
-        
-        // 2. تحديث الشاشة فوراً
-        renderSchedule();
-        
-        // 3. الحفظ في السيرفر
-        saveData();
-        
-        // 4. رسالة تأكيد (اختياري)
-        // alert("تم مسح الشهر.");
+        state.schedule[key] = {}; // تصفير الذاكرة
+        renderSchedule();         // تحديث الشاشة فوراً
+        saveData();               // حفظ في السيرفر
     }
 
     // --- UTILS ---
@@ -645,3 +785,5 @@
         a.click();
     }
 </script>
+</body>
+</html>
