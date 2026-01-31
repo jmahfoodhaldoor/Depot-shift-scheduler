@@ -549,38 +549,74 @@
         const reqs = state.meta.requirements || {};
 
         for(let d=1; d<=numDays; d++) {
-            let depotCounts = {}; 
-            appConfig.depots.forEach(dep => depotCounts[dep] = 0);
-            
-            // 1. Calculate Needs Weight (Optional optimization: prioritize depots with higher reqs)
-            
-            // 2. Count existing filled depots
+            // 1. تصفير العدادات ومعرفة من تم تعيينه مسبقاً
+            let currentCounts = {}; 
+            appConfig.depots.forEach(dep => {
+                currentCounts[dep] = { D:0, EN:0, LN:0 };
+            });
+
+            // حساب الموظفين الذين لديهم مواقع مثبتة يدوياً
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d]) {
                     const cell = sched[emp.id][d];
-                    if(cell.depot && appConfig.depots.includes(cell.depot)) {
-                        depotCounts[cell.depot]++;
+                    if(cell.depot && appConfig.depots.includes(cell.depot) && cell.shift) {
+                         if(!currentCounts[cell.depot]) currentCounts[cell.depot] = { D:0, EN:0, LN:0 };
+                         if(currentCounts[cell.depot][cell.shift] !== undefined) {
+                            currentCounts[cell.depot][cell.shift]++;
+                         }
                     }
                 }
             });
 
-            // 3. Assign empty based on balancing logic
-            // Simple logic: fill depots that have fewer people than others relative to requirements?
-            // For now: stick to simple round-robin or lowest count.
+            // 2. تجهيز قائمة الموظفين الذين يحتاجون توزيع (عندهم شفت بس ما عندهم موقع)
+            // نقسمهم حسب الشفت عشان نوزع كل شفت بروحه
+            let unassigned = { D: [], EN: [], LN: [] };
+
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d]) {
                     const cell = sched[emp.id][d];
+                    // نأخذ فقط اللي عندهم دوام وليس لديهم موقع
                     if(["D","EN","LN"].includes(cell.shift) && !cell.depot) {
-                        // Find depot with lowest count
-                        let target = appConfig.depots.reduce((a, b) => depotCounts[a] < depotCounts[b] ? a : b);
-                        cell.depot = target;
-                        depotCounts[target]++;
+                        unassigned[cell.shift].push(cell);
                     }
                 }
             });
+
+            // 3. التوزيع الذكي لكل نوع شفت (D, EN, LN)
+            ["D", "EN", "LN"].forEach(shiftType => {
+                let workers = unassigned[shiftType];
+                if(workers.length === 0) return; // ما في موظفين لهذا الشفت اليوم
+
+                // أ) تعبئة النقص (الأولوية القصوى)
+                appConfig.depots.forEach(dep => {
+                    const needed = (reqs[dep] && reqs[dep][shiftType]) ? reqs[dep][shiftType] : 0;
+                    
+                    // طالما في موظفين، والموقع هذا لسه ما اكتمل عدده
+                    while (workers.length > 0 && currentCounts[dep][shiftType] < needed) {
+                        let cell = workers.pop(); // خذ موظف
+                        cell.depot = dep;       // حطه في الموقع
+                        currentCounts[dep][shiftType]++;
+                    }
+                });
+
+                // ب) توزيع الفائض (إذا بقي موظفين زايدين عن الحاجة)
+                // نوزعهم بالتساوي على المواقع عشان ما يصير مكان زحمة ومكان فاضي
+                while (workers.length > 0) {
+                    // نختار الموقع اللي فيه أقل عدد حالياً من هذا الشفت
+                    let targetDepot = appConfig.depots.reduce((a, b) => 
+                        currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
+                    );
+                    
+                    let cell = workers.pop();
+                    cell.depot = targetDepot;
+                    currentCounts[targetDepot][shiftType]++;
+                }
+            });
         }
+        
         renderSchedule();
         saveData();
+        alert("تم توزيع الموظفين بدقة. \nملاحظة: إذا بقي 'آخر ليل' فارغاً، فهذا يعني أنه لا يوجد موظف لديه شفت LN في هذا اليوم.");
     }
 
     function clearMonth() {
@@ -677,3 +713,4 @@
 </script>
 </body>
 </html>
+
