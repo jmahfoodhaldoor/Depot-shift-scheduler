@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة الذكي (الميزان الدقيق)</title>
+    <title>نظام الجدولة (الحماية من الإرهاق - Max 5 Days)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -95,7 +95,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ نظام الجدولة (الميزان الذكي)</h1>
+        <h1>🗓️ نظام الجدولة (الحماية من الإرهاق)</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -114,8 +114,8 @@
     <div id="view-schedule" class="view active">
         <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
             <div>
-                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (حسب الحاجة)</button>
-                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب حصة الموظف)</button>
+                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (خوارزمية الميزان)</button>
+                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب الحصة)</button>
             </div>
             <div>
                 <button onclick="clearMonth()" class="danger">🗑️ مسح الشهر</button>
@@ -233,7 +233,6 @@
                 // تنظيف البيانات
                 state.employees.forEach(emp => {
                     if(!emp.patternType) emp.patternType = 'weekly';
-                    // إضافة قيم افتراضية للشفت الدوار المرن
                     if(!emp.flexCounts) emp.flexCounts = { D: 1, EN: 2, LN: 2, OFF: 2 };
                     if(!emp.depotQuotas) emp.depotQuotas = {};
                 });
@@ -331,7 +330,7 @@
                 weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#666;">${day}</label><select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%">${opts}</select></div>`;
             });
 
-            // 2. Depot Quota UI (توزيع حصص المواقع)
+            // 2. Depot Quota UI
             let quotasHtml = `<label style="font-weight:bold; margin-bottom:5px; display:block;">توزيع أيام العمل (أسبوعياً):</label><div class="depot-quotas">`;
             appConfig.depots.forEach(d => {
                 const val = (emp.depotQuotas && emp.depotQuotas[d]) ? emp.depotQuotas[d] : 0;
@@ -346,21 +345,21 @@
             if(emp.patternType === 'rolling') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">إعدادات الشفت الدوار (عدد الأيام):</label>
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">إعدادات الشفت الدوار (العدد المطلوب):</label>
                         <div class="flex-counts">
                             <div><label>D نهار</label><input type="number" min="0" value="${flex.D}" onchange="updateFlexCount('${emp.id}', 'D', this.value)"></div>
                             <div><label>EN أول</label><input type="number" min="0" value="${flex.EN}" onchange="updateFlexCount('${emp.id}', 'EN', this.value)"></div>
                             <div><label>LN آخر</label><input type="number" min="0" value="${flex.LN}" onchange="updateFlexCount('${emp.id}', 'LN', this.value)"></div>
                             <div><label>OFF</label><input type="number" min="0" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
                         </div>
-                        <div class="note">سيقوم النظام بترتيب هذه الشفتات بمرونة حسب حاجة الجدول (بدون التزام بترتيب معين، لكن الالتزام بالعدد).</div>
+                        <div class="note">سيتم الالتزام بهذه النسب قدر الإمكان مع <b>منع العمل لأكثر من 5 أيام متواصلة</b>.</div>
                     </div>
                 `;
             } else if (emp.patternType === 'joker') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر (تغطية شاملة)</div>
-                        <div class="note">يغطي النقص تلقائياً. أولوية قصوى لليل (LN/EN). حد أقصى 4 إجازات في الشهر.</div>
+                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر</div>
+                        <div class="note">أولوية لليل (LN/EN). حد أقصى 4 إجازات في الشهر.</div>
                     </div>
                 `;
             } else {
@@ -379,7 +378,7 @@
                     <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold; font-size:1.1rem;">
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
                         <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (مرن حسب العدد)</option>
+                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (ميزان مرن)</option>
                         <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
@@ -432,9 +431,9 @@
         renderEmployees(); renderSchedule(); saveData(); 
     }
 
-    // --- GENERATOR LOGIC (Flexible Rolling + Joker) ---
+    // --- GENERATOR LOGIC (The "Max 5 Days" Rule) ---
     function generateSchedule() {
-        if(!confirm("سيقوم النظام بتوزيع الشفتات.\n- الثابت: حسب أيامه.\n- الدوار: حسب عدد الأيام (مرن).\n- الجوكر: سد النقص.")) return;
+        if(!confirm("سيقوم النظام بتوزيع الشفتات.\n- الالتزام بقاعدة: ممنوع العمل أكثر من 5 أيام متواصلة.")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -443,7 +442,7 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // 1. حساب الحاجة اليومية
+        // 1. حساب الحاجة
         let dailyNeeds = {}; 
         for(let d=1; d<=numDays; d++) {
             dailyNeeds[d] = { D:0, EN:0, LN:0 };
@@ -457,21 +456,23 @@
             });
         }
 
-        // 2. تطبيق الثابت (Weekly)
+        // تتبع أيام العمل المتواصلة لكل موظف
+        let workStreaks = {}; // empId -> count
+        state.employees.forEach(e => workStreaks[e.id] = 0);
+
+        // 2. تطبيق الثابت (Weekly) مع كسر الاستمرارية > 5
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
             if (emp.patternType === 'weekly' || !emp.patternType) {
-                applyWeekly(emp, numDays, sched, dailyNeeds);
+                applyWeekly(emp, numDays, sched, dailyNeeds, workStreaks);
             } else {
                 for(let d=1; d<=numDays; d++) sched[emp.id][d] = { shift: "", depot: "" };
             }
         });
 
-        // 3. تطبيق الدوار المرن (Flexible Rolling)
-        // الفكرة: الموظف عنده "رصيد" شفتات في الشهر. نوزعها حسب الحاجة.
+        // 3. الدوار المرن (Flexible Rolling) مع كسر الاستمرارية
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
         
-        // حساب رصيد كل موظف للشهر كامل تقريباً
         let rollingBalances = {};
         rollingEmps.forEach(emp => {
             const flex = emp.flexCounts || { D:1, EN:2, LN:2, OFF:2 };
@@ -483,42 +484,44 @@
                 LN: Math.round(flex.LN * cyclesInMonth),
                 OFF: Math.round(flex.OFF * cyclesInMonth)
             };
-            // تعقب شفت أمس لمنع القلبة
             rollingBalances[emp.id].prevShift = "OFF";
         });
 
         for(let d=1; d<=numDays; d++) {
             let todaysNeeds = dailyNeeds[d];
-            // خلط الموظفين للعدالة
             let activeRolling = [...rollingEmps].sort(() => Math.random() - 0.5);
 
             activeRolling.forEach(emp => {
-                if(handleExceptions(emp, d, sched)) return;
+                if(handleExceptions(emp, d, sched, workStreaks)) return;
 
                 let bal = rollingBalances[emp.id];
                 let prev = bal.prevShift;
                 let canMorning = (prev !== 'LN');
                 let assigned = "OFF";
-
-                // محاولة تلبية الحاجة + توفر الرصيد
-                if (todaysNeeds.LN > 0 && bal.LN > 0) {
-                    assigned = "LN"; todaysNeeds.LN--; bal.LN--;
-                } else if (todaysNeeds.EN > 0 && bal.EN > 0 && canMorning) {
-                    assigned = "EN"; todaysNeeds.EN--; bal.EN--;
-                } else if (todaysNeeds.D > 0 && bal.D > 0 && canMorning) {
-                    assigned = "D"; todaysNeeds.D--; bal.D--;
+                
+                // Max 5 rule
+                let currentStreak = workStreaks[emp.id] || 0;
+                if(currentStreak >= 5) {
+                    assigned = "OFF"; // إجبار على الراحة
                 } else {
-                    // لم نجد شفت مناسب أو انتهى الرصيد -> إجازة
-                    // أو نعطيه شفت فائض إذا كان رصيد الإجازات انتهى (اختياري، هنا سأعطيه إجازة)
-                    assigned = "OFF";
+                    if (todaysNeeds.LN > 0 && bal.LN > 0) {
+                        assigned = "LN"; todaysNeeds.LN--; bal.LN--;
+                    } else if (todaysNeeds.EN > 0 && bal.EN > 0 && canMorning) {
+                        assigned = "EN"; todaysNeeds.EN--; bal.EN--;
+                    } else if (todaysNeeds.D > 0 && bal.D > 0 && canMorning) {
+                        assigned = "D"; todaysNeeds.D--; bal.D--;
+                    } else {
+                        assigned = "OFF";
+                    }
                 }
                 
                 sched[emp.id][d] = { shift: assigned, depot: "" };
                 bal.prevShift = assigned;
+                updateStreak(emp.id, assigned, workStreaks);
             });
         }
 
-        // 4. الجوكر (Joker)
+        // 4. الجوكر
         const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
         let jokerOffCounts = {};
         let jokerPrev = {};
@@ -529,7 +532,7 @@
             let activeJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
 
             activeJokers.forEach(emp => {
-                if(handleExceptions(emp, d, sched)) {
+                if(handleExceptions(emp, d, sched, workStreaks)) {
                     if(sched[emp.id][d].shift === 'OFF') jokerOffCounts[emp.id]++;
                     jokerPrev[emp.id] = sched[emp.id][d].shift;
                     return;
@@ -538,28 +541,84 @@
                 let prev = jokerPrev[emp.id];
                 let canMorning = (prev !== 'LN');
                 let assigned = "OFF";
+                
+                // Max 5 rule overrides forced work
+                let currentStreak = workStreaks[emp.id] || 0;
                 let forceWork = (jokerOffCounts[emp.id] >= 4);
 
-                if (todaysNeeds.LN > 0) { assigned = "LN"; todaysNeeds.LN--; }
-                else if (todaysNeeds.EN > 0 && canMorning) { assigned = "EN"; todaysNeeds.EN--; }
-                else if (todaysNeeds.D > 0 && canMorning) { assigned = "D"; todaysNeeds.D--; }
-                else if (forceWork) {
-                    assigned = canMorning ? "EN" : "LN"; // تعبئة فراغ ليلي
+                if(currentStreak >= 5) {
+                    assigned = "OFF"; 
                 } else {
-                    assigned = "OFF";
+                    if (todaysNeeds.LN > 0) { assigned = "LN"; todaysNeeds.LN--; }
+                    else if (todaysNeeds.EN > 0 && canMorning) { assigned = "EN"; todaysNeeds.EN--; }
+                    else if (todaysNeeds.D > 0 && canMorning) { assigned = "D"; todaysNeeds.D--; }
+                    else if (forceWork) {
+                        assigned = canMorning ? "EN" : "LN"; 
+                    } else {
+                        assigned = "OFF";
+                    }
                 }
 
                 sched[emp.id][d] = { shift: assigned, depot: "" };
                 jokerPrev[emp.id] = assigned;
                 if(assigned === 'OFF') jokerOffCounts[emp.id]++;
+                updateStreak(emp.id, assigned, workStreaks);
             });
         }
         
         renderSchedule(); saveData();
-        alert("تم توزيع الشفتات (بناءً على الأعداد المرنة وحصص المواقع).");
+        alert("تم توزيع الشفتات (مع مراعاة الحد الأقصى 5 أيام عمل متواصلة).");
     }
 
-    // --- DEPOT DISTRIBUTOR (QUOTA BASED) ---
+    // --- Helpers ---
+    function updateStreak(empId, shift, streaks) {
+        if(shift === 'OFF' || shift === 'X' || shift === '') {
+            streaks[empId] = 0;
+        } else {
+            streaks[empId] = (streaks[empId] || 0) + 1;
+        }
+    }
+
+    function handleExceptions(emp, d, sched, streaks) {
+        const exc = emp.exceptions || {};
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        if (xDates.includes(d)) { sched[emp.id][d] = { shift: "X", depot: "" }; updateStreak(emp.id, "X", streaks); return true; }
+        if (offDates.includes(d)) { sched[emp.id][d] = { shift: "OFF", depot: "" }; updateStreak(emp.id, "OFF", streaks); return true; }
+        return false;
+    }
+
+    function applyWeekly(emp, numDays, sched, dailyNeeds, streaks) {
+        const exc = emp.exceptions || {};
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+        for(let d=1; d<=numDays; d++) {
+            let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
+            if (shift === "") {
+                const date = new Date(appConfig.year, appConfig.month - 1, d);
+                shift = emp.weeklyTemplate[date.getDay()];
+                if (xDates.includes(d)) shift = "X";
+                else if (offDates.includes(d)) shift = "OFF";
+                
+                // Max 5 Rule for Weekly
+                let currentStreak = streaks[emp.id] || 0;
+                if(currentStreak >= 5 && ["D","EN","LN"].includes(shift)) {
+                    shift = "OFF"; // Force Break
+                }
+
+                sched[emp.id][d] = { shift: shift, depot: "" };
+            }
+            if (["D","EN","LN"].includes(shift)) {
+                if(dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
+                updateStreak(emp.id, shift, streaks);
+            } else {
+                updateStreak(emp.id, shift, streaks);
+            }
+        }
+    }
+
+    // --- DEPOT DISTRIBUTOR ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
@@ -568,9 +627,8 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        if(!confirm("سيتم توزيع المواقع مع مراعاة 'حصص الموظفين' (Quotas) لكل موقع.")) return;
+        if(!confirm("سيتم توزيع المواقع مع مراعاة 'حصص الموظفين'.")) return;
 
-        // تصفير المواقع
         for(let d=1; d<=numDays; d++) {
             state.employees.forEach(emp => {
                 if(sched[emp.id] && sched[emp.id][d] && ["D","EN","LN"].includes(sched[emp.id][d].shift)) {
@@ -579,11 +637,9 @@
             });
         }
 
-        // تتبع عدد مرات العمل لكل موظف في كل موقع خلال الشهر
         let empDepotUsage = {}; 
         state.employees.forEach(e => empDepotUsage[e.id] = {});
 
-        // التوزيع يوم بيوم
         for(let d=1; d<=numDays; d++) {
             let currentCounts = {}; 
             cleanDepots.forEach(dep => { currentCounts[dep] = { D:0, EN:0, LN:0 }; });
@@ -600,29 +656,23 @@
                 let workers = workersByShift[shiftType];
                 if(workers.length === 0) return;
 
-                // فرز الموظفين: من الذي يحتاج لهذا الموقع أكثر؟ (Based on Quota Ratio)
-                // لكن للتبسيط: سنملأ الاحتياج حسب من لديه "حصة" أعلى متبقية
-                
                 cleanDepots.forEach(dep => {
                     let needed = 0;
                     let r = reqs[dep] || reqs[dep.trim()];
                     if(r) needed = r[shiftType] || 0;
 
-                    // من من هؤلاء العمال لديه حصة في هذا الموقع؟
-                    // نفرزهم بحيث نأخذ من لديه حصة عالية ولم يستنفذها
                     workers.sort((a, b) => {
                         let quotaA = (a.depotQuotas && a.depotQuotas[dep]) || 0;
                         let quotaB = (b.depotQuotas && b.depotQuotas[dep]) || 0;
                         let usedA = (empDepotUsage[a.id][dep] || 0);
                         let usedB = (empDepotUsage[b.id][dep] || 0);
-                        // الأولوية لمن لديه حصة أكبر متبقية
                         return (quotaB - usedB) - (quotaA - usedA);
                     });
 
                     let i = 0;
                     while(i < workers.length && currentCounts[dep][shiftType] < needed) {
                         let emp = workers[i];
-                        if(!sched[emp.id][d].depot) { // لم يتم تعيينه بعد
+                        if(!sched[emp.id][d].depot) { 
                             sched[emp.id][d].depot = dep;
                             currentCounts[dep][shiftType]++;
                             if(!empDepotUsage[emp.id][dep]) empDepotUsage[emp.id][dep] = 0;
@@ -632,7 +682,6 @@
                     }
                 });
 
-                // الفائض (نوزعه على أي مكان)
                 workers.forEach(emp => {
                     if(!sched[emp.id][d].depot) {
                         let target = cleanDepots.reduce((a, b) => currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b);
@@ -643,37 +692,6 @@
             });
         }
         renderSchedule(); saveData();
-    }
-
-    // --- Helpers ---
-    function handleExceptions(emp, d, sched) {
-        const exc = emp.exceptions || {};
-        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        if (xDates.includes(d)) { sched[emp.id][d] = { shift: "X", depot: "" }; return true; }
-        if (offDates.includes(d)) { sched[emp.id][d] = { shift: "OFF", depot: "" }; return true; }
-        return false;
-    }
-
-    function applyWeekly(emp, numDays, sched, dailyNeeds) {
-        const exc = emp.exceptions || {};
-        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-
-        for(let d=1; d<=numDays; d++) {
-            let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
-            if (shift === "") {
-                const date = new Date(appConfig.year, appConfig.month - 1, d);
-                shift = emp.weeklyTemplate[date.getDay()];
-                if (xDates.includes(d)) shift = "X";
-                else if (offDates.includes(d)) shift = "OFF";
-                
-                sched[emp.id][d] = { shift: shift, depot: "" };
-            }
-            if (["D","EN","LN"].includes(shift)) {
-                if(dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
-            }
-        }
     }
 
     // --- BASE FUNCTIONS ---
@@ -780,7 +798,7 @@
             }
         }
         if(issues.length === 0) report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%)</div>`;
-        else report.innerHTML = `<h4 style="margin:5px 0;">⚠️ تقرير النقص:</h4>` + issues.map(i => `<div class="report-item">${i}</div>`).join('');
+        else report.innerHTML = `<div class="report-analysis">💡 النظام يمنع العمل لأكثر من 5 أيام متواصلة، وهذا قد يسبب عجزاً إذا لم يكن هناك موظفون كافون.</div><h4 style="margin:5px 0;">⚠️ تقرير النقص:</h4>` + issues.map(i => `<div class="report-item">${i}</div>`).join('');
     }
 
     function exportCSV() {
