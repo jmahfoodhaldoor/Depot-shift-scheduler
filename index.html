@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة الذكي (النسخة النهائية + ضبط الجوكر)</title>
+    <title>نظام الجدولة الذكي (الميزان الدقيق)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -64,6 +64,15 @@
         .emp-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px;}
         .pattern-editor { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; }
         
+        .flex-counts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .flex-counts div { display: flex; flex-direction: column; align-items: center; }
+        .flex-counts label { font-size: 0.75rem; font-weight: bold; margin-bottom: 2px; }
+        .flex-counts input { width: 40px; text-align: center; }
+
+        .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; background: #fff7ed; padding: 10px; border-radius: 4px; border: 1px solid #ffedd5; }
+        .depot-quotas div { display: flex; flex-direction: column; }
+        .depot-quotas label { font-size: 0.75rem; color: #9a3412; }
+
         /* Loading Overlay */
         #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; font-size: 1.2rem; color: var(--primary); display: none; flex-direction: column; gap: 10px;}
         
@@ -86,7 +95,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ نظام الجدولة (3 أنواع + جوكر نشيط)</h1>
+        <h1>🗓️ نظام الجدولة (الميزان الذكي)</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -105,8 +114,8 @@
     <div id="view-schedule" class="view active">
         <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
             <div>
-                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (الخوارزمية الذكية)</button>
-                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب العدد)</button>
+                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (حسب الحاجة)</button>
+                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب حصة الموظف)</button>
             </div>
             <div>
                 <button onclick="clearMonth()" class="danger">🗑️ مسح الشهر</button>
@@ -131,13 +140,13 @@
     <div id="view-settings" class="view">
         <div class="emp-card">
             <h3>1. إدارة المواقع (Depots)</h3>
-            <p class="note">افصل بين الأسماء بفاصلة</p>
-            <input type="text" id="settingDepots" style="width: 100%;" value="موقع 1, موقع 2" onchange="updateDepots()">
+            <p class="note">افصل بين الأسماء بفاصلة. مثال: Budaiya, IsaTown</p>
+            <input type="text" id="settingDepots" style="width: 100%;" value="Budaiya, IsaTown" onchange="updateDepots()">
         </div>
 
         <div class="emp-card">
             <h3>2. العدد المطلوب في كل موقع (Requirements)</h3>
-            <p class="note">حدد كم موظف تحتاج في كل شفت. (تأكد من الضغط على زر حفظ بعد التعديل)</p>
+            <p class="note">حدد كم موظف تحتاج في كل شفت.</p>
             <div id="requirementsContainer"></div>
         </div>
 
@@ -210,7 +219,6 @@
             if (json.ok) {
                 state = json.data;
                 
-                // استرجاع الإعدادات
                 if (state.meta && state.meta.depots && state.meta.depots.length > 0) {
                     appConfig.depots = state.meta.depots;
                 } else {
@@ -222,9 +230,12 @@
 
                 document.getElementById('settingDepots').value = appConfig.depots.join(', ');
                 
+                // تنظيف البيانات
                 state.employees.forEach(emp => {
                     if(!emp.patternType) emp.patternType = 'weekly';
-                    if(!emp.rollingPattern) emp.rollingPattern = "D,D,EN,EN,LN,LN,OFF,OFF"; 
+                    // إضافة قيم افتراضية للشفت الدوار المرن
+                    if(!emp.flexCounts) emp.flexCounts = { D: 1, EN: 2, LN: 2, OFF: 2 };
+                    if(!emp.depotQuotas) emp.depotQuotas = {};
                 });
 
                 renderEmployees();
@@ -313,31 +324,43 @@
             const div = document.createElement('div');
             div.className = "emp-card";
             
+            // 1. Weekly UI
             let weekHtml = "";
             WEEKDAYS.forEach((day, i) => {
                 const opts = SHIFTS.map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
-                weekHtml += `
-                    <div style="text-align:center;">
-                        <label style="font-size:0.7rem; color:#666;">${day}</label>
-                        <select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%">${opts}</select>
-                    </div>`;
+                weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#666;">${day}</label><select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%">${opts}</select></div>`;
             });
 
+            // 2. Depot Quota UI (توزيع حصص المواقع)
+            let quotasHtml = `<label style="font-weight:bold; margin-bottom:5px; display:block;">توزيع أيام العمل (أسبوعياً):</label><div class="depot-quotas">`;
+            appConfig.depots.forEach(d => {
+                const val = (emp.depotQuotas && emp.depotQuotas[d]) ? emp.depotQuotas[d] : 0;
+                quotasHtml += `<div><label>${d}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${d}', this.value)"></div>`;
+            });
+            quotasHtml += `</div>`;
+
+            // 3. Pattern Editor
             let patternEditorHtml = "";
+            const flex = emp.flexCounts || { D: 1, EN: 2, LN: 2, OFF: 2 };
+
             if(emp.patternType === 'rolling') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">نمط الشفت الدوار:</label>
-                        <input type="text" value="${emp.rollingPattern}" onchange="updateEmployee('${emp.id}', 'rollingPattern', this.value)" style="width:98%; font-family:monospace; letter-spacing:1px;">
-                        <div class="note">مثال: D,D,EN,EN,LN,LN,OFF,OFF</div>
-                        <div class="note" style="color:#2563eb;">* سيقوم البرنامج باختيار <b>يوم البدء</b> الأنسب، ثم يلتزم بالترتيب.</div>
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">إعدادات الشفت الدوار (عدد الأيام):</label>
+                        <div class="flex-counts">
+                            <div><label>D نهار</label><input type="number" min="0" value="${flex.D}" onchange="updateFlexCount('${emp.id}', 'D', this.value)"></div>
+                            <div><label>EN أول</label><input type="number" min="0" value="${flex.EN}" onchange="updateFlexCount('${emp.id}', 'EN', this.value)"></div>
+                            <div><label>LN آخر</label><input type="number" min="0" value="${flex.LN}" onchange="updateFlexCount('${emp.id}', 'LN', this.value)"></div>
+                            <div><label>OFF</label><input type="number" min="0" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
+                        </div>
+                        <div class="note">سيقوم النظام بترتيب هذه الشفتات بمرونة حسب حاجة الجدول (بدون التزام بترتيب معين، لكن الالتزام بالعدد).</div>
                     </div>
                 `;
             } else if (emp.patternType === 'joker') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 وضع الجوكر (التغطية الشاملة - حد أقصى 4 إجازات)</div>
-                        <div class="note">سيتم استخدامه لسد النقص (يفضل الليل). إذا وصل إلى 4 أيام إجازة، سيتم إجباره على العمل حتى لو كان الجدول مكتملاً.</div>
+                        <div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر (تغطية شاملة)</div>
+                        <div class="note">يغطي النقص تلقائياً. أولوية قصوى لليل (LN/EN). حد أقصى 4 إجازات في الشهر.</div>
                     </div>
                 `;
             } else {
@@ -356,161 +379,62 @@
                     <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold; font-size:1.1rem;">
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
                         <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (نمط ثابت - بداية مرنة)</option>
-                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر (شغيل)</option>
+                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (مرن حسب العدد)</option>
+                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
                 </div>
+                ${quotasHtml}
                 ${patternEditorHtml}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div>
-                        <label style="font-size:0.75rem">إجبار إجازة (تواريخ):</label>
-                        <input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="مثال: 5, 12, 20" onchange="updateExceptions('${emp.id}', 'offDates', this.value)">
-                    </div>
-                    <div>
-                        <label style="font-size:0.75rem">إجبار غياب (تواريخ):</label>
-                        <input type="text" style="width:95%" value="${exc.xDates || ''}" placeholder="مثال: 15" onchange="updateExceptions('${emp.id}', 'xDates', this.value)">
-                    </div>
+                    <div><label style="font-size:0.75rem">إجبار إجازة (تواريخ):</label><input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="5, 12..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)"></div>
+                    <div><label style="font-size:0.75rem">إجبار غياب (تواريخ):</label><input type="text" style="width:95%" value="${exc.xDates || ''}" placeholder="15..." onchange="updateExceptions('${emp.id}', 'xDates', this.value)"></div>
                 </div>
             `;
             container.appendChild(div);
         });
     }
 
+    // --- State Updaters ---
     function addEmployee() {
         const id = "emp_" + Math.random().toString(36).substr(2, 9);
         state.employees.push({
-            id: id,
-            name: "موظف جديد",
-            patternType: "weekly", 
+            id: id, name: "موظف جديد", patternType: "weekly", 
             weeklyTemplate: ["OFF", "D", "D", "D", "D", "D", "OFF"], 
-            rollingPattern: "D,D,EN,EN,LN,LN,OFF,OFF", 
+            flexCounts: { D: 1, EN: 2, LN: 2, OFF: 2 },
+            depotQuotas: {},
             exceptions: { offDates: "", xDates: "" }
         });
         renderEmployees();
     }
-
     function updateEmployee(id, field, value) {
         const emp = state.employees.find(e => e.id === id);
-        if(emp) {
-            emp[field] = value;
-            if(field === 'name' || field === 'patternType') renderEmployees(); 
-        }
+        if(emp) { emp[field] = value; if(field==='patternType') renderEmployees(); }
     }
-
-    function updateWeeklyTemplate(id, dayIndex, val) {
+    function updateWeeklyTemplate(id, i, val) {
+        const emp = state.employees.find(e => e.id === id); if(emp) emp.weeklyTemplate[i] = val;
+    }
+    function updateFlexCount(id, type, val) {
+        const emp = state.employees.find(e => e.id === id); 
+        if(emp) { if(!emp.flexCounts) emp.flexCounts={}; emp.flexCounts[type] = parseInt(val)||0; }
+    }
+    function updateDepotQuota(id, depot, val) {
         const emp = state.employees.find(e => e.id === id);
-        if(emp) emp.weeklyTemplate[dayIndex] = val;
+        if(emp) { if(!emp.depotQuotas) emp.depotQuotas={}; emp.depotQuotas[depot] = parseInt(val)||0; }
     }
-
     function updateExceptions(id, type, val) {
          const emp = state.employees.find(e => e.id === id);
-         if(emp) {
-             if(!emp.exceptions) emp.exceptions = { offDates:"", xDates:"" };
-             emp.exceptions[type] = val;
-         }
+         if(emp) { if(!emp.exceptions) emp.exceptions = { offDates:"", xDates:"" }; emp.exceptions[type] = val; }
     }
-
     function deleteEmployee(id) {
         if(!confirm("حذف الموظف؟")) return;
         state.employees = state.employees.filter(e => e.id !== id);
-        renderEmployees();
-        renderSchedule();
-        saveData(); 
+        renderEmployees(); renderSchedule(); saveData(); 
     }
 
-    // --- SCHEDULE LOGIC ---
-    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
-    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
-    
-    function renderSchedule() {
-        const grid = document.getElementById('scheduleGrid');
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const data = (state.schedule[getMonthKey()] || {});
-        
-        let html = `<thead><tr><th class="emp-col">الموظف</th>`;
-        for(let d=1; d<=numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month - 1, d);
-            const dayName = WEEKDAYS[date.getDay()];
-            const isWeekend = (date.getDay() === 5 || date.getDay() === 6); 
-            html += `<th style="${isWeekend ? 'background:#e2e8f0' : ''}">${d}<br>${dayName}</th>`;
-        }
-        html += `</tr></thead><tbody>`;
-
-        state.employees.forEach(emp => {
-            const empData = data[emp.id] || {};
-            let counts = { D:0, EN:0, LN:0, OFF:0, X:0 };
-            
-            let rowHtml = `<tr><td class="emp-col">
-                <div>${emp.name}</div>
-                <div class="stat-box" id="stats-${emp.id}"></div>
-            </td>`;
-            
-            let prevShift = null;
-
-            for(let d=1; d<=numDays; d++) {
-                const cellData = empData[d] || { shift: "" };
-                const shift = cellData.shift || "";
-                const depot = cellData.depot || "";
-                
-                if(counts[shift] !== undefined) counts[shift]++;
-
-                let violation = "";
-                if (prevShift === 'LN' && shift === 'D') violation = "violation";
-                if (prevShift === 'LN' && shift === 'EN') violation = "violation";
-                
-                if(shift !== 'OFF' && shift !== 'X' && shift !== '') prevShift = shift;
-                if(shift === 'OFF' || shift === 'X') prevShift = 'OFF'; 
-
-                const display = (shift === "OFF" || shift === "X") ? shift : (shift ? `${shift}<span class="depot-tag">${depot}</span>` : "");
-                
-                rowHtml += `<td class="cell shift-${shift} ${violation}" onclick="cycleCell('${emp.id}', ${d})">${display}</td>`;
-            }
-            rowHtml += `</tr>`;
-            html += rowHtml;
-
-            setTimeout(() => {
-                const el = document.getElementById(`stats-${emp.id}`);
-                if(el) el.innerText = `D:${counts.D} EN:${counts.EN} LN:${counts.LN} OFF:${counts.OFF}`;
-            }, 0);
-        });
-
-        html += `</tbody>`;
-        grid.innerHTML = html;
-        analyzeCoverage();
-    }
-
-    function cycleCell(empId, day) {
-        const key = getMonthKey();
-        if(!state.schedule[key]) state.schedule[key] = {};
-        if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
-        
-        const current = state.schedule[key][empId][day] || { shift: "" };
-        let idx = SHIFTS.indexOf(current.shift);
-        
-        if (idx === -1) idx = 0; 
-        else idx++; 
-        
-        let newShift = "";
-        let newDepot = "";
-
-        if (idx < SHIFTS.length) {
-            newShift = SHIFTS[idx];
-            if(["D","EN","LN"].includes(newShift)) {
-                newDepot = current.depot || appConfig.depots[0];
-            }
-        } else {
-            newShift = ""; 
-        }
-
-        state.schedule[key][empId][day] = { shift: newShift, depot: newDepot };
-        renderSchedule();
-        saveData();
-    }
-
-    // --- GENERATOR LOGIC (UPDATED: MAX 4 OFF FOR JOKER) ---
+    // --- GENERATOR LOGIC (Flexible Rolling + Joker) ---
     function generateSchedule() {
-        if(!confirm("سيقوم النظام الآن بتوزيع الشفتات.\nملاحظة: سيتم إجبار 'الجوكر' على العمل إذا تجاوز 4 أيام إجازة في الشهر.")) return;
+        if(!confirm("سيقوم النظام بتوزيع الشفتات.\n- الثابت: حسب أيامه.\n- الدوار: حسب عدد الأيام (مرن).\n- الجوكر: سد النقص.")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -519,9 +443,8 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // 1. حساب إجمالي المطلوب يومياً
+        // 1. حساب الحاجة اليومية
         let dailyNeeds = {}; 
-        
         for(let d=1; d<=numDays; d++) {
             dailyNeeds[d] = { D:0, EN:0, LN:0 };
             cleanDepots.forEach(dep => {
@@ -534,10 +457,9 @@
             });
         }
 
-        // 2. تطبيق النوع الأول: الثابت (Weekly)
+        // 2. تطبيق الثابت (Weekly)
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
-            
             if (emp.patternType === 'weekly' || !emp.patternType) {
                 applyWeekly(emp, numDays, sched, dailyNeeds);
             } else {
@@ -545,84 +467,193 @@
             }
         });
 
-        // 3. تطبيق النوع الثاني: الدوار (Rolling)
+        // 3. تطبيق الدوار المرن (Flexible Rolling)
+        // الفكرة: الموظف عنده "رصيد" شفتات في الشهر. نوزعها حسب الحاجة.
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
+        
+        // حساب رصيد كل موظف للشهر كامل تقريباً
+        let rollingBalances = {};
         rollingEmps.forEach(emp => {
-            applyRollingSmart(emp, numDays, sched, dailyNeeds);
-        });
-
-        // 4. تطبيق النوع الثالث: الجوكر (Joker) - شغيل (Max 4 OFF)
-        const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-        
-        // تتبع حالة الجوكر
-        let jokerStatus = {}; // شفت أمس
-        let jokerOffCounts = {}; // عدد الإجازات
-        
-        jokerEmps.forEach(e => {
-            jokerStatus[e.id] = "OFF";
-            jokerOffCounts[e.id] = 0;
+            const flex = emp.flexCounts || { D:1, EN:2, LN:2, OFF:2 };
+            const cycleLen = (flex.D + flex.EN + flex.LN + flex.OFF) || 7;
+            const cyclesInMonth = numDays / cycleLen;
+            rollingBalances[emp.id] = {
+                D: Math.round(flex.D * cyclesInMonth),
+                EN: Math.round(flex.EN * cyclesInMonth),
+                LN: Math.round(flex.LN * cyclesInMonth),
+                OFF: Math.round(flex.OFF * cyclesInMonth)
+            };
+            // تعقب شفت أمس لمنع القلبة
+            rollingBalances[emp.id].prevShift = "OFF";
         });
 
         for(let d=1; d<=numDays; d++) {
-            let todaysNeeds = dailyNeeds[d]; // المتبقي من الحاجة
-            
-            let availableJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
+            let todaysNeeds = dailyNeeds[d];
+            // خلط الموظفين للعدالة
+            let activeRolling = [...rollingEmps].sort(() => Math.random() - 0.5);
 
-            availableJokers.forEach(emp => {
-                if(checkExceptions(emp, d, sched)) {
-                    let s = sched[emp.id][d].shift;
-                    jokerStatus[emp.id] = s;
-                    if(s === 'OFF' || s === 'X') jokerOffCounts[emp.id]++;
+            activeRolling.forEach(emp => {
+                if(handleExceptions(emp, d, sched)) return;
+
+                let bal = rollingBalances[emp.id];
+                let prev = bal.prevShift;
+                let canMorning = (prev !== 'LN');
+                let assigned = "OFF";
+
+                // محاولة تلبية الحاجة + توفر الرصيد
+                if (todaysNeeds.LN > 0 && bal.LN > 0) {
+                    assigned = "LN"; todaysNeeds.LN--; bal.LN--;
+                } else if (todaysNeeds.EN > 0 && bal.EN > 0 && canMorning) {
+                    assigned = "EN"; todaysNeeds.EN--; bal.EN--;
+                } else if (todaysNeeds.D > 0 && bal.D > 0 && canMorning) {
+                    assigned = "D"; todaysNeeds.D--; bal.D--;
+                } else {
+                    // لم نجد شفت مناسب أو انتهى الرصيد -> إجازة
+                    // أو نعطيه شفت فائض إذا كان رصيد الإجازات انتهى (اختياري، هنا سأعطيه إجازة)
+                    assigned = "OFF";
+                }
+                
+                sched[emp.id][d] = { shift: assigned, depot: "" };
+                bal.prevShift = assigned;
+            });
+        }
+
+        // 4. الجوكر (Joker)
+        const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
+        let jokerOffCounts = {};
+        let jokerPrev = {};
+        jokerEmps.forEach(e => { jokerOffCounts[e.id] = 0; jokerPrev[e.id] = "OFF"; });
+
+        for(let d=1; d<=numDays; d++) {
+            let todaysNeeds = dailyNeeds[d];
+            let activeJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
+
+            activeJokers.forEach(emp => {
+                if(handleExceptions(emp, d, sched)) {
+                    if(sched[emp.id][d].shift === 'OFF') jokerOffCounts[emp.id]++;
+                    jokerPrev[emp.id] = sched[emp.id][d].shift;
                     return;
                 }
 
-                let prevShift = jokerStatus[emp.id];
-                let canWorkMorning = (prevShift !== "LN");
-                let assignedShift = "OFF";
-
-                // هل تجاوز الحد الأقصى للإجازات؟ (4 أيام)
-                // إذا كان عدد إجازاته حتى الآن >= 4، يجب إجباره على العمل اليوم
-                // إلا إذا كان "ممنوعاً" بسبب LN -> D ولا يوجد خيار آخر
+                let prev = jokerPrev[emp.id];
+                let canMorning = (prev !== 'LN');
+                let assigned = "OFF";
                 let forceWork = (jokerOffCounts[emp.id] >= 4);
 
-                // منطق التعيين (الأولوية للحاجة، ثم للإجبار)
-                if (todaysNeeds.LN > 0) {
-                    assignedShift = "LN";
-                    todaysNeeds.LN--;
-                } else if (todaysNeeds.EN > 0 && canWorkMorning) {
-                    assignedShift = "EN";
-                    todaysNeeds.EN--;
-                } else if (todaysNeeds.D > 0 && canWorkMorning) {
-                    // الجوكر يأخذ نهار إذا فيه حاجة ماسة
-                    assignedShift = "D"; 
-                    todaysNeeds.D--;
-                } else if (forceWork) {
-                    // --- حالة الإجبار (انتهت الحاجة لكن لازم يشتغل) ---
-                    // نختار له شفت ليلي (أول ليل أو آخر ليل)
-                    if(canWorkMorning) {
-                        // يفضل EN على D
-                        assignedShift = "EN"; 
-                    } else {
-                        // إذا كان أمس LN، اليوم نعطيه LN أيضاً (لأن D و EN ممنوعين)
-                        assignedShift = "LN";
-                    }
+                if (todaysNeeds.LN > 0) { assigned = "LN"; todaysNeeds.LN--; }
+                else if (todaysNeeds.EN > 0 && canMorning) { assigned = "EN"; todaysNeeds.EN--; }
+                else if (todaysNeeds.D > 0 && canMorning) { assigned = "D"; todaysNeeds.D--; }
+                else if (forceWork) {
+                    assigned = canMorning ? "EN" : "LN"; // تعبئة فراغ ليلي
                 } else {
-                    // لا حاجة، ولم يصل للحد الأقصى -> إجازة
-                    assignedShift = "OFF";
+                    assigned = "OFF";
                 }
 
-                sched[emp.id][d] = { shift: assignedShift, depot: "" };
-                jokerStatus[emp.id] = assignedShift;
-                if(assignedShift === 'OFF') jokerOffCounts[emp.id]++;
+                sched[emp.id][d] = { shift: assigned, depot: "" };
+                jokerPrev[emp.id] = assigned;
+                if(assigned === 'OFF') jokerOffCounts[emp.id]++;
             });
         }
         
-        renderSchedule();
-        saveData();
-        alert("تم التوزيع! تم ضبط الجوكر بحيث لا يتجاوز 4 أيام إجازة.");
+        renderSchedule(); saveData();
+        alert("تم توزيع الشفتات (بناءً على الأعداد المرنة وحصص المواقع).");
     }
 
-    // --- Helpers for Generator ---
+    // --- DEPOT DISTRIBUTOR (QUOTA BASED) ---
+    function fillDepots() {
+        const key = getMonthKey();
+        const sched = state.schedule[key];
+        if(!sched) return;
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const reqs = state.meta.requirements || {};
+        const cleanDepots = appConfig.depots.map(d => d.trim());
+
+        if(!confirm("سيتم توزيع المواقع مع مراعاة 'حصص الموظفين' (Quotas) لكل موقع.")) return;
+
+        // تصفير المواقع
+        for(let d=1; d<=numDays; d++) {
+            state.employees.forEach(emp => {
+                if(sched[emp.id] && sched[emp.id][d] && ["D","EN","LN"].includes(sched[emp.id][d].shift)) {
+                    sched[emp.id][d].depot = ""; 
+                }
+            });
+        }
+
+        // تتبع عدد مرات العمل لكل موظف في كل موقع خلال الشهر
+        let empDepotUsage = {}; 
+        state.employees.forEach(e => empDepotUsage[e.id] = {});
+
+        // التوزيع يوم بيوم
+        for(let d=1; d<=numDays; d++) {
+            let currentCounts = {}; 
+            cleanDepots.forEach(dep => { currentCounts[dep] = { D:0, EN:0, LN:0 }; });
+
+            let workersByShift = { D:[], EN:[], LN:[] };
+            state.employees.forEach(emp => {
+                if(sched[emp.id] && sched[emp.id][d]) {
+                    const s = sched[emp.id][d].shift;
+                    if(["D","EN","LN"].includes(s)) workersByShift[s].push(emp);
+                }
+            });
+
+            ["D", "EN", "LN"].forEach(shiftType => {
+                let workers = workersByShift[shiftType];
+                if(workers.length === 0) return;
+
+                // فرز الموظفين: من الذي يحتاج لهذا الموقع أكثر؟ (Based on Quota Ratio)
+                // لكن للتبسيط: سنملأ الاحتياج حسب من لديه "حصة" أعلى متبقية
+                
+                cleanDepots.forEach(dep => {
+                    let needed = 0;
+                    let r = reqs[dep] || reqs[dep.trim()];
+                    if(r) needed = r[shiftType] || 0;
+
+                    // من من هؤلاء العمال لديه حصة في هذا الموقع؟
+                    // نفرزهم بحيث نأخذ من لديه حصة عالية ولم يستنفذها
+                    workers.sort((a, b) => {
+                        let quotaA = (a.depotQuotas && a.depotQuotas[dep]) || 0;
+                        let quotaB = (b.depotQuotas && b.depotQuotas[dep]) || 0;
+                        let usedA = (empDepotUsage[a.id][dep] || 0);
+                        let usedB = (empDepotUsage[b.id][dep] || 0);
+                        // الأولوية لمن لديه حصة أكبر متبقية
+                        return (quotaB - usedB) - (quotaA - usedA);
+                    });
+
+                    let i = 0;
+                    while(i < workers.length && currentCounts[dep][shiftType] < needed) {
+                        let emp = workers[i];
+                        if(!sched[emp.id][d].depot) { // لم يتم تعيينه بعد
+                            sched[emp.id][d].depot = dep;
+                            currentCounts[dep][shiftType]++;
+                            if(!empDepotUsage[emp.id][dep]) empDepotUsage[emp.id][dep] = 0;
+                            empDepotUsage[emp.id][dep]++;
+                        }
+                        i++;
+                    }
+                });
+
+                // الفائض (نوزعه على أي مكان)
+                workers.forEach(emp => {
+                    if(!sched[emp.id][d].depot) {
+                        let target = cleanDepots.reduce((a, b) => currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b);
+                        sched[emp.id][d].depot = target;
+                        currentCounts[target][shiftType]++;
+                    }
+                });
+            });
+        }
+        renderSchedule(); saveData();
+    }
+
+    // --- Helpers ---
+    function handleExceptions(emp, d, sched) {
+        const exc = emp.exceptions || {};
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        if (xDates.includes(d)) { sched[emp.id][d] = { shift: "X", depot: "" }; return true; }
+        if (offDates.includes(d)) { sched[emp.id][d] = { shift: "OFF", depot: "" }; return true; }
+        return false;
+    }
 
     function applyWeekly(emp, numDays, sched, dailyNeeds) {
         const exc = emp.exceptions || {};
@@ -645,158 +676,72 @@
         }
     }
 
-    function applyRollingSmart(emp, numDays, sched, dailyNeeds) {
-        let pattern = emp.rollingPattern.split(',').map(s => s.trim().toUpperCase());
-        if(pattern.length === 0) pattern = ["OFF"];
-        const pLen = pattern.length;
-
-        let bestOffset = 0;
-        let bestScore = -Infinity; 
-
-        for(let offset = 0; offset < pLen; offset++) {
-            let currentScore = 0;
-            for(let d=1; d<=numDays; d++) {
-                let pIndex = (d - 1 + offset) % pLen; 
-                let proposedShift = pattern[pIndex];
-                
-                if (["D","EN","LN"].includes(proposedShift)) {
-                    if (dailyNeeds[d][proposedShift] > 0) currentScore += 10;
-                    else currentScore -= 2; 
-                }
-            }
-            if (currentScore > bestScore) {
-                bestScore = currentScore;
-                bestOffset = offset;
-            }
-        }
-
-        const exc = emp.exceptions || {};
-        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-
-        for(let d=1; d<=numDays; d++) {
-            let pIndex = (d - 1 + bestOffset) % pLen;
-            let finalShift = pattern[pIndex];
-            
-            if (xDates.includes(d)) finalShift = "X";
-            else if (offDates.includes(d)) finalShift = "OFF";
-
-            sched[emp.id][d] = { shift: finalShift, depot: "" };
-
-            if (["D","EN","LN"].includes(finalShift)) {
-                if(dailyNeeds[d][finalShift] > 0) dailyNeeds[d][finalShift]--;
-            }
-        }
-    }
-
-    function checkExceptions(emp, d, sched) {
-        const exc = emp.exceptions || {};
-        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        
-        if (xDates.includes(d)) {
-            sched[emp.id][d] = { shift: "X", depot: "" };
-            return true;
-        }
-        if (offDates.includes(d)) {
-            sched[emp.id][d] = { shift: "OFF", depot: "" };
-            return true;
-        }
-        return false;
-    }
-
-
-    // --- DEPOT DISTRIBUTOR (CORRECTED & CLEAN) ---
-    function fillDepots() {
-        const key = getMonthKey();
-        const sched = state.schedule[key];
-        if(!sched) return;
+    // --- BASE FUNCTIONS ---
+    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
+    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+    
+    function renderSchedule() {
+        const grid = document.getElementById('scheduleGrid');
         const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const reqs = state.meta.requirements || {};
-        const cleanDepots = appConfig.depots.map(d => d.trim());
-
-        let totalReqs = 0;
-        cleanDepots.forEach(d => {
-            let r = reqs[d] || reqs[d.trim()];
-            if(r) totalReqs += (r.D||0) + (r.EN||0) + (r.LN||0);
-        });
-
-        if(totalReqs === 0) {
-            alert("تنبيه: الأعداد المطلوبة صفر! تأكد من إدخال الأعداد وحفظها في الإعدادات.");
-            return;
-        }
-
-        if(!confirm("سيتم إعادة توزيع المواقع بدقة حسب العدد المطلوب وتصحيح الأسماء.\nهل أنت متأكد؟")) return;
-
+        const data = (state.schedule[getMonthKey()] || {});
+        let html = `<thead><tr><th class="emp-col">الموظف</th>`;
         for(let d=1; d<=numDays; d++) {
-            let currentCounts = {}; 
-            cleanDepots.forEach(dep => {
-                currentCounts[dep] = { D:0, EN:0, LN:0 };
-            });
-
-            let unassigned = { D: [], EN: [], LN: [] };
-
-            state.employees.forEach(emp => {
-                if(sched[emp.id] && sched[emp.id][d]) {
-                    const cell = sched[emp.id][d];
-                    if(["D","EN","LN"].includes(cell.shift)) {
-                        cell.depot = ""; 
-                        unassigned[cell.shift].push(cell);
-                    }
-                }
-            });
-
-            ["D", "EN", "LN"].forEach(shiftType => {
-                let workers = unassigned[shiftType];
-                if(workers.length === 0) return;
-
-                cleanDepots.forEach(dep => {
-                    let needed = 0;
-                    if(reqs[dep]) needed = reqs[dep][shiftType] || 0;
-                    else if(reqs[dep.trim()]) needed = reqs[dep.trim()][shiftType] || 0;
-                    
-                    while (workers.length > 0 && currentCounts[dep][shiftType] < needed) {
-                        let cell = workers.pop(); 
-                        cell.depot = dep;      
-                        currentCounts[dep][shiftType]++;
-                    }
-                });
-
-                while (workers.length > 0) {
-                    let targetDepot = cleanDepots.reduce((a, b) => 
-                        currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
-                    );
-                    let cell = workers.pop();
-                    cell.depot = targetDepot;
-                    currentCounts[targetDepot][shiftType]++;
-                }
-            });
+            const date = new Date(appConfig.year, appConfig.month - 1, d);
+            const dayName = WEEKDAYS[date.getDay()];
+            const isWeekend = (date.getDay() === 5 || date.getDay() === 6); 
+            html += `<th style="${isWeekend ? 'background:#e2e8f0' : ''}">${d}<br>${dayName}</th>`;
         }
-        
-        renderSchedule();
-        saveData();
-        alert("تم توزيع المواقع وتصحيح الأسماء!");
+        html += `</tr></thead><tbody>`;
+        state.employees.forEach(emp => {
+            const empData = data[emp.id] || {};
+            let counts = { D:0, EN:0, LN:0, OFF:0, X:0 };
+            let rowHtml = `<tr><td class="emp-col"><div>${emp.name}</div><div class="stat-box" id="stats-${emp.id}"></div></td>`;
+            let prevShift = null;
+            for(let d=1; d<=numDays; d++) {
+                const cell = empData[d] || { shift: "" };
+                const shift = cell.shift || "";
+                const depot = cell.depot || "";
+                if(counts[shift] !== undefined) counts[shift]++;
+                let violation = (prevShift === 'LN' && (shift === 'D' || shift === 'EN')) ? "violation" : "";
+                if(shift !== 'OFF' && shift !== 'X' && shift !== '') prevShift = shift;
+                if(shift === 'OFF' || shift === 'X') prevShift = 'OFF'; 
+                const display = (shift === "OFF" || shift === "X") ? shift : (shift ? `${shift}<span class="depot-tag">${depot}</span>` : "");
+                rowHtml += `<td class="cell shift-${shift} ${violation}" onclick="cycleCell('${emp.id}', ${d})">${display}</td>`;
+            }
+            rowHtml += `</tr>`;
+            html += rowHtml;
+            setTimeout(() => { document.getElementById(`stats-${emp.id}`).innerText = `D:${counts.D} EN:${counts.EN} LN:${counts.LN}`; }, 0);
+        });
+        html += `</tbody>`;
+        grid.innerHTML = html;
+        analyzeCoverage();
     }
 
-    // --- FIX: CLEAR MONTH ---
-    function clearMonth() {
-        if(!confirm("هل أنت متأكد من مسح جدول هذا الشهر بالكامل؟")) return;
+    function cycleCell(empId, day) {
         const key = getMonthKey();
-        state.schedule[key] = {}; 
-        renderSchedule();         
-        saveData();               
+        if(!state.schedule[key]) state.schedule[key] = {};
+        if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
+        const current = state.schedule[key][empId][day] || { shift: "" };
+        let idx = SHIFTS.indexOf(current.shift);
+        if (idx === -1) idx = 0; else idx++; 
+        let newShift = (idx < SHIFTS.length) ? SHIFTS[idx] : "";
+        let newDepot = (["D","EN","LN"].includes(newShift)) ? (current.depot || appConfig.depots[0]) : "";
+        state.schedule[key][empId][day] = { shift: newShift, depot: newDepot };
+        renderSchedule(); saveData();
     }
 
-    // --- UTILS ---
+    function clearMonth() {
+        if(!confirm("هل أنت متأكد من مسح الجدول؟")) return;
+        state.schedule[getMonthKey()] = {}; renderSchedule(); saveData();
+    }
+
     function updateDepots() {
         const val = document.getElementById('settingDepots').value;
         appConfig.depots = val.split(',').map(s => s.trim()).filter(s => s);
         renderRequirementsTable();
     }
 
-    function showLoader(show) {
-        document.getElementById('loader').style.display = show ? 'flex' : 'none';
-    }
+    function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
 
     function analyzeCoverage() {
         const report = document.getElementById('coverageReport');
@@ -805,85 +750,57 @@
         const sched = state.schedule[key] || {};
         const requirements = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
-        
         let issues = [];
-
         for(let d=1; d<=numDays; d++) {
             let dailyCounts = {}; 
             cleanDepots.forEach(dep => dailyCounts[dep] = {D:0, EN:0, LN:0});
-
             let totalAvailableWorkers = 0;
             state.employees.forEach(emp => {
                 const cell = (sched[emp.id] && sched[emp.id][d]) ? sched[emp.id][d] : null;
-                if(cell) {
-                     if(cell.shift !== 'OFF' && cell.shift !== 'X' && cell.shift !== '') {
-                         totalAvailableWorkers++;
-                         if(cell.depot) {
-                            let cellDepot = cell.depot.trim(); 
-                            if(dailyCounts[cellDepot] && dailyCounts[cellDepot][cell.shift] !== undefined) {
-                                dailyCounts[cellDepot][cell.shift]++;
-                            }
-                         }
+                if(cell && cell.shift !== 'OFF' && cell.shift !== 'X' && cell.shift !== '') {
+                     totalAvailableWorkers++;
+                     if(cell.depot) {
+                        let cellDepot = cell.depot.trim(); 
+                        if(dailyCounts[cellDepot] && dailyCounts[cellDepot][cell.shift] !== undefined) dailyCounts[cellDepot][cell.shift]++;
                      }
                 }
             });
-
             let dailyReqTotal = 0;
             cleanDepots.forEach(dep => {
                 let req = requirements[dep] || requirements[dep.trim()];
-                if(!req) return;
-                dailyReqTotal += (req.D||0) + (req.EN||0) + (req.LN||0);
-
+                if(req) dailyReqTotal += (req.D||0) + (req.EN||0) + (req.LN||0);
                 ["D","EN","LN"].forEach(shift => {
-                    const required = req[shift] || 0;
+                    const required = req ? (req[shift] || 0) : 0;
                     const actual = dailyCounts[dep][shift];
-                    if(actual < required) {
-                        issues.push(`يوم ${d}: <b>${dep}</b> (شفت ${shift}) - المطلوب ${required}، الموجود ${actual}`);
-                    }
+                    if(actual < required) issues.push(`يوم ${d}: <b>${dep}</b> (شفت ${shift}) - المطلوب ${required}، الموجود ${actual}`);
                 });
             });
-            
             if (dailyReqTotal > totalAvailableWorkers && issues.some(i => i.includes(`يوم ${d}`))) {
-                issues.push(`<span style="color:#d97706; font-size:0.85rem;">⚠️ تشخيص يوم ${d}: أنت تطلب ${dailyReqTotal} شفت، ولكن المتوفرين للعمل فقط ${totalAvailableWorkers} موظفين (الباقي إجازات). هذا عجز حقيقي.</span>`);
+                issues.push(`<span style="color:#d97706; font-size:0.85rem;">⚠️ تشخيص يوم ${d}: أنت تطلب ${dailyReqTotal} شفت، والمتوفر ${totalAvailableWorkers}.</span>`);
             }
         }
-
-        if(issues.length === 0) {
-            report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%) - لا يوجد نقص.</div>`;
-        } else {
-            report.innerHTML = `<div class="report-analysis">💡 تلميح: رسائل "عجز حقيقي" تعني أن عدد الموظفين المداومين اليوم لا يكفي لتغطية الطلب.</div>` + 
-                `<h4 style="margin:10px 0 10px 0;">⚠️ تقرير النقص:</h4>` + 
-                issues.map(i => `<div class="report-item" style="${i.includes('تشخيص') ? 'margin-bottom:10px; margin-right:15px;' : ''}">${i.includes('تشخيص') ? '' : '❌ '}${i}</div>`).join('');
-        }
+        if(issues.length === 0) report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%)</div>`;
+        else report.innerHTML = `<h4 style="margin:5px 0;">⚠️ تقرير النقص:</h4>` + issues.map(i => `<div class="report-item">${i}</div>`).join('');
     }
 
     function exportCSV() {
         const numDays = daysInMonth(appConfig.year, appConfig.month);
-        let csv = "\uFEFF"; 
-        csv += "الموظف,";
-        for(let d=1; d<=numDays; d++) csv += d + ",";
-        csv += "\n";
-
+        let csv = "\uFEFF"; csv += "الموظف,";
+        for(let d=1; d<=numDays; d++) csv += d + ","; csv += "\n";
         const key = getMonthKey();
         const data = state.schedule[key] || {};
-
         state.employees.forEach(emp => {
             csv += `"${emp.name}",`;
             for(let d=1; d<=numDays; d++) {
                 const cell = (data[emp.id] && data[emp.id][d]) ? data[emp.id][d] : {shift:""};
-                let val = cell.shift;
-                if(val && cell.depot) val += ` (${cell.depot})`;
+                let val = cell.shift; if(val && cell.depot) val += ` (${cell.depot})`;
                 csv += `"${val}",`;
             }
             csv += "\n";
         });
-
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Schedule_${appConfig.year}_${appConfig.month}.csv`;
-        a.click();
+        const a = document.createElement('a'); a.href = url; a.download = `Schedule.csv`; a.click();
     }
 </script>
 </body>
