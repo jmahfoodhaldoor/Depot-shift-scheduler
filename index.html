@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة (النسخة الصارمة - منع القلبة)</title>
+    <title>نظام السيدة زينب لجدولة الشفتات-</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -40,6 +40,7 @@
         .cell.shift-X { background-color: #fee2e2; color: #b91c1c; font-weight: bold; } 
         .stat-box { font-size: 0.70rem; color: #64748b; margin-top: 2px; display:flex; gap:3px; flex-wrap:wrap;}
         .violation { border: 3px solid #ef4444 !important; position: relative; }
+        .violation::after { content: '⚠️'; position: absolute; top: 2px; right: 2px; font-size: 0.7rem; }
         .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .req-table th, .req-table td { border: 1px solid #eee; padding: 8px; text-align: center; }
         .req-table th { background: #f8fafc; }
@@ -61,6 +62,7 @@
         .report-item { color: #b91c1c; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
         .report-ok { color: #047857; font-weight: bold; }
         .report-analysis { background: #fff7ed; border: 1px solid #fdba74; padding: 10px; margin-bottom: 10px; border-radius: 4px; color: #9a3412; font-size: 0.9rem;}
+        .alert-box { background: #fef3c7; border: 2px solid #fbbf24; padding: 12px; border-radius: 6px; margin: 10px 0; color: #92400e; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -72,7 +74,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ نظام الجدولة (النسخة الصارمة)</h1>
+        <h1>🗓️ ظام السيدة زينب لجدولة الشفتات</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -89,9 +91,12 @@
     </div>
 
     <div id="view-schedule" class="view active">
+        <div class="alert-box">
+            ✅ <strong>التحسينات الجديدة:</strong> منع قلبة الشفت (LN→D/EN، EN→D) | دلو أسبوعي دقيق (تصفير كل أحد) | أولوية الجوكر للشفتات الليلية
+        </div>
         <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
             <div>
-                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (خوارزمية منع القلبة)</button>
+                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (محسّن)</button>
                 <button onclick="fillDepots()">🏭 توزيع المواقع (حسب الحصة)</button>
             </div>
             <div>
@@ -137,6 +142,30 @@
     let appConfig = { depots: ["Main", "North"], year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
     const SHIFTS = ["D", "EN", "LN", "OFF", "X"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+
+    // ============== SHIFT FLIP PREVENTION ==============
+    /**
+     * ✅ فحص قلبة الشفت - يمنع:
+     * 1. LN → D (آخر ليل إلى نهار)
+     * 2. LN → EN (آخر ليل إلى أول ليل)
+     * 3. EN → D (أول ليل إلى نهار)
+     */
+    function isShiftFlipViolation(previousShift, nextShift) {
+        if (!previousShift || previousShift === 'OFF' || previousShift === 'X') return false;
+        if (nextShift === 'OFF' || nextShift === 'X') return false;
+        
+        // LN → D أو LN → EN
+        if (previousShift === 'LN') {
+            return nextShift === 'D' || nextShift === 'EN';
+        }
+        
+        // EN → D
+        if (previousShift === 'EN') {
+            return nextShift === 'D';
+        }
+        
+        return false;
+    }
 
     // --- INITIALIZATION ---
     window.onload = () => { initDateSelectors(); loadData(); };
@@ -241,17 +270,17 @@
             if(emp.patternType === 'rolling') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">الحصة الأسبوعية (الأحد-السبت):</label>
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">الحصة الأسبوعية (كل أسبوع من الأحد للسبت):</label>
                         <div class="flex-counts">
-                            <div><label>D</label><input type="number" min="0" value="${flex.D}" onchange="updateFlexCount('${emp.id}', 'D', this.value)"></div>
-                            <div><label>EN</label><input type="number" min="0" value="${flex.EN}" onchange="updateFlexCount('${emp.id}', 'EN', this.value)"></div>
-                            <div><label>LN</label><input type="number" min="0" value="${flex.LN}" onchange="updateFlexCount('${emp.id}', 'LN', this.value)"></div>
+                            <div><label>D نهار</label><input type="number" min="0" value="${flex.D}" onchange="updateFlexCount('${emp.id}', 'D', this.value)"></div>
+                            <div><label>EN أول</label><input type="number" min="0" value="${flex.EN}" onchange="updateFlexCount('${emp.id}', 'EN', this.value)"></div>
+                            <div><label>LN آخر</label><input type="number" min="0" value="${flex.LN}" onchange="updateFlexCount('${emp.id}', 'LN', this.value)"></div>
                             <div><label>OFF</label><input type="number" min="0" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
                         </div>
-                        <div class="note">سيتم منح الأولوية لتغطية النهار (D) بهذا الرصيد لتوفير الليل للجوكر.</div>
+                        <div class="note">✅ سيتم تصفير العداد كل يوم أحد، وتوزيع هذه الكميات بدقة خلال الأسبوع.</div>
                     </div>`;
             } else if (emp.patternType === 'joker') {
-                patternEditorHtml = `<div class="pattern-editor"><div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر</div><div class="note">أولوية لليل (LN/EN). يتجنب النهار. Max 4 OFF.</div></div>`;
+                patternEditorHtml = `<div class="pattern-editor"><div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر</div><div class="note">✅ يغطي النقص تلقائياً. أولوية: LN → EN → D. Max 4 OFF/Month.</div></div>`;
             } else {
                 patternEditorHtml = `<div class="pattern-editor"><label style="font-weight:bold; display:block; margin-bottom:5px;">الأيام الثابتة:</label><div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:5px;">${weekHtml}</div></div>`;
             }
@@ -261,14 +290,14 @@
                     <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold; font-size:1.1rem;">
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
                         <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (الحصة الأسبوعية)</option>
+                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (حصة أسبوعية صارمة)</option>
                         <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
                 </div>
                 ${quotasHtml} ${patternEditorHtml}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div><label style="font-size:0.75rem">إجبار إجازة:</label><input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="5, 12..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)"></div>
+                    <div><label style="font-size:0.75rem">إجبار إجازة (تواريخ):</label><input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="5, 12..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)"></div>
                     <div><label style="font-size:0.75rem">إجبار غياب:</label><input type="text" style="width:95%" value="${exc.xDates || ''}" placeholder="15..." onchange="updateExceptions('${emp.id}', 'xDates', this.value)"></div>
                 </div>`;
             container.appendChild(div);
@@ -288,9 +317,9 @@
     function updateExceptions(id, t, v) { const e = state.employees.find(x=>x.id===id); if(e){ if(!e.exceptions) e.exceptions={}; e.exceptions[t]=v; } }
     function deleteEmployee(id) { if(confirm("حذف؟")) { state.employees = state.employees.filter(x=>x.id!==id); renderEmployees(); renderSchedule(); saveData(); } }
 
-    // --- STRICT GENERATOR LOGIC ---
+    // ============== IMPROVED GENERATOR LOGIC ==============
     function generateSchedule() {
-        if(!confirm("سيتم توزيع الشفتات.\n- الالتزام الصارم بمنع 'قلبة الشفت' (LN->D/EN و EN->D ممنوع).\n- الشفت الدوار يغطي النهار أولاً.\n- الجوكر يغطي الليل.")) return;
+        if(!confirm("✅ النظام المحسّن:\n• منع قلبة الشفت (LN→D/EN، EN→D)\n• دلو أسبوعي دقيق (تصفير كل أحد)\n• أولوية الجوكر: LN → EN → D\n• حد أقصى 5 أيام متواصلة\n\nهل تريد المتابعة؟")) return;
         
         const key = getMonthKey();
         if(!state.schedule[key]) state.schedule[key] = {};
@@ -299,6 +328,7 @@
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
+        // 1. Calculate Daily Needs
         let dailyNeeds = {}; 
         for(let d=1; d<=numDays; d++) {
             dailyNeeds[d] = { D:0, EN:0, LN:0 };
@@ -312,179 +342,224 @@
             });
         }
 
+        // Tracking
         let workStreaks = {}; 
-        state.employees.forEach(e => workStreaks[e.id] = 0);
+        let empPrevShift = {}; // ✅ Track previous shift for flip prevention
+        state.employees.forEach(e => {
+            workStreaks[e.id] = 0;
+            empPrevShift[e.id] = 'OFF';
+        });
 
-        // 2. Fixed Weekly
+        // 2. Fixed Weekly Employees
         state.employees.forEach(emp => {
             if(!sched[emp.id]) sched[emp.id] = {};
             if (emp.patternType === 'weekly' || !emp.patternType) {
-                applyWeekly(emp, numDays, sched, dailyNeeds, workStreaks);
+                applyWeeklyImproved(emp, numDays, sched, dailyNeeds, workStreaks, empPrevShift);
             } else {
                 for(let d=1; d<=numDays; d++) sched[emp.id][d] = { shift: "", depot: "" };
             }
         });
 
-        // 3. Rolling Employees (Day First + Strict Anti-Flip)
+        // 3. Rolling Employees (✅ IMPROVED WEEKLY BUCKET)
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
-        let rollingPrevShift = {};
-        rollingEmps.forEach(e => rollingPrevShift[e.id] = "OFF");
-
-        let currentDay = 1;
-        while(currentDay <= numDays) {
-            let weekStart = currentDay;
-            let daysInWeek = [];
-            let d = weekStart;
-            while(d <= numDays) {
-                daysInWeek.push(d);
-                let curDate = new Date(appConfig.year, appConfig.month - 1, d);
-                if(curDate.getDay() === 6) break; 
-                d++;
+        
+        for(let d=1; d<=numDays; d++) {
+            const date = new Date(appConfig.year, appConfig.month - 1, d);
+            const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
+            const isWeekStart = (dayOfWeek === 0);
+            
+            // ✅ Reset buckets on Sunday
+            if(isWeekStart) {
+                rollingEmps.forEach(emp => {
+                    emp._weeklyBucketUsed = { D: 0, EN: 0, LN: 0, OFF: 0 };
+                });
             }
             
-            let empBuckets = {};
+            // Initialize bucket if not exists
             rollingEmps.forEach(emp => {
-                let flex = emp.flexCounts || { D:1, EN:2, LN:2, OFF:2 };
-                empBuckets[emp.id] = { D: flex.D, EN: flex.EN, LN: flex.LN, OFF: flex.OFF };
+                if(!emp._weeklyBucketUsed) {
+                    emp._weeklyBucketUsed = { D: 0, EN: 0, LN: 0, OFF: 0 };
+                }
             });
+            
+            let todaysNeeds = {...dailyNeeds[d]};
+            let activeRolling = [...rollingEmps].sort(() => Math.random() - 0.5);
 
-            daysInWeek.forEach(dayNum => {
-                let todaysNeeds = dailyNeeds[dayNum];
-                let activeRolling = [...rollingEmps].sort(() => Math.random() - 0.5);
-
-                activeRolling.forEach(emp => {
-                    if(handleExceptions(emp, dayNum, sched, workStreaks)) {
-                        if(sched[emp.id][dayNum].shift === 'OFF' && empBuckets[emp.id].OFF > 0) empBuckets[emp.id].OFF--;
-                        rollingPrevShift[emp.id] = sched[emp.id][dayNum].shift;
-                        return;
-                    }
-
-                    let bucket = empBuckets[emp.id];
-                    let prev = rollingPrevShift[emp.id];
-                    let assigned = "OFF";
-                    let streak = workStreaks[emp.id] || 0;
-
-                    if (streak >= 5) {
-                        assigned = "OFF"; 
-                    } else {
-                        // Priority: D > EN > LN (To save Night for Jokers)
-                        // STRICT FLIP CHECK:
-                        // LN -> D (Ban)
-                        // LN -> EN (Ban)
-                        // EN -> D (Ban) - New Rule
-                        
-                        let allowD = (prev !== 'LN' && prev !== 'EN');
-                        let allowEN = (prev !== 'LN');
-                        
-                        if (todaysNeeds.D > 0 && bucket.D > 0 && allowD) {
-                            assigned = "D"; todaysNeeds.D--; bucket.D--;
-                        } else if (todaysNeeds.EN > 0 && bucket.EN > 0 && allowEN) {
-                            assigned = "EN"; todaysNeeds.EN--; bucket.EN--;
-                        } else if (todaysNeeds.LN > 0 && bucket.LN > 0) {
-                            assigned = "LN"; todaysNeeds.LN--; bucket.LN--;
-                        } else {
-                            // If needs met or blocked, try to drain bucket safely
-                            if (bucket.OFF > 0) {
-                                assigned = "OFF"; bucket.OFF--;
-                            } else {
-                                if (bucket.D > 0 && allowD) { assigned = "D"; bucket.D--; }
-                                else if (bucket.EN > 0 && allowEN) { assigned = "EN"; bucket.EN--; }
-                                else if (bucket.LN > 0) { assigned = "LN"; bucket.LN--; }
-                                else assigned = "OFF";
-                            }
-                        }
-                    }
-
-                    sched[emp.id][dayNum] = { shift: assigned, depot: "" };
-                    rollingPrevShift[emp.id] = assigned;
-                    updateStreak(emp.id, assigned, workStreaks);
-                });
-            });
-            currentDay = d + 1;
-        }
-
-        // 4. Joker (Night First + Strict Anti-Flip)
-        const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-        let jokerOffCounts = {};
-        let jokerPrev = {};
-        jokerEmps.forEach(e => { jokerOffCounts[e.id] = 0; jokerPrev[e.id] = "OFF"; });
-
-        for(let d=1; d<=numDays; d++) {
-            let todaysNeeds = dailyNeeds[d];
-            let activeJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
-
-            activeJokers.forEach(emp => {
-                if(handleExceptions(emp, d, sched, workStreaks)) {
-                    if(sched[emp.id][d].shift === 'OFF') jokerOffCounts[emp.id]++;
-                    jokerPrev[emp.id] = sched[emp.id][d].shift;
+            activeRolling.forEach(emp => {
+                // Handle exceptions first
+                if(handleExceptionsImproved(emp, d, sched, workStreaks, empPrevShift)) {
                     return;
                 }
 
-                let prev = jokerPrev[emp.id];
+                const flex = emp.flexCounts || { D:1, EN:2, LN:2, OFF:2 };
+                const used = emp._weeklyBucketUsed;
+                const prev = empPrevShift[emp.id];
+                const streak = workStreaks[emp.id] || 0;
                 let assigned = "OFF";
-                let streak = workStreaks[emp.id] || 0;
-                let forceWork = (jokerOffCounts[emp.id] >= 4);
 
-                let allowD = (prev !== 'LN' && prev !== 'EN');
-                let allowEN = (prev !== 'LN');
+                // ✅ Force break after 5 consecutive days
+                if (streak >= 5) {
+                    assigned = "OFF";
+                } else {
+                    // Try to assign based on needs and bucket availability
+                    // Priority: Fill needs in order of deficit
+                    
+                    // ✅ Check bucket availability
+                    const canAssignD = (used.D < flex.D) && !isShiftFlipViolation(prev, 'D');
+                    const canAssignEN = (used.EN < flex.EN) && !isShiftFlipViolation(prev, 'EN');
+                    const canAssignLN = (used.LN < flex.LN) && !isShiftFlipViolation(prev, 'LN');
+                    
+                    // Fill by priority of need
+                    if (todaysNeeds.LN > 0 && canAssignLN) {
+                        assigned = "LN"; todaysNeeds.LN--; used.LN++;
+                    } else if (todaysNeeds.EN > 0 && canAssignEN) {
+                        assigned = "EN"; todaysNeeds.EN--; used.EN++;
+                    } else if (todaysNeeds.D > 0 && canAssignD) {
+                        assigned = "D"; todaysNeeds.D--; used.D++;
+                    } else {
+                        // No immediate need, but must empty bucket?
+                        // Assign remaining bucket items if available
+                        if (canAssignLN) { assigned = "LN"; used.LN++; }
+                        else if (canAssignEN) { assigned = "EN"; used.EN++; }
+                        else if (canAssignD) { assigned = "D"; used.D++; }
+                        else {
+                            // Bucket full or all blocked by shift flip
+                            if (used.OFF < flex.OFF) { assigned = "OFF"; used.OFF++; }
+                            else assigned = "OFF"; // Default
+                        }
+                    }
+                }
+
+                sched[emp.id][d] = { shift: assigned, depot: "" };
+                empPrevShift[emp.id] = assigned;
+                updateStreak(emp.id, assigned, workStreaks);
+            });
+        }
+
+        // 4. ✅ IMPROVED Joker (Night Priority + Shift Flip Prevention)
+        const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
+        let jokerOffCounts = {};
+        jokerEmps.forEach(e => { jokerOffCounts[e.id] = 0; });
+
+        for(let d=1; d<=numDays; d++) {
+            let todaysNeeds = {...dailyNeeds[d]};
+            
+            // Calculate current assignments to update needs
+            state.employees.forEach(emp => {
+                if(sched[emp.id] && sched[emp.id][d]) {
+                    const s = sched[emp.id][d].shift;
+                    if(todaysNeeds[s] !== undefined && todaysNeeds[s] > 0) todaysNeeds[s]--;
+                }
+            });
+            
+            let activeJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
+
+            activeJokers.forEach(emp => {
+                if(handleExceptionsImproved(emp, d, sched, workStreaks, empPrevShift)) {
+                    if(sched[emp.id][d].shift === 'OFF') jokerOffCounts[emp.id]++;
+                    return;
+                }
+
+                const prev = empPrevShift[emp.id];
+                const streak = workStreaks[emp.id] || 0;
+                const forceWork = (jokerOffCounts[emp.id] >= 4);
+                let assigned = "OFF";
 
                 if(streak >= 5) {
                     assigned = "OFF"; 
                 } else {
-                    // Priority: LN > EN > D
-                    if (todaysNeeds.LN > 0) { assigned = "LN"; todaysNeeds.LN--; }
-                    else if (todaysNeeds.EN > 0 && allowEN) { assigned = "EN"; todaysNeeds.EN--; }
-                    else if (todaysNeeds.D > 0 && allowD) { assigned = "D"; todaysNeeds.D--; }
-                    else if (forceWork) {
-                        if(allowEN) assigned = "EN";
-                        else assigned = "LN";
+                    // ✅ Priority: LN → EN → D (with shift flip check)
+                    if (todaysNeeds.LN > 0 && !isShiftFlipViolation(prev, 'LN')) {
+                        assigned = "LN"; todaysNeeds.LN--;
+                    } else if (todaysNeeds.EN > 0 && !isShiftFlipViolation(prev, 'EN')) {
+                        assigned = "EN"; todaysNeeds.EN--;
+                    } else if (todaysNeeds.D > 0 && !isShiftFlipViolation(prev, 'D')) {
+                        assigned = "D"; todaysNeeds.D--;
+                    } else if (forceWork) {
+                        // Force work on available shift
+                        if (!isShiftFlipViolation(prev, 'LN')) assigned = "LN";
+                        else if (!isShiftFlipViolation(prev, 'EN')) assigned = "EN";
+                        else if (!isShiftFlipViolation(prev, 'D')) assigned = "D";
+                        else assigned = "OFF"; // Stuck - can't work due to flip
                     } else {
                         assigned = "OFF";
                     }
                 }
 
                 sched[emp.id][d] = { shift: assigned, depot: "" };
-                jokerPrev[emp.id] = assigned;
+                empPrevShift[emp.id] = assigned;
                 if(assigned === 'OFF') jokerOffCounts[emp.id]++;
                 updateStreak(emp.id, assigned, workStreaks);
             });
         }
         
         renderSchedule(); saveData();
-        alert("تم توزيع الشفتات (مع قواعد منع القلبة الصارمة).");
+        alert("✅ تم توزيع الشفتات بنجاح!\n• منع قلبة الشفت\n• دلو أسبوعي دقيق\n• أولوية ليلية للجوكر");
     }
 
-    // --- Helpers ---
+    // ============== IMPROVED HELPERS ==============
     function updateStreak(empId, shift, streaks) {
         if(shift === 'OFF' || shift === 'X' || shift === '') streaks[empId] = 0;
         else streaks[empId] = (streaks[empId] || 0) + 1;
     }
-    function handleExceptions(emp, d, sched, streaks) {
+    
+    function handleExceptionsImproved(emp, d, sched, streaks, prevShifts) {
         const exc = emp.exceptions || {};
         const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
         const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        if (xDates.includes(d)) { sched[emp.id][d] = { shift: "X", depot: "" }; updateStreak(emp.id, "X", streaks); return true; }
-        if (offDates.includes(d)) { sched[emp.id][d] = { shift: "OFF", depot: "" }; updateStreak(emp.id, "OFF", streaks); return true; }
+        
+        if (xDates.includes(d)) { 
+            sched[emp.id][d] = { shift: "X", depot: "" }; 
+            updateStreak(emp.id, "X", streaks);
+            prevShifts[emp.id] = "X";
+            return true; 
+        }
+        if (offDates.includes(d)) { 
+            sched[emp.id][d] = { shift: "OFF", depot: "" }; 
+            updateStreak(emp.id, "OFF", streaks);
+            prevShifts[emp.id] = "OFF";
+            return true; 
+        }
         return false;
     }
-    function applyWeekly(emp, numDays, sched, dailyNeeds, streaks) {
+    
+    function applyWeeklyImproved(emp, numDays, sched, dailyNeeds, streaks, prevShifts) {
         const exc = emp.exceptions || {};
         const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
         const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        
         for(let d=1; d<=numDays; d++) {
             let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
             if (shift === "") {
                 const date = new Date(appConfig.year, appConfig.month - 1, d);
                 shift = emp.weeklyTemplate[date.getDay()];
-                if (xDates.includes(d)) shift = "X"; else if (offDates.includes(d)) shift = "OFF";
-                let currentStreak = streaks[emp.id] || 0;
+                
+                if (xDates.includes(d)) shift = "X"; 
+                else if (offDates.includes(d)) shift = "OFF";
+                
+                const currentStreak = streaks[emp.id] || 0;
                 if(currentStreak >= 5 && ["D","EN","LN"].includes(shift)) shift = "OFF";
+                
+                // ✅ Check shift flip
+                const prev = prevShifts[emp.id];
+                if(isShiftFlipViolation(prev, shift)) {
+                    // Try to find alternative
+                    if(!isShiftFlipViolation(prev, 'LN')) shift = 'LN';
+                    else if(!isShiftFlipViolation(prev, 'OFF')) shift = 'OFF';
+                    else shift = 'OFF'; // Force off if stuck
+                }
+                
                 sched[emp.id][d] = { shift: shift, depot: "" };
             }
+            
             if (["D","EN","LN"].includes(shift)) {
                 if(dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
                 updateStreak(emp.id, shift, streaks);
-            } else updateStreak(emp.id, shift, streaks);
+            } else {
+                updateStreak(emp.id, shift, streaks);
+            }
+            
+            prevShifts[emp.id] = shift;
         }
     }
 
@@ -576,20 +651,22 @@
             const empData = data[emp.id] || {};
             let counts = { D:0, EN:0, LN:0, OFF:0, X:0 };
             let rowHtml = `<tr><td class="emp-col"><div>${emp.name}</div><div class="stat-box" id="stats-${emp.id}"></div></td>`;
-            let prevShift = null;
+            let prevShift = 'OFF';
             for(let d=1; d<=numDays; d++) {
                 const cell = empData[d] || { shift: "" };
                 const shift = cell.shift || "";
                 const depot = cell.depot || "";
                 if(counts[shift] !== undefined) counts[shift]++;
                 
-                // Violation Check (Red Border)
+                // ✅ Detect shift flip violation
                 let violation = "";
-                if (prevShift === 'LN' && (shift === 'D' || shift === 'EN')) violation = "violation";
-                if (prevShift === 'EN' && shift === 'D') violation = "violation";
-
+                if(isShiftFlipViolation(prevShift, shift)) {
+                    violation = "violation";
+                }
+                
                 if(shift !== 'OFF' && shift !== 'X' && shift !== '') prevShift = shift;
-                if(shift === 'OFF' || shift === 'X') prevShift = 'OFF'; 
+                else prevShift = shift;
+                
                 const display = (shift === "OFF" || shift === "X") ? shift : (shift ? `${shift}<span class="depot-tag">${depot}</span>` : "");
                 rowHtml += `<td class="cell shift-${shift} ${violation}" onclick="cycleCell('${emp.id}', ${d})">${display}</td>`;
             }
@@ -636,6 +713,23 @@
         const requirements = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
         let issues = [];
+        let violationCount = 0;
+        
+        // ✅ Count shift flip violations
+        state.employees.forEach(emp => {
+            let prev = 'OFF';
+            for(let d=1; d<=numDays; d++) {
+                const cell = (sched[emp.id] && sched[emp.id][d]) ? sched[emp.id][d] : null;
+                if(cell && cell.shift) {
+                    if(isShiftFlipViolation(prev, cell.shift)) {
+                        violationCount++;
+                        issues.push(`⚠️ <strong>قلبة شفت</strong>: ${emp.name} - يوم ${d} (${prev} → ${cell.shift})`);
+                    }
+                    prev = cell.shift;
+                }
+            }
+        });
+        
         for(let d=1; d<=numDays; d++) {
             let dailyCounts = {}; 
             cleanDepots.forEach(dep => dailyCounts[dep] = {D:0, EN:0, LN:0});
@@ -664,8 +758,15 @@
                 issues.push(`<span style="color:#d97706; font-size:0.85rem;">⚠️ تشخيص يوم ${d}: أنت تطلب ${dailyReqTotal} شفت، والمتوفر ${totalAvailableWorkers}.</span>`);
             }
         }
-        if(issues.length === 0) report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%)</div>`;
-        else report.innerHTML = `<div class="report-analysis">💡 النظام يمنع القلبة والعمل المتواصل > 5 أيام.</div><h4 style="margin:5px 0;">⚠️ تقرير النقص:</h4>` + issues.map(i => `<div class="report-item">${i}</div>`).join('');
+        
+        if(issues.length === 0) {
+            report.innerHTML = `<div class="report-ok">✅ التغطية مكتملة (100%) | لا توجد قلبات شفت</div>`;
+        } else {
+            let header = violationCount > 0 ? 
+                `<div class="alert-box" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">🚨 تحذير: تم اكتشاف ${violationCount} قلبة شفت!</div>` : 
+                `<div class="report-analysis">💡 النظام يمنع العمل لأكثر من 5 أيام متواصلة، وهذا قد يسبب عجزاً.</div>`;
+            report.innerHTML = header + `<h4 style="margin:5px 0;">⚠️ تقرير التشخيص:</h4>` + issues.map(i => `<div class="report-item">${i}</div>`).join('');
+        }
     }
 
     function exportCSV() {
@@ -685,7 +786,7 @@
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `Schedule.csv`; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = `Schedule_${getMonthKey()}.csv`; a.click();
     }
 </script>
 </body>
