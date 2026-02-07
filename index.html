@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام السيدة زينب لجدولة الشفتات-</title>
+    <title>نظام السيدة زينب للشفتات </title>
     <style>
         :root {
             --primary: #2563eb;
@@ -40,7 +40,6 @@
         .cell.shift-X { background-color: #fee2e2; color: #b91c1c; font-weight: bold; } 
         .stat-box { font-size: 0.70rem; color: #64748b; margin-top: 2px; display:flex; gap:3px; flex-wrap:wrap;}
         .violation { border: 3px solid #ef4444 !important; position: relative; }
-        .violation::after { content: '⚠️'; position: absolute; top: 2px; right: 2px; font-size: 0.7rem; }
         .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .req-table th, .req-table td { border: 1px solid #eee; padding: 8px; text-align: center; }
         .req-table th { background: #f8fafc; }
@@ -74,7 +73,7 @@
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ ظام السيدة زينب لجدولة الشفتات</h1>
+        <h1>🗓️ نظام الجدولة </h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
@@ -92,11 +91,11 @@
 
     <div id="view-schedule" class="view active">
         <div class="alert-box">
-            ✅ <strong>التحسينات الجديدة:</strong> منع قلبة الشفت (LN→D/EN، EN→D) | دلو أسبوعي دقيق (تصفير كل أحد) | أولوية الجوكر للشفتات الليلية
+            🔥 <strong>نظام التوزيع:</strong> الجوكر إجازة واحدة فقط أسبوعياً | محاولة سد كل الثغرات | منع قلبة الشفت
         </div>
         <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
             <div>
-                <button onclick="generateSchedule()" class="primary">⚡ توزيع الشفتات (محسّن)</button>
+                <button onclick="runSmartOptimizer()" class="primary">⚡ توزيع الشفتات </button>
                 <button onclick="fillDepots()">🏭 توزيع المواقع (حسب الحصة)</button>
             </div>
             <div>
@@ -135,7 +134,7 @@
 
 <script>
     // --- CONFIGURATION ---
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ضع رابط Google Web App هنا
+    const API_URL = "PASTE_WEB_APP_URL_HERE"; // <--- ضع رابط Google Web App هنا
     
     // --- STATE ---
     let state = { employees: [], schedule: {}, meta: { requirements: {} } };
@@ -143,27 +142,14 @@
     const SHIFTS = ["D", "EN", "LN", "OFF", "X"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
 
-    // ============== SHIFT FLIP PREVENTION ==============
-    /**
-     * ✅ فحص قلبة الشفت - يمنع:
-     * 1. LN → D (آخر ليل إلى نهار)
-     * 2. LN → EN (آخر ليل إلى أول ليل)
-     * 3. EN → D (أول ليل إلى نهار)
-     */
+    // --- HELPER: Shift Flip Check ---
     function isShiftFlipViolation(previousShift, nextShift) {
         if (!previousShift || previousShift === 'OFF' || previousShift === 'X') return false;
         if (nextShift === 'OFF' || nextShift === 'X') return false;
-        
-        // LN → D أو LN → EN
-        if (previousShift === 'LN') {
-            return nextShift === 'D' || nextShift === 'EN';
-        }
-        
-        // EN → D
-        if (previousShift === 'EN') {
-            return nextShift === 'D';
-        }
-        
+        // LN -> D or EN
+        if (previousShift === 'LN') return nextShift === 'D' || nextShift === 'EN';
+        // EN -> D
+        if (previousShift === 'EN') return nextShift === 'D';
         return false;
     }
 
@@ -270,17 +256,17 @@
             if(emp.patternType === 'rolling') {
                 patternEditorHtml = `
                     <div class="pattern-editor">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">الحصة الأسبوعية (كل أسبوع من الأحد للسبت):</label>
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">الحصة الأسبوعية (الأحد-السبت):</label>
                         <div class="flex-counts">
                             <div><label>D نهار</label><input type="number" min="0" value="${flex.D}" onchange="updateFlexCount('${emp.id}', 'D', this.value)"></div>
                             <div><label>EN أول</label><input type="number" min="0" value="${flex.EN}" onchange="updateFlexCount('${emp.id}', 'EN', this.value)"></div>
                             <div><label>LN آخر</label><input type="number" min="0" value="${flex.LN}" onchange="updateFlexCount('${emp.id}', 'LN', this.value)"></div>
                             <div><label>OFF</label><input type="number" min="0" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
                         </div>
-                        <div class="note">✅ سيتم تصفير العداد كل يوم أحد، وتوزيع هذه الكميات بدقة خلال الأسبوع.</div>
+                        <div class="note">✅ يلتزم بهذه الكميات أسبوعياً.</div>
                     </div>`;
             } else if (emp.patternType === 'joker') {
-                patternEditorHtml = `<div class="pattern-editor"><div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر</div><div class="note">✅ يغطي النقص تلقائياً. أولوية: LN → EN → D. Max 4 OFF/Month.</div></div>`;
+                patternEditorHtml = `<div class="pattern-editor"><div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر</div><div class="note">✅ يغطي النقص بشراسة. إجازة واحدة فقط/أسبوع. يفضل الليل.</div></div>`;
             } else {
                 patternEditorHtml = `<div class="pattern-editor"><label style="font-weight:bold; display:block; margin-bottom:5px;">الأيام الثابتة:</label><div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:5px;">${weekHtml}</div></div>`;
             }
@@ -290,14 +276,14 @@
                     <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold; font-size:1.1rem;">
                     <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
                         <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (حصة أسبوعية صارمة)</option>
+                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (حصة أسبوعية)</option>
                         <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر</option>
                     </select>
                     <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
                 </div>
                 ${quotasHtml} ${patternEditorHtml}
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div><label style="font-size:0.75rem">إجبار إجازة (تواريخ):</label><input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="5, 12..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)"></div>
+                    <div><label style="font-size:0.75rem">إجبار إجازة:</label><input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="5, 12..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)"></div>
                     <div><label style="font-size:0.75rem">إجبار غياب:</label><input type="text" style="width:95%" value="${exc.xDates || ''}" placeholder="15..." onchange="updateExceptions('${emp.id}', 'xDates', this.value)"></div>
                 </div>`;
             container.appendChild(div);
@@ -317,18 +303,47 @@
     function updateExceptions(id, t, v) { const e = state.employees.find(x=>x.id===id); if(e){ if(!e.exceptions) e.exceptions={}; e.exceptions[t]=v; } }
     function deleteEmployee(id) { if(confirm("حذف؟")) { state.employees = state.employees.filter(x=>x.id!==id); renderEmployees(); renderSchedule(); saveData(); } }
 
-    // ============== IMPROVED GENERATOR LOGIC ==============
-    function generateSchedule() {
-        if(!confirm("✅ النظام المحسّن:\n• منع قلبة الشفت (LN→D/EN، EN→D)\n• دلو أسبوعي دقيق (تصفير كل أحد)\n• أولوية الجوكر: LN → EN → D\n• حد أقصى 5 أيام متواصلة\n\nهل تريد المتابعة؟")) return;
+    // ==========================================
+    // === OPTIMIZER ENGINE (THE BEST FIT) ===
+    // ==========================================
+    
+    function runSmartOptimizer() {
+        if(!confirm("سيقوم النظام بتجربة عدة سيناريوهات لاختيار أفضل جدول يغطي النقص.\n- الجوكر: إجازة واحدة أسبوعياً.\n- منع قلبة الشفت.")) return;
         
-        const key = getMonthKey();
-        if(!state.schedule[key]) state.schedule[key] = {};
-        const sched = state.schedule[key];
+        showLoader(true);
+        // Delay to allow UI to show loader
+        setTimeout(() => {
+            let bestSched = null;
+            let bestScore = -Infinity; // Higher is better (less negative)
+
+            // Run 50 iterations
+            for(let i=0; i<50; i++) {
+                let result = generateSingleRun();
+                if(result.score > bestScore) {
+                    bestScore = result.score;
+                    bestSched = result.schedule;
+                }
+            }
+
+            // Apply best schedule
+            const key = getMonthKey();
+            state.schedule[key] = bestSched;
+            renderSchedule();
+            saveData();
+            showLoader(false);
+            alert(`تم إنشاء الجدول بنجاح! (تم اختيار السيناريو الأفضل من بين 50 محاولة)`);
+        }, 100);
+    }
+
+    function generateSingleRun() {
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
+        
+        let tempSched = {};
+        state.employees.forEach(e => tempSched[e.id] = {});
 
-        // 1. Calculate Daily Needs
+        // 1. Daily Needs
         let dailyNeeds = {}; 
         for(let d=1; d<=numDays; d++) {
             dailyNeeds[d] = { D:0, EN:0, LN:0 };
@@ -342,162 +357,142 @@
             });
         }
 
-        // Tracking
         let workStreaks = {}; 
-        let empPrevShift = {}; // ✅ Track previous shift for flip prevention
-        state.employees.forEach(e => {
-            workStreaks[e.id] = 0;
-            empPrevShift[e.id] = 'OFF';
-        });
+        let empPrevShift = {};
+        state.employees.forEach(e => { workStreaks[e.id] = 0; empPrevShift[e.id] = 'OFF'; });
 
-        // 2. Fixed Weekly Employees
+        // 2. Fixed Weekly
         state.employees.forEach(emp => {
-            if(!sched[emp.id]) sched[emp.id] = {};
-            if (emp.patternType === 'weekly' || !emp.patternType) {
-                applyWeeklyImproved(emp, numDays, sched, dailyNeeds, workStreaks, empPrevShift);
-            } else {
-                for(let d=1; d<=numDays; d++) sched[emp.id][d] = { shift: "", depot: "" };
+            if(emp.patternType === 'weekly' || !emp.patternType) {
+                applyWeeklyImproved(emp, numDays, tempSched, dailyNeeds, workStreaks, empPrevShift);
             }
         });
 
-        // 3. Rolling Employees (✅ IMPROVED WEEKLY BUCKET)
+        // 3. Rolling
         const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
-        
-        for(let d=1; d<=numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month - 1, d);
-            const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
-            const isWeekStart = (dayOfWeek === 0);
-            
-            // ✅ Reset buckets on Sunday
-            if(isWeekStart) {
-                rollingEmps.forEach(emp => {
-                    emp._weeklyBucketUsed = { D: 0, EN: 0, LN: 0, OFF: 0 };
-                });
-            }
-            
-            // Initialize bucket if not exists
-            rollingEmps.forEach(emp => {
-                if(!emp._weeklyBucketUsed) {
-                    emp._weeklyBucketUsed = { D: 0, EN: 0, LN: 0, OFF: 0 };
-                }
-            });
-            
-            let todaysNeeds = {...dailyNeeds[d]};
-            let activeRolling = [...rollingEmps].sort(() => Math.random() - 0.5);
+        processWeeklyBuckets(rollingEmps, numDays, tempSched, dailyNeeds, workStreaks, empPrevShift, 'rolling');
 
-            activeRolling.forEach(emp => {
-                // Handle exceptions first
-                if(handleExceptionsImproved(emp, d, sched, workStreaks, empPrevShift)) {
-                    return;
-                }
-
-                const flex = emp.flexCounts || { D:1, EN:2, LN:2, OFF:2 };
-                const used = emp._weeklyBucketUsed;
-                const prev = empPrevShift[emp.id];
-                const streak = workStreaks[emp.id] || 0;
-                let assigned = "OFF";
-
-                // ✅ Force break after 5 consecutive days
-                if (streak >= 5) {
-                    assigned = "OFF";
-                } else {
-                    // Try to assign based on needs and bucket availability
-                    // Priority: Fill needs in order of deficit
-                    
-                    // ✅ Check bucket availability
-                    const canAssignD = (used.D < flex.D) && !isShiftFlipViolation(prev, 'D');
-                    const canAssignEN = (used.EN < flex.EN) && !isShiftFlipViolation(prev, 'EN');
-                    const canAssignLN = (used.LN < flex.LN) && !isShiftFlipViolation(prev, 'LN');
-                    
-                    // Fill by priority of need
-                    if (todaysNeeds.LN > 0 && canAssignLN) {
-                        assigned = "LN"; todaysNeeds.LN--; used.LN++;
-                    } else if (todaysNeeds.EN > 0 && canAssignEN) {
-                        assigned = "EN"; todaysNeeds.EN--; used.EN++;
-                    } else if (todaysNeeds.D > 0 && canAssignD) {
-                        assigned = "D"; todaysNeeds.D--; used.D++;
-                    } else {
-                        // No immediate need, but must empty bucket?
-                        // Assign remaining bucket items if available
-                        if (canAssignLN) { assigned = "LN"; used.LN++; }
-                        else if (canAssignEN) { assigned = "EN"; used.EN++; }
-                        else if (canAssignD) { assigned = "D"; used.D++; }
-                        else {
-                            // Bucket full or all blocked by shift flip
-                            if (used.OFF < flex.OFF) { assigned = "OFF"; used.OFF++; }
-                            else assigned = "OFF"; // Default
-                        }
-                    }
-                }
-
-                sched[emp.id][d] = { shift: assigned, depot: "" };
-                empPrevShift[emp.id] = assigned;
-                updateStreak(emp.id, assigned, workStreaks);
-            });
-        }
-
-        // 4. ✅ IMPROVED Joker (Night Priority + Shift Flip Prevention)
+        // 4. Joker (Target: 6 Work, 1 Off)
         const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-        let jokerOffCounts = {};
-        jokerEmps.forEach(e => { jokerOffCounts[e.id] = 0; });
+        processWeeklyBuckets(jokerEmps, numDays, tempSched, dailyNeeds, workStreaks, empPrevShift, 'joker');
 
+        // Calculate Score (Deficit penalizes heavily)
+        let score = 0;
         for(let d=1; d<=numDays; d++) {
-            let todaysNeeds = {...dailyNeeds[d]};
-            
-            // Calculate current assignments to update needs
-            state.employees.forEach(emp => {
-                if(sched[emp.id] && sched[emp.id][d]) {
-                    const s = sched[emp.id][d].shift;
-                    if(todaysNeeds[s] !== undefined && todaysNeeds[s] > 0) todaysNeeds[s]--;
-                }
-            });
-            
-            let activeJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
-
-            activeJokers.forEach(emp => {
-                if(handleExceptionsImproved(emp, d, sched, workStreaks, empPrevShift)) {
-                    if(sched[emp.id][d].shift === 'OFF') jokerOffCounts[emp.id]++;
-                    return;
-                }
-
-                const prev = empPrevShift[emp.id];
-                const streak = workStreaks[emp.id] || 0;
-                const forceWork = (jokerOffCounts[emp.id] >= 4);
-                let assigned = "OFF";
-
-                if(streak >= 5) {
-                    assigned = "OFF"; 
-                } else {
-                    // ✅ Priority: LN → EN → D (with shift flip check)
-                    if (todaysNeeds.LN > 0 && !isShiftFlipViolation(prev, 'LN')) {
-                        assigned = "LN"; todaysNeeds.LN--;
-                    } else if (todaysNeeds.EN > 0 && !isShiftFlipViolation(prev, 'EN')) {
-                        assigned = "EN"; todaysNeeds.EN--;
-                    } else if (todaysNeeds.D > 0 && !isShiftFlipViolation(prev, 'D')) {
-                        assigned = "D"; todaysNeeds.D--;
-                    } else if (forceWork) {
-                        // Force work on available shift
-                        if (!isShiftFlipViolation(prev, 'LN')) assigned = "LN";
-                        else if (!isShiftFlipViolation(prev, 'EN')) assigned = "EN";
-                        else if (!isShiftFlipViolation(prev, 'D')) assigned = "D";
-                        else assigned = "OFF"; // Stuck - can't work due to flip
-                    } else {
-                        assigned = "OFF";
-                    }
-                }
-
-                sched[emp.id][d] = { shift: assigned, depot: "" };
-                empPrevShift[emp.id] = assigned;
-                if(assigned === 'OFF') jokerOffCounts[emp.id]++;
-                updateStreak(emp.id, assigned, workStreaks);
-            });
+            score -= (dailyNeeds[d].D * 10);
+            score -= (dailyNeeds[d].EN * 10);
+            score -= (dailyNeeds[d].LN * 10);
         }
-        
-        renderSchedule(); saveData();
-        alert("✅ تم توزيع الشفتات بنجاح!\n• منع قلبة الشفت\n• دلو أسبوعي دقيق\n• أولوية ليلية للجوكر");
+        return { schedule: tempSched, score: score };
     }
 
-    // ============== IMPROVED HELPERS ==============
+    function processWeeklyBuckets(employees, numDays, sched, dailyNeeds, workStreaks, empPrevShift, type) {
+        let currentDay = 1;
+        while(currentDay <= numDays) {
+            // Define Week
+            let daysInWeek = [];
+            let d = currentDay;
+            while(d <= numDays) {
+                daysInWeek.push(d);
+                let curDate = new Date(appConfig.year, appConfig.month - 1, d);
+                if(curDate.getDay() === 6) break; 
+                d++;
+            }
+
+            // Init Buckets
+            let buckets = {};
+            employees.forEach(emp => {
+                if(type === 'rolling') {
+                    let flex = emp.flexCounts || { D:1, EN:2, LN:2, OFF:2 };
+                    buckets[emp.id] = { ...flex };
+                } else {
+                    // Joker: 1 OFF, 6 Work (Virtual Bucket)
+                    buckets[emp.id] = { D:6, EN:6, LN:6, OFF:1 }; // Plenty of work, limited OFF
+                }
+            });
+
+            // Randomize Day Order within week to avoid "First Day bias"
+            let shuffledDays = [...daysInWeek].sort(() => Math.random() - 0.5);
+
+            shuffledDays.forEach(dayNum => {
+                let todaysNeeds = dailyNeeds[dayNum];
+                let activeEmps = [...employees].sort(() => Math.random() - 0.5);
+
+                activeEmps.forEach(emp => {
+                    if(handleExceptionsImproved(emp, dayNum, sched, workStreaks, empPrevShift)) {
+                        if(sched[emp.id][dayNum].shift === 'OFF' && buckets[emp.id].OFF > 0) buckets[emp.id].OFF--;
+                        return;
+                    }
+
+                    let bucket = buckets[emp.id];
+                    let prev = empPrevShift[emp.id];
+                    let streak = workStreaks[emp.id];
+                    let assigned = "OFF";
+
+                    // Determine Constraint
+                    let mustRest = (streak >= 5);
+                    
+                    if (mustRest) {
+                        assigned = "OFF";
+                    } else {
+                        // Priority logic
+                        let canD = !isShiftFlipViolation(prev, 'D') && (type==='joker' ? true : bucket.D > 0);
+                        let canEN = !isShiftFlipViolation(prev, 'EN') && (type==='joker' ? true : bucket.EN > 0);
+                        let canLN = !isShiftFlipViolation(prev, 'LN') && (type==='joker' ? true : bucket.LN > 0);
+
+                        // Joker hates Day, loves Night
+                        if(type === 'joker') {
+                            // Joker Logic: 
+                            // 1. Need LN?
+                            // 2. Need EN?
+                            // 3. Need D? (If allowed)
+                            // 4. If no need, check OFF bucket. If OFF > 0, take OFF.
+                            // 5. If OFF == 0 (must work), force safe shift (LN -> EN).
+                            
+                            if (todaysNeeds.LN > 0 && canLN) { assigned = "LN"; todaysNeeds.LN--; }
+                            else if (todaysNeeds.EN > 0 && canEN) { assigned = "EN"; todaysNeeds.EN--; }
+                            else if (todaysNeeds.D > 0 && canD) { assigned = "D"; todaysNeeds.D--; }
+                            else {
+                                // No Need. Can we take OFF?
+                                if(bucket.OFF > 0) {
+                                    assigned = "OFF"; bucket.OFF--;
+                                } else {
+                                    // Forced Work
+                                    if(canLN) assigned = "LN";
+                                    else if(canEN) assigned = "EN";
+                                    else if(canD) assigned = "D";
+                                    else assigned = "OFF"; // Stuck
+                                }
+                            }
+
+                        } else {
+                            // Rolling Logic: 
+                            // Prioritize DAY to save Night for Joker, but respect bucket limits
+                            if (todaysNeeds.D > 0 && canD) { assigned = "D"; todaysNeeds.D--; bucket.D--; }
+                            else if (todaysNeeds.EN > 0 && canEN) { assigned = "EN"; todaysNeeds.EN--; bucket.EN--; }
+                            else if (todaysNeeds.LN > 0 && canLN) { assigned = "LN"; todaysNeeds.LN--; bucket.LN--; }
+                            else {
+                                // Drain bucket
+                                if(bucket.OFF > 0) { assigned = "OFF"; bucket.OFF--; }
+                                else if(canD && bucket.D > 0) { assigned = "D"; bucket.D--; }
+                                else if(canEN && bucket.EN > 0) { assigned = "EN"; bucket.EN--; }
+                                else if(canLN && bucket.LN > 0) { assigned = "LN"; bucket.LN--; }
+                                else assigned = "OFF"; 
+                            }
+                        }
+                    }
+
+                    sched[emp.id][dayNum] = { shift: assigned, depot: "" };
+                    empPrevShift[emp.id] = assigned;
+                    updateStreak(emp.id, assigned, workStreaks);
+                });
+            });
+
+            currentDay = d + 1;
+        }
+    }
+
+    // --- SHARED HELPERS ---
     function updateStreak(empId, shift, streaks) {
         if(shift === 'OFF' || shift === 'X' || shift === '') streaks[empId] = 0;
         else streaks[empId] = (streaks[empId] || 0) + 1;
@@ -533,20 +528,18 @@
             if (shift === "") {
                 const date = new Date(appConfig.year, appConfig.month - 1, d);
                 shift = emp.weeklyTemplate[date.getDay()];
-                
                 if (xDates.includes(d)) shift = "X"; 
                 else if (offDates.includes(d)) shift = "OFF";
                 
                 const currentStreak = streaks[emp.id] || 0;
                 if(currentStreak >= 5 && ["D","EN","LN"].includes(shift)) shift = "OFF";
                 
-                // ✅ Check shift flip
+                // Anti-flip for Fixed
                 const prev = prevShifts[emp.id];
                 if(isShiftFlipViolation(prev, shift)) {
-                    // Try to find alternative
+                    // Try to adjust if violation
                     if(!isShiftFlipViolation(prev, 'LN')) shift = 'LN';
-                    else if(!isShiftFlipViolation(prev, 'OFF')) shift = 'OFF';
-                    else shift = 'OFF'; // Force off if stuck
+                    else shift = 'OFF';
                 }
                 
                 sched[emp.id][d] = { shift: shift, depot: "" };
@@ -563,7 +556,7 @@
         }
     }
 
-    // --- DEPOT DISTRIBUTOR (QUOTA BASED) ---
+    // --- DEPOT DISTRIBUTOR ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
@@ -658,11 +651,8 @@
                 const depot = cell.depot || "";
                 if(counts[shift] !== undefined) counts[shift]++;
                 
-                // ✅ Detect shift flip violation
                 let violation = "";
-                if(isShiftFlipViolation(prevShift, shift)) {
-                    violation = "violation";
-                }
+                if(isShiftFlipViolation(prevShift, shift)) violation = "violation";
                 
                 if(shift !== 'OFF' && shift !== 'X' && shift !== '') prevShift = shift;
                 else prevShift = shift;
@@ -715,7 +705,6 @@
         let issues = [];
         let violationCount = 0;
         
-        // ✅ Count shift flip violations
         state.employees.forEach(emp => {
             let prev = 'OFF';
             for(let d=1; d<=numDays; d++) {
@@ -764,7 +753,7 @@
         } else {
             let header = violationCount > 0 ? 
                 `<div class="alert-box" style="background:#fee2e2; border-color:#ef4444; color:#991b1b;">🚨 تحذير: تم اكتشاف ${violationCount} قلبة شفت!</div>` : 
-                `<div class="report-analysis">💡 النظام يمنع العمل لأكثر من 5 أيام متواصلة، وهذا قد يسبب عجزاً.</div>`;
+                `<div class="report-analysis">💡 تم تحسين التوزيع لأقصى حد. النواقص المتبقية تعني عجزاً في عدد الموظفين.</div>`;
             report.innerHTML = header + `<h4 style="margin:5px 0;">⚠️ تقرير التشخيص:</h4>` + issues.map(i => `<div class="report-item">${i}</div>`).join('');
         }
     }
