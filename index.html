@@ -3,92 +3,234 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>نظام الجدولة (V11 - Template أسبوعي + تعديل يدوي)</title>
+  <title>نظام الجدولة (V11 - UI + عرضين)</title>
   <style>
-    :root { --primary:#2563eb; --success:#10b981; --danger:#ef4444; --warning:#f59e0b; --bg:#f8fafc; --border:#cbd5e1; }
+    :root{
+      --primary:#2563eb; --success:#10b981; --danger:#ef4444; --warning:#f59e0b;
+      --bg:#f6f8fc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+      --shadow: 0 6px 18px rgba(15,23,42,.08);
+      --radius: 14px;
+    }
     *{ box-sizing:border-box; }
-    body{ font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; margin:0; padding:0; background:var(--bg); font-size:13.5px; direction:rtl; }
-    .app-container{ max-width:1400px; margin:0 auto; padding:10px; }
-    .toolbar{ display:flex; flex-wrap:wrap; gap:10px; background:#fff; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.1); margin-bottom:20px; align-items:center; }
-    h1{ margin:0; font-size:1.3rem; margin-left:auto; color:#1e293b; font-weight:800; }
-    button{ cursor:pointer; padding:8px 16px; border:1px solid var(--border); background:#fff; border-radius:6px; font-weight:600; transition:.2s; font-family:inherit; }
-    button:hover{ transform:translateY(-1px); box-shadow:0 2px 5px rgba(0,0,0,.1); }
+    body{
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      margin:0; background:var(--bg); color:var(--text);
+      font-size:13.5px; direction:rtl;
+    }
+    .app-container{ max-width:1480px; margin:0 auto; padding:14px; }
+    .topbar{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+      background:linear-gradient(180deg,#fff, #fbfdff);
+      padding:14px; border:1px solid var(--border);
+      border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:12px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; margin-left:auto;
+    }
+    .brand .logo{
+      width:40px; height:40px; border-radius:12px;
+      background:linear-gradient(135deg, #2563eb, #60a5fa);
+      display:grid; place-items:center; color:#fff; font-weight:900;
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+    }
+    .brand h1{ margin:0; font-size:1.15rem; font-weight:900; }
+    .subnote{ font-size:.8rem; color:var(--muted); font-weight:700; margin-top:2px; }
+    .controls{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    button{
+      cursor:pointer; padding:9px 14px; border:1px solid var(--border); background:#fff;
+      border-radius:12px; font-weight:900; transition:.15s; font-family:inherit;
+      box-shadow:0 1px 0 rgba(15,23,42,.02);
+    }
+    button:hover{ transform:translateY(-1px); box-shadow:0 10px 18px rgba(15,23,42,.08); }
     button.primary{ background:var(--primary); color:#fff; border-color:var(--primary); }
     button.success{ background:var(--success); color:#fff; border-color:var(--success); }
     button.danger{ background:var(--danger); color:#fff; border-color:var(--danger); }
-    button.outline{ background:#fff; border:1px solid #94a3b8; }
-    input,select{ padding:8px; border:1px solid var(--border); border-radius:5px; font-family:inherit; }
-    .tabs{ display:flex; gap:5px; margin-bottom:15px; border-bottom:2px solid #e2e8f0; background:#fff; border-radius:8px 8px 0 0; padding:0 10px; }
-    .tab{ padding:12px 24px; cursor:pointer; border-bottom:3px solid transparent; transition:.2s; color:#64748b; font-weight:600; }
-    .tab:hover{ background:#f8fafc; color:var(--primary); }
-    .tab.active{ border-bottom-color:var(--primary); color:var(--primary); }
+    button.ghost{ background:transparent; }
+    input,select{
+      padding:9px 10px; border:1px solid var(--border); border-radius:12px;
+      font-family:inherit; font-weight:800; background:#fff;
+    }
+
+    .tabs{
+      display:flex; gap:8px; margin:12px 0 10px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:8px; box-shadow:var(--shadow);
+    }
+    .tab{
+      padding:10px 14px; cursor:pointer; border-radius:12px;
+      color:var(--muted); font-weight:900; transition:.15s;
+      border:1px solid transparent;
+    }
+    .tab:hover{ background:#f1f5ff; color:var(--primary); }
+    .tab.active{
+      background:#eef2ff; color:var(--primary);
+      border-color:#c7d2fe;
+    }
     .view{ display:none; }
     .view.active{ display:block; }
-    .grid-container{ overflow-x:auto; background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border); }
-    .schedule-table{ border-collapse:collapse; width:100%; min-width:1100px; table-layout:fixed; }
-    .schedule-table th,.schedule-table td{ border:1px solid #e2e8f0; text-align:center; padding:4px; height:38px; font-size:.85rem; }
-    .schedule-table th{ background:#f8fafc; position:sticky; top:0; z-index:10; font-weight:700; color:#334155; white-space:nowrap; }
-    .schedule-table th.emp-col{ position:sticky; right:0; z-index:20; width:190px; text-align:right; padding-right:12px; border-left:2px solid #cbd5e1; background:#f8fafc; }
-    .schedule-table td.emp-col{ position:sticky; right:0; z-index:5; background:#fff; text-align:right; padding-right:12px; font-weight:600; border-left:2px solid #cbd5e1; color:#1e293b; white-space:nowrap; }
 
-    .cell{ cursor:pointer; user-select:none; transition:background .15s; font-weight:700; }
-    .cell:hover{ filter:brightness(.95); }
-    .cell.shift-M{ background-color:#dbeafe; color:#1e40af; }
-    .cell.shift-A{ background-color:#fef3c7; color:#92400e; }
-    .cell.shift-N{ background-color:#1e293b; color:#f8fafc; }
-    .cell.shift-OFF{ background-color:#f0fdf4; color:#166534; }
-    .cell.shift-VAC{ background-color:#f3e8ff; color:#7e22ce; }
-    .cell.shift-X{ background-color:#fee2e2; color:#991b1b; }
-    .violation{ border:3px solid var(--danger)!important; }
+    .panel{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:12px; margin-bottom:12px;
+    }
+    .alert{
+      background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;
+      padding:12px; border-radius:12px; font-weight:900;
+      display:flex; gap:10px; align-items:flex-start;
+    }
+    .alert .dot{
+      width:10px; height:10px; border-radius:999px; background:#2563eb; margin-top:4px;
+      box-shadow:0 0 0 5px rgba(37,99,235,.12);
+    }
 
-    .emp-card{ border:1px solid var(--border); background:#fff; padding:16px; border-radius:10px; margin-bottom:12px; box-shadow:0 1px 2px rgba(0,0,0,.05); }
-    .emp-header{ display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid #f1f5f9; margin-bottom:12px; gap:8px; }
-    .pattern-editor{ background:#f8fafc; padding:12px; border-radius:8px; border:1px dashed var(--border); margin-top:10px; }
-    .flex-counts{ display:flex; gap:10px; flex-wrap:wrap; }
-    .flex-counts div{ display:flex; flex-direction:column; align-items:center; }
-    .flex-counts label{ font-size:.7rem; font-weight:800; color:#64748b; }
-    .flex-counts input{ width:45px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px; padding:4px; }
-    .depot-quotas{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-top:10px; }
-    .depot-quotas div{ background:#fff7ed; padding:6px; border:1px solid #ffedd5; border-radius:6px; }
-    .depot-quotas label{ font-size:.7rem; font-weight:800; color:#9a3412; display:block; }
-    .depot-quotas input{ width:100%; text-align:center; font-weight:700; margin-top:2px; }
+    .rowbar{
+      display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+      justify-content:space-between;
+    }
+    .seg{
+      display:flex; background:#f1f5f9; border:1px solid var(--border);
+      border-radius:999px; padding:4px; gap:4px;
+    }
+    .seg button{
+      border-radius:999px; border:1px solid transparent;
+      background:transparent; box-shadow:none;
+      padding:8px 12px; font-weight:900; color:var(--muted);
+    }
+    .seg button.active{
+      background:#fff; border-color:#cbd5e1; color:#0f172a;
+      box-shadow:0 6px 14px rgba(15,23,42,.08);
+    }
 
-    .vacation-input{ background:#f3e8ff; padding:8px; border-radius:6px; border:1px solid #e9d5ff; margin-top:10px; }
-    .vacation-input input{ width:100%; padding:5px; border:1px solid #d8b4fe; border-radius:4px; }
+    .grid-container{
+      overflow:auto; background:#fff; border-radius:var(--radius);
+      border:1px solid var(--border); box-shadow:var(--shadow);
+    }
 
-    #loader{ position:fixed; inset:0; background:rgba(255,255,255,.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
-    .report-box{ margin-top:20px; padding:16px; background:#fff; border:1px solid var(--border); border-radius:10px; }
-    .report-item{ margin-bottom:4px; padding:6px 10px; background:#fff1f2; color:#9f1239; border-radius:4px; border-right:3px solid var(--danger); font-size:.9rem; font-weight:700; }
-    .report-ok{ background:#d1fae5; color:#065f46; padding:15px; text-align:center; font-weight:900; border-radius:8px; }
-    .alert-box{ background:#dbeafe; border:1px solid #93c5fd; padding:12px; border-radius:8px; margin:10px 0; color:#1e40af; font-weight:800; font-size:.9rem; text-align:center; }
-    .req-table{ width:100%; border-collapse:collapse; margin-top:10px; }
-    .req-table th,.req-table td{ border:1px solid #e2e8f0; padding:8px; text-align:center; }
-    .req-input{ width:60px; text-align:center; font-weight:800; }
+    .schedule-table{
+      border-collapse:separate; border-spacing:0;
+      width:100%; min-width:1150px; table-layout:fixed;
+    }
+    .schedule-table th,.schedule-table td{
+      border-bottom:1px solid #eef2f7;
+      border-left:1px solid #eef2f7;
+      text-align:center; padding:6px; height:42px;
+      font-size:.84rem;
+    }
+    .schedule-table th{
+      background:#fbfdff; position:sticky; top:0; z-index:10;
+      font-weight:900; color:#334155;
+      white-space:nowrap;
+    }
+    .schedule-table th.emp-col{
+      position:sticky; right:0; z-index:20;
+      width:210px; text-align:right; padding-right:12px;
+      border-left:1px solid #e2e8f0;
+      background:#fbfdff;
+    }
+    .schedule-table td.emp-col{
+      position:sticky; right:0; z-index:5; background:#fff;
+      text-align:right; padding-right:12px; font-weight:900;
+      border-left:1px solid #e2e8f0;
+      white-space:nowrap;
+    }
 
-    /* Manual Editor Modal */
+    .cell{
+      cursor:pointer; user-select:none; transition:.12s;
+      font-weight:900;
+      border-radius:10px;
+    }
+    .cell:hover{ filter:brightness(.98); transform:translateY(-.5px); }
+    .shift-pill{
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:44px; padding:6px 10px; border-radius:999px;
+      font-weight:1000; letter-spacing:.2px;
+    }
+    .badge-depot{
+      display:inline-block; margin-top:4px;
+      padding:2px 8px; border-radius:999px; font-size:.72rem; font-weight:1000;
+      background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;
+    }
+
+    .shift-M .shift-pill{ background:#dbeafe; color:#1e40af; }
+    .shift-A .shift-pill{ background:#fef3c7; color:#92400e; }
+    .shift-N .shift-pill{ background:#0f172a; color:#f8fafc; }
+    .shift-OFF .shift-pill{ background:#dcfce7; color:#166534; }
+    .shift-VAC .shift-pill{ background:#f3e8ff; color:#7e22ce; }
+    .shift-X .shift-pill{ background:#fee2e2; color:#991b1b; }
+
+    .violation{ outline:3px solid var(--danger); outline-offset:-3px; }
+
+    /* Shift view table */
+    .shift-table{ min-width:1150px; }
+    .shift-table td{ vertical-align:top; }
+    .names{
+      display:flex; flex-direction:column; gap:4px;
+      max-height:88px; overflow:auto;
+      padding:4px;
+    }
+    .name-chip{
+      display:inline-flex; align-items:center; gap:6px;
+      background:#f8fafc; border:1px solid #e2e8f0;
+      border-radius:999px; padding:4px 8px; font-weight:900;
+      font-size:.78rem; color:#0f172a;
+      justify-content:space-between;
+    }
+    .mini-tag{
+      font-size:.7rem; font-weight:1000; padding:2px 6px; border-radius:999px;
+      border:1px solid #e2e8f0; background:#fff; color:#334155;
+      white-space:nowrap;
+    }
+
+    .report-box{ margin-top:12px; }
+    .report-item{
+      margin-bottom:6px; padding:8px 10px; border-radius:12px;
+      background:#fff1f2; color:#9f1239; border:1px solid #fecdd3;
+      font-weight:900;
+    }
+    .report-ok{
+      background:#d1fae5; color:#065f46; padding:14px;
+      text-align:center; font-weight:1000; border-radius:12px;
+      border:1px solid #a7f3d0;
+    }
+
+    /* Loader */
+    #loader{ position:fixed; inset:0; background:rgba(255,255,255,.92);
+      display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999;
+      backdrop-filter: blur(3px);
+    }
+    #loader .spin{
+      width:56px; height:56px; border-radius:999px;
+      border:6px solid #e2e8f0; border-top-color:#2563eb;
+      animation:rot 1s linear infinite;
+      margin-bottom:10px;
+    }
+    @keyframes rot{ to{ transform:rotate(360deg);} }
+
+    /* Manual editor modal */
     #cellEditorOverlay{
       position:fixed; inset:0; background:rgba(15,23,42,.35);
       display:none; align-items:center; justify-content:center; z-index:10000;
     }
     #cellEditor{
-      width:min(620px,92vw);
-      background:#fff; border:1px solid #e2e8f0; border-radius:12px;
-      box-shadow:0 10px 30px rgba(0,0,0,.2); padding:14px;
+      width:min(640px,94vw);
+      background:#fff; border:1px solid var(--border); border-radius:16px;
+      box-shadow:0 18px 45px rgba(0,0,0,.22); padding:14px;
     }
-    #cellEditor h3{ margin:0 0 10px 0; font-size:1rem; color:#0f172a; }
+    #cellEditor h3{ margin:0 0 10px; font-size:1rem; font-weight:1000; }
     .ce-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
     .ce-row > div{ flex:1; min-width:170px; }
-    .ce-row label{ display:block; font-size:.8rem; font-weight:900; color:#475569; margin-bottom:6px; }
+    .ce-row label{ display:block; font-size:.8rem; font-weight:1000; color:#475569; margin-bottom:6px; }
     .ce-actions{ display:flex; gap:10px; justify-content:flex-start; margin-top:8px; flex-wrap:wrap; }
-    .ce-hint{ font-size:.78rem; color:#64748b; margin-top:8px; line-height:1.6; }
-    .ce-warn{ background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:8px; border-radius:8px; font-weight:900; font-size:.8rem; display:none; }
+    .ce-hint{ font-size:.78rem; color:#64748b; margin-top:8px; line-height:1.6; font-weight:800; }
+    .ce-warn{ background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:10px; border-radius:12px; font-weight:1000; font-size:.82rem; display:none; }
   </style>
 </head>
 <body>
 
 <div id="loader">
-  <div style="font-size:2.5rem;">🏗️</div>
-  <div style="margin-top:10px; font-weight:900; color:#334155;">جاري التوليد...</div>
+  <div class="spin"></div>
+  <div style="font-weight:1000; color:#0f172a;">جاري التوليد...</div>
 </div>
 
 <!-- Manual Editor -->
@@ -109,25 +251,33 @@
     <div class="ce-actions">
       <button class="primary" onclick="saveCellEdit()">حفظ</button>
       <button onclick="closeCellEditor()">إلغاء</button>
-      <button class="danger" onclick="clearCellEdit()">مسح (فارغ)</button>
-      <button class="outline" onclick="applyWeekdayToMonth()">📌 تطبيق على نفس يوم الأسبوع لبقية الشهر</button>
+      <button class="danger" onclick="clearCellEdit()">مسح</button>
+      <button class="ghost" onclick="applyWeekdayToMonth()">📌 تطبيق على نفس يوم الأسبوع لبقية الشهر</button>
     </div>
     <div class="ce-hint">
-      - التعديل اليدوي يسمح لك تسوي تعديل “استثنائي” إذا المولد ما قدر يحل حالة معينة.<br>
+      - التعديل اليدوي يسمح لك تسوي “استثناء” إذا المولد ما قدر يحل حالة معينة.<br>
       - زر 📌 يكرر نفس الشفت (ونفس الموقع إذا كان Work) على نفس الـ weekday لبقية الشهر لنفس الموظف.
     </div>
   </div>
 </div>
 
 <div class="app-container">
-  <div class="toolbar">
-    <h1>🗓️ نظام السيدة زينب (V11)</h1>
-    <select id="selYear"></select>
-    <select id="selMonth"></select>
-    <button onclick="loadData()">🔄 تحديث</button>
-    <button class="primary" onclick="saveData()">💾 حفظ</button>
-    <div style="flex-grow:1; text-align:left; font-size:0.8rem; color:#64748b;">
-      <span id="lastUpdated"></span>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">🗓️</div>
+      <div>
+        <h1>نظام السيدة زينب (V11)</h1>
+        <div class="subnote">UI جديد + عرضين: حسب الموظف / حسب الشفتات</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <select id="selYear"></select>
+      <select id="selMonth"></select>
+      <button onclick="loadData()">🔄 تحديث</button>
+      <button class="primary" onclick="saveData()">💾 حفظ</button>
+      <span style="font-size:.8rem; color:var(--muted); font-weight:900;" id="lastUpdated"></span>
     </div>
   </div>
 
@@ -138,49 +288,70 @@
   </div>
 
   <div id="view-schedule" class="view active">
-    <div class="alert-box">
-      ✅ <strong>V11:</strong>
-      Template أسبوعي يتكرر لبقية الشهر • توزيع OFF للدوّار بدون تكدّس • منع Friday OFF للدوّار/الجوكر (آلياً)
-      • الجوكر يفضّل N ويبتعد عن M (آلياً) • تعديل يدوي + تكرار weekday
+
+    <div class="panel">
+      <div class="alert">
+        <div class="dot"></div>
+        <div>
+          <div style="font-weight:1000;">V11</div>
+          <div style="margin-top:4px;">
+            Template أسبوعي يتكرر • توزيع OFF للدوّار بدون تكدّس • منع Friday OFF للدوّار/الجوكر (آلياً) • الجوكر يفضّل N • تعديل يدوي + تكرار weekday
+          </div>
+        </div>
+      </div>
+
+      <div class="rowbar" style="margin-top:12px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="primary" onclick="generateScheduleV11()">⚡ توليد (V11)</button>
+          <button class="success" onclick="fillDepots()">🏭 توزيع المواقع</button>
+          <button class="danger" onclick="clearMonth()">🗑️ مسح</button>
+          <button onclick="exportCSV()">📄 Excel</button>
+        </div>
+
+        <div class="seg" title="طريقة العرض">
+          <button id="btnViewEmp" class="active" onclick="setScheduleView('emp')">👤 حسب الموظف</button>
+          <button id="btnViewShift" onclick="setScheduleView('shift')">🧩 حسب الشفتات</button>
+        </div>
+      </div>
     </div>
 
-    <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
-      <div>
-        <button onclick="generateScheduleV11()" class="primary">⚡ توليد (V11)</button>
-        <button onclick="fillDepots()" class="success">🏭 توزيع المواقع</button>
-      </div>
-      <div>
-        <button onclick="clearMonth()" class="danger">🗑️ مسح</button>
-        <button onclick="exportCSV()">📄 Excel</button>
-      </div>
-    </div>
-
-    <div class="grid-container">
+    <!-- View 1 -->
+    <div id="scheduleByEmployee" class="grid-container">
       <table class="schedule-table" id="scheduleGrid"></table>
     </div>
 
-    <div id="coverageReport" class="report-box"></div>
+    <!-- View 2 -->
+    <div id="scheduleByShift" class="grid-container" style="display:none;">
+      <table class="schedule-table shift-table" id="shiftGrid"></table>
+    </div>
+
+    <div id="coverageReport" class="report-box panel"></div>
   </div>
 
   <div id="view-employees" class="view">
-    <button class="primary" onclick="addEmployee()" style="margin-bottom:15px;">➕ إضافة موظف</button>
+    <div class="panel">
+      <button class="primary" onclick="addEmployee()">➕ إضافة موظف</button>
+    </div>
     <div id="employeeList"></div>
   </div>
 
   <div id="view-settings" class="view">
-    <div class="emp-card">
-      <h3>1️⃣ المواقع (Depots)</h3>
+    <div class="panel">
+      <h3 style="margin:0 0 10px; font-weight:1000;">1️⃣ المواقع (Depots)</h3>
       <input type="text" id="settingDepots" style="width:100%;" onchange="updateDepots()">
     </div>
-    <div class="emp-card">
-      <h3>2️⃣ العدد المطلوب (M, A, N)</h3>
+
+    <div class="panel">
+      <h3 style="margin:0 0 10px; font-weight:1000;">2️⃣ العدد المطلوب (M, A, N)</h3>
       <div id="requirementsContainer"></div>
     </div>
-    <div class="emp-card">
-      <h3>3️⃣ تحكم</h3>
+
+    <div class="panel">
+      <h3 style="margin:0 0 10px; font-weight:1000;">3️⃣ تحكم</h3>
       <button class="danger" onclick="saveData(true)">⚠️ تصفير قاعدة البيانات</button>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -196,11 +367,12 @@
   const WORK_SHIFTS = ["M","A","N"];
   const WEEKDAYS = ["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
   const MAX_CONSECUTIVE = 6;
+  const FRIDAY = 5; // 0 Sun..5 Fri..6 Sat
 
-  const FRIDAY = 5; // JS: 0 Sun..5 Fri..6 Sat
+  let currentScheduleView = "emp"; // emp | shift
 
   // =========================
-  // SAFETY GATE (original rules)
+  // SAFETY GATE
   // =========================
   function isShiftFlipViolation(prev, next){
     if(!prev || ["OFF","VAC","X",""].includes(prev)) return false;
@@ -209,9 +381,7 @@
     if(prev==="A") return (next==="M");
     return false;
   }
-  function breaksStreak(shift){
-    return shift === "OFF"; // فقط OFF يكسر
-  }
+  function breaksStreak(shift){ return shift === "OFF"; } // فقط OFF يكسر
 
   // =========================
   // INIT
@@ -240,6 +410,15 @@
 
   function showLoader(s){ document.getElementById("loader").style.display = s ? "flex" : "none"; }
 
+  function setScheduleView(mode){
+    currentScheduleView = mode;
+    document.getElementById("btnViewEmp").classList.toggle("active", mode==="emp");
+    document.getElementById("btnViewShift").classList.toggle("active", mode==="shift");
+    document.getElementById("scheduleByEmployee").style.display = (mode==="emp") ? "" : "none";
+    document.getElementById("scheduleByShift").style.display = (mode==="shift") ? "" : "none";
+    if(mode==="shift") renderShiftView();
+  }
+
   // =========================
   // API
   // =========================
@@ -267,9 +446,8 @@
         });
 
         renderAll();
-
         if(state.meta.updatedAt){
-          document.getElementById("lastUpdated").innerText = new Date(state.meta.updatedAt).toLocaleTimeString();
+          document.getElementById("lastUpdated").innerText = "آخر حفظ: " + new Date(state.meta.updatedAt).toLocaleTimeString();
         }
       }
     }catch(e){
@@ -288,7 +466,7 @@
     state.meta.updatedAt = new Date().toISOString();
     try{
       await fetch(API_URL, { method:"POST", body: JSON.stringify({ action:"save", payload:{ employees:state.employees, schedule:state.schedule, meta:state.meta } }) });
-      document.getElementById("lastUpdated").innerText = new Date().toLocaleTimeString();
+      document.getElementById("lastUpdated").innerText = "آخر حفظ: " + new Date().toLocaleTimeString();
       if(reset) renderAll();
     }catch(e){
       alert("خطأ حفظ.");
@@ -304,6 +482,7 @@
     renderEmployees();
     renderRequirementsTable();
     renderSchedule();
+    if(currentScheduleView==="shift") renderShiftView();
   }
 
   function renderRequirementsTable(){
@@ -313,7 +492,7 @@
     appConfig.depots.forEach(dep=>{
       const r = state.meta.requirements[dep] || {M:0,A:0,N:0};
       html += `<tr>
-        <td style="font-weight:900;">${dep}</td>
+        <td style="font-weight:1000;">${dep}</td>
         <td><input type="number" min="0" class="req-input" value="${r.M||0}" onchange="updateReq('${dep}','M',this.value)"></td>
         <td><input type="number" min="0" class="req-input" value="${r.A||0}" onchange="updateReq('${dep}','A',this.value)"></td>
         <td><input type="number" min="0" class="req-input" value="${r.N||0}" onchange="updateReq('${dep}','N',this.value)"></td>
@@ -332,14 +511,14 @@
 
     state.employees.forEach(emp=>{
       const div = document.createElement("div");
-      div.className = "emp-card";
+      div.className = "panel";
 
-      let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:6px;'>";
+      let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:8px;'>";
       WEEKDAYS.forEach((day,i)=>{
         const opts = SHIFTS.filter(s=>!["VAC","X"].includes(s)).map(s=>`<option value="${s}" ${emp.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join("");
         weekHtml += `<div style="text-align:center;">
-          <label style="font-size:0.7rem; color:#64748b; font-weight:900;">${day}</label>
-          <select onchange="updateWeeklyTemplate('${emp.id}',${i},this.value)" style="width:100%; font-size:0.85rem;">${opts}</select>
+          <div style="font-size:.72rem;color:var(--muted);font-weight:1000;margin-bottom:6px;">${day}</div>
+          <select onchange="updateWeeklyTemplate('${emp.id}',${i},this.value)" style="width:100%;">${opts}</select>
         </div>`;
       });
       weekHtml += "</div>";
@@ -352,7 +531,7 @@
       quotasHtml += `</div>`;
 
       let vacationHtml = `<div class="vacation-input">
-        <label style="font-weight:900;">🏖️ أيام الإجازات (مثال: 5, 6)</label>
+        <label style="font-weight:1000;">🏖️ أيام الإجازات (مثال: 5, 6)</label>
         <input type="text" value="${emp.vacationDates||''}" onchange="updateVacationDates('${emp.id}',this.value)">
       </div>`;
 
@@ -366,31 +545,29 @@
           <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}','OFF',this.value)"></div>
         </div></div>`;
       } else if(emp.patternType==="joker"){
-        patternHtml = `<div class="pattern-editor">
-          <div style="color:#d97706; font-weight:900;">🃏 جوكر</div>
-          <p style="font-size:0.82rem; margin:6px 0 0; font-weight:800; color:#92400e;">
+        patternHtml = `<div class="pattern-editor" style="border-style:solid;">
+          <div style="color:#b45309; font-weight:1000;">🃏 جوكر</div>
+          <div style="font-size:.82rem; margin-top:6px; font-weight:900; color:#92400e;">
             آلياً: N أولاً، ثم A عند الضرورة، و M ممنوع.
-          </p>
+          </div>
         </div>`;
       } else {
         patternHtml = `<div class="pattern-editor">${weekHtml}</div>`;
       }
 
       div.innerHTML = `
-        <div class="emp-header">
-          <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}','name',this.value)" style="font-weight:900; flex:1; border:none;">
-          <select onchange="updateEmployee('${emp.id}','patternType',this.value)" style="margin:0 10px; font-weight:900;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}','name',this.value)" style="font-weight:1000; flex:1; min-width:220px;">
+          <select onchange="updateEmployee('${emp.id}','patternType',this.value)">
             <option value="weekly" ${emp.patternType==='weekly'?'selected':''}>ثابت</option>
             <option value="rolling" ${emp.patternType==='rolling'?'selected':''}>دوار</option>
             <option value="joker" ${emp.patternType==='joker'?'selected':''}>جوكر</option>
           </select>
-          <button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️</button>
+          <button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️ حذف</button>
         </div>
         ${vacationHtml}
-        <div style="margin:10px 0;">
-          <strong style="font-size:0.85rem; color:#64748b; font-weight:900;">توزيع المواقع:</strong>
-          ${quotasHtml}
-        </div>
+        <div style="margin:10px 0; font-weight:1000; color:var(--muted);">توزيع المواقع:</div>
+        ${quotasHtml}
         ${patternHtml}
       `;
       container.appendChild(div);
@@ -448,7 +625,7 @@
   }
 
   // =========================
-  // SCHEDULE STORAGE HELPERS
+  // Schedule helpers
   // =========================
   function getMonthKey(){ return `${appConfig.year}-${appConfig.month}`; }
   function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
@@ -465,13 +642,12 @@
   function getCell(sched, empId, day){
     return (sched[empId] && sched[empId][day]) ? sched[empId][day] : null;
   }
-
   function setCell(sched, empId, day, shift, depot=""){
     sched[empId][day] = { shift, depot };
   }
 
   // =========================
-  // APPLY VACATIONS (override)
+  // VAC
   // =========================
   function applyVacations(numDays, sched){
     state.employees.forEach(emp=>{
@@ -486,29 +662,10 @@
   }
 
   // =========================
-  // DAILY NEEDS (for report + optional balancing)
-  // =========================
-  function calculateDailyNeeds(numDays){
-    const needs = {};
-    const depots = appConfig.depots.map(d=>d.trim());
-    const reqs = state.meta.requirements || {};
-    for(let d=1; d<=numDays; d++){
-      needs[d] = { M:0, A:0, N:0 };
-      depots.forEach(dep=>{
-        const r = reqs[dep] || {};
-        needs[d].M += (r.M||0);
-        needs[d].A += (r.A||0);
-        needs[d].N += (r.N||0);
-      });
-    }
-    return needs;
-  }
-
-  // =========================
-  // V11 GENERATOR (Template Weekly)
+  // V11 generator
   // =========================
   function generateScheduleV11(){
-    if(!confirm("🚀 توليد V11؟\n\n- الثابت يتكرر حسب Template\n- الدوّار: OFF موزع وممنوع الجمعة (آلياً)\n- الجوكر: N أولاً و OFF واحد وممنوع الجمعة (آلياً)\n- VAC لا يُمس\n\nملاحظة: أي تعديل يدوي لاحق تقدر تثبّته بزر 📌")) return;
+    if(!confirm("🚀 توليد V11؟\n- الثابت Template\n- الدوّار OFF موزع + ممنوع الجمعة\n- الجوكر N أولاً + ممنوع الجمعة\n- VAC لا يُمس\n\nبعدها تقدر تعدل يدوي وتثبت بالـ 📌")) return;
 
     showLoader(true);
     setTimeout(()=> {
@@ -516,36 +673,27 @@
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const sched = ensureMonthSchedule();
 
-        // 1) clear month (لكن نخلي VAC إذا موجود؟ الأفضل نعيد كل شيء ثم نطبق VAC)
-        //    لأن VAC override: نعيد توليد ثم نطبق VAC آخر شيء.
-        for(const emp of state.employees){
-          sched[emp.id] = {};
-        }
+        // reset month
+        for(const emp of state.employees) sched[emp.id] = {};
 
-        // 2) apply VAC first (so generator skips those days)
         applyVacations(numDays, sched);
 
-        // 3) build weekly templates
         const fixed = state.employees.filter(e=>e.patternType==="weekly");
         const rolling = state.employees.filter(e=>e.patternType==="rolling");
         const joker = state.employees.filter(e=>e.patternType==="joker");
 
-        // A) fixed: repeat month directly with safety streak + flip
         applyFixedTemplateForMonth(numDays, sched, fixed);
 
-        // B) rolling: create 7-day template per employee (Sun..Sat), repeat
         const rollingTemplates = buildRollingWeeklyTemplates(rolling);
         applyWeeklyTemplatesForMonth(numDays, sched, rolling, rollingTemplates, { forbidFridayOff:true });
 
-        // C) joker: create 7-day template per employee (mostly N + 1 OFF), repeat
         const jokerTemplates = buildJokerWeeklyTemplates(joker);
         applyWeeklyTemplatesForMonth(numDays, sched, joker, jokerTemplates, { forbidFridayOff:true });
 
-        // 4) enforce safety & max consecutive over full month (only OFF breaks)
         enforceSafetyAndStreakMonth(numDays, sched);
 
-        // 5) render & save
         renderSchedule();
+        if(currentScheduleView==="shift") renderShiftView();
         saveData();
         alert("✅ تم توليد الجدول (V11)!");
       }catch(e){
@@ -564,79 +712,49 @@
 
       for(let day=1; day<=numDays; day++){
         const existing = getCell(sched, emp.id, day);
-        if(existing && existing.shift==="VAC"){
-          prev = "VAC";
-          // VAC لا يكسر الستريك حسب طلبك، لذا الستريك كما هو
-          continue;
-        }
+        if(existing && existing.shift==="VAC"){ prev="VAC"; continue; }
 
-        const dow = new Date(appConfig.year, appConfig.month-1, day).getDay(); // 0..6
+        const dow = new Date(appConfig.year, appConfig.month-1, day).getDay();
         let shift = emp.weeklyTemplate[dow] || "OFF";
 
-        // enforce max consecutive: إذا streak == 6 و اليوم عمل => OFF
-        if(streak >= MAX_CONSECUTIVE && WORK_SHIFTS.includes(shift)){
-          shift = "OFF";
-        }
-
-        // enforce anti-flip
-        if(isShiftFlipViolation(prev, shift)){
-          shift = "OFF"; // حل آمن
-        }
+        if(streak >= MAX_CONSECUTIVE && WORK_SHIFTS.includes(shift)) shift = "OFF";
+        if(isShiftFlipViolation(prev, shift)) shift = "OFF";
 
         setCell(sched, emp.id, day, shift, "");
 
-        // update streak
-        if(breaksStreak(shift)){
-          streak = 0;
-        } else if(WORK_SHIFTS.includes(shift)){
-          streak++;
-        } // VAC/X لا تغيّر الستريك
+        if(breaksStreak(shift)) streak = 0;
+        else if(WORK_SHIFTS.includes(shift)) streak++;
 
         prev = shift;
       }
     });
   }
 
-  // ----- Build Rolling templates (7 days) -----
-  // الهدف: توزيع OFF بين الموظفين بدون تكدّس + منع Friday OFF آلياً
   function buildRollingWeeklyTemplates(rollingEmps){
-    const offCountsByDow = Array(7).fill(0); // global to spread
-    const templates = {}; // empId -> array[7]
+    const offCountsByDow = Array(7).fill(0);
+    const templates = {};
 
-    // helper choose OFF day with min count excluding Friday
     function pickOffDow(excludeSet){
       let best = null, bestCount = Infinity;
       for(let d=0; d<7; d++){
         if(d === FRIDAY) continue;
         if(excludeSet.has(d)) continue;
-        if(offCountsByDow[d] < bestCount){
-          bestCount = offCountsByDow[d];
-          best = d;
-        }
+        if(offCountsByDow[d] < bestCount){ bestCount = offCountsByDow[d]; best = d; }
       }
-      // fallback
       if(best===null){
-        for(let d=0; d<7; d++){
-          if(d!==FRIDAY && !excludeSet.has(d)) return d;
-        }
+        for(let d=0; d<7; d++) if(d!==FRIDAY && !excludeSet.has(d)) return d;
         return 6;
       }
       return best;
     }
 
-    // deterministic-ish shuffle to avoid same order each time
     const list = [...rollingEmps].sort((a,b)=> (a.id>b.id?1:-1));
 
     list.forEach(emp=>{
       const f = emp.flexCounts || {M:1,A:2,N:2,OFF:2};
-      const offNeeded = Math.max(0, parseInt(f.OFF)||0);
-      // نثبت 2 OFF غالباً؛ إذا user دخل شيء مختلف نمشي عليه
-      const offSlots = Math.min(6, offNeeded);
+      const offSlots = Math.min(6, Math.max(0, parseInt(f.OFF)||0));
 
-      // start with all WORK placeholders
       const week = Array(7).fill(null);
-
-      // pick OFF dows (spread)
       const chosen = new Set();
       for(let i=0; i<offSlots; i++){
         const d = pickOffDow(chosen);
@@ -645,38 +763,27 @@
         week[d] = "OFF";
       }
 
-      // fill remaining with shifts based on counts (M/A/N)
       let m = Math.max(0, parseInt(f.M)||0);
       let a = Math.max(0, parseInt(f.A)||0);
       let n = Math.max(0, parseInt(f.N)||0);
 
-      // If counts don't fit remaining slots, we'll flex:
       const workSlots = 7 - offSlots;
       let total = m + a + n;
-      if(total < workSlots){
-        // add extra M (upgrade friendly) to reach
-        m += (workSlots - total);
-      } else if(total > workSlots){
-        // trim from N first (upgrade preference) then A then M
+
+      if(total < workSlots) m += (workSlots - total);
+      else if(total > workSlots){
         let excess = total - workSlots;
-        const dec = (ref) => {
-          const take = Math.min(ref.val, excess);
-          ref.val -= take;
-          excess -= take;
-        };
+        const dec = (ref)=>{ const take=Math.min(ref.val,excess); ref.val-=take; excess-=take; };
         let refN={val:n}, refA={val:a}, refM={val:m};
         dec(refN); dec(refA); dec(refM);
         n=refN.val; a=refA.val; m=refM.val;
       }
 
-      // Build ordered pool to minimize anti-flip (M -> A -> N is safest)
-      // لكن تفضيل Upgrade يعني مسموح نرفع، فخلّينا نعطي M أول الأسبوع أكثر
       const pool = [];
       for(let i=0;i<m;i++) pool.push("M");
       for(let i=0;i<a;i++) pool.push("A");
       for(let i=0;i<n;i++) pool.push("N");
 
-      // place into week in weekday order
       let idx=0;
       for(let d=0; d<7; d++){
         if(week[d]==="OFF") continue;
@@ -684,16 +791,13 @@
         idx++;
       }
 
-      // fix anti-flip inside weekly loop (including Sat->Sun)
       fixWeekAntiFlip(week);
-
       templates[emp.id] = week;
     });
 
     return templates;
   }
 
-  // ----- Build Joker templates -----
   function buildJokerWeeklyTemplates(jokerEmps){
     const offCountsByDow = Array(7).fill(0);
     const templates = {};
@@ -702,10 +806,7 @@
       let best=null, bestCount=Infinity;
       for(let d=0; d<7; d++){
         if(d === FRIDAY) continue;
-        if(offCountsByDow[d] < bestCount){
-          bestCount = offCountsByDow[d];
-          best = d;
-        }
+        if(offCountsByDow[d] < bestCount){ bestCount = offCountsByDow[d]; best = d; }
       }
       if(best===null) best = 6;
       return best;
@@ -713,26 +814,19 @@
 
     const list = [...jokerEmps].sort((a,b)=> (a.id>b.id?1:-1));
     list.forEach(emp=>{
-      const week = Array(7).fill("N"); // default N
+      const week = Array(7).fill("N");
       const offDow = pickOffDow();
       offCountsByDow[offDow]++;
       week[offDow] = "OFF";
-
-      // Joker prefers N, avoids M. We'll allow A in template only if needed by counts? (but joker has no counts)
-      // Keep as N.
       fixWeekAntiFlip(week);
       templates[emp.id] = week;
     });
     return templates;
   }
 
-  // ensure no forbidden transitions (N->M/A, A->M) around 7 days cycle
   function fixWeekAntiFlip(week){
-    // try upgrade "next" day if violates, else OFF as last resort
     const upgrade = (s) => (s==="M" ? "A" : (s==="A" ? "N" : s));
-    const safeNext = (prev,next) => !isShiftFlipViolation(prev,next);
 
-    // iterate multiple passes
     for(let pass=0; pass<5; pass++){
       let changed=false;
       for(let i=0; i<7; i++){
@@ -741,25 +835,29 @@
         let next = week[j];
 
         if(isShiftFlipViolation(prev,next)){
-          // try upgrade next
           let cand = next;
           for(let k=0;k<2;k++){
             cand = upgrade(cand);
-            if(safeNext(prev,cand)){
-              week[j]=cand;
-              changed=true;
-              break;
-            }
+            if(!isShiftFlipViolation(prev,cand)){ week[j]=cand; changed=true; break; }
           }
-          // still violation? make next OFF
-          if(isShiftFlipViolation(prev, week[j])){
-            week[j]="OFF";
-            changed=true;
-          }
+          if(isShiftFlipViolation(prev, week[j])){ week[j]="OFF"; changed=true; }
         }
       }
       if(!changed) break;
     }
+  }
+
+  function tryUpgradeToAvoidFlip(prev, desired, type){
+    const upgrade = (s) => (s==="M" ? "A" : (s==="A" ? "N" : s));
+    let cand = desired;
+    for(let i=0;i<3;i++){
+      if(!isShiftFlipViolation(prev, cand)){
+        if(type==="joker" && cand==="M") cand="A";
+        if(!isShiftFlipViolation(prev,cand)) return cand;
+      }
+      cand = upgrade(cand);
+    }
+    return "OFF";
   }
 
   function applyWeeklyTemplatesForMonth(numDays, sched, emps, templates, opts={forbidFridayOff:true}){
@@ -770,67 +868,33 @@
 
       for(let day=1; day<=numDays; day++){
         const existing = getCell(sched, emp.id, day);
-        if(existing && existing.shift==="VAC"){
-          prev = "VAC";
-          continue;
-        }
+        if(existing && existing.shift==="VAC"){ prev="VAC"; continue; }
 
-        const dow = new Date(appConfig.year, appConfig.month-1, day).getDay(); // 0..6
+        const dow = new Date(appConfig.year, appConfig.month-1, day).getDay();
         let shift = week[dow] || "OFF";
 
-        // enforce: rolling/joker Friday OFF ممنوع آلياً
         if(opts.forbidFridayOff && dow===FRIDAY && shift==="OFF"){
-          // اجبار عمل: للجوكر N، للدوار A (أخف) ثم N
-          if(emp.patternType==="joker") shift="N";
-          else shift="A";
+          shift = (emp.patternType==="joker") ? "N" : "A";
         }
 
-        // enforce max consecutive: إذا streak == 6 و اليوم عمل => OFF (حتى لو VAC/X ما يكسر)
-        if(streak >= MAX_CONSECUTIVE && WORK_SHIFTS.includes(shift)){
-          shift = "OFF";
-        }
+        if(streak >= MAX_CONSECUTIVE && WORK_SHIFTS.includes(shift)) shift = "OFF";
+        if(isShiftFlipViolation(prev, shift)) shift = tryUpgradeToAvoidFlip(prev, shift, emp.patternType);
 
-        // enforce anti-flip with prev day
-        if(isShiftFlipViolation(prev, shift)){
-          // حاول upgrade (M->A->N) لتفادي flip، إذا ما نفع OFF
-          shift = tryUpgradeToAvoidFlip(prev, shift, emp.patternType);
-        }
-
-        // Joker avoid M آلياً
         if(emp.patternType==="joker" && shift==="M"){
-          shift = "A"; // ثم enforcement below
+          shift = "A";
           if(isShiftFlipViolation(prev, shift)) shift = tryUpgradeToAvoidFlip(prev, shift, "joker");
         }
 
         setCell(sched, emp.id, day, shift, "");
 
-        // update streak
-        if(breaksStreak(shift)){
-          streak = 0;
-        } else if(WORK_SHIFTS.includes(shift)){
-          streak++;
-        } // VAC/X لا تغيّر الستريك
+        if(breaksStreak(shift)) streak = 0;
+        else if(WORK_SHIFTS.includes(shift)) streak++;
 
         prev = shift;
       }
     });
   }
 
-  function tryUpgradeToAvoidFlip(prev, desired, type){
-    const upgrade = (s) => (s==="M" ? "A" : (s==="A" ? "N" : s));
-    let cand = desired;
-    for(let i=0;i<3;i++){
-      if(!isShiftFlipViolation(prev, cand)){
-        // Joker avoid M
-        if(type==="joker" && cand==="M") cand="A";
-        if(!isShiftFlipViolation(prev,cand)) return cand;
-      }
-      cand = upgrade(cand);
-    }
-    return "OFF";
-  }
-
-  // Enforce month-wide streak & flip after everything (safety net)
   function enforceSafetyAndStreakMonth(numDays, sched){
     state.employees.forEach(emp=>{
       let prev = "OFF";
@@ -840,43 +904,26 @@
         const c = getCell(sched, emp.id, day);
         if(!c){ setCell(sched, emp.id, day, "OFF", ""); prev="OFF"; streak=0; continue; }
 
-        // VAC override
-        if(c.shift==="VAC"){
-          prev = "VAC";
-          continue;
-        }
+        if(c.shift==="VAC"){ prev="VAC"; continue; }
 
-        // enforce max consecutive
-        if(streak >= MAX_CONSECUTIVE && WORK_SHIFTS.includes(c.shift)){
-          c.shift = "OFF";
-          c.depot = "";
-        }
+        if(streak >= MAX_CONSECUTIVE && WORK_SHIFTS.includes(c.shift)){ c.shift="OFF"; c.depot=""; }
+        if(isShiftFlipViolation(prev, c.shift)){ c.shift="OFF"; c.depot=""; }
 
-        // enforce anti flip
-        if(isShiftFlipViolation(prev, c.shift)){
-          c.shift = "OFF";
-          c.depot = "";
-        }
-
-        // joker no M (auto safety)
         if(emp.patternType==="joker" && c.shift==="M"){
-          c.shift = "A";
-          if(isShiftFlipViolation(prev, c.shift)) c.shift="OFF";
+          c.shift="A";
+          if(isShiftFlipViolation(prev,c.shift)) c.shift="OFF";
         }
 
-        // update streak
-        if(breaksStreak(c.shift)){
-          streak = 0;
-        } else if(WORK_SHIFTS.includes(c.shift)){
-          streak++;
-        }
+        if(breaksStreak(c.shift)) streak = 0;
+        else if(WORK_SHIFTS.includes(c.shift)) streak++;
+
         prev = c.shift;
       }
     });
   }
 
   // =========================
-  // DEPOT FILL (unchanged)
+  // DEPOT FILL
   // =========================
   function fillDepots(){
     const key = getMonthKey();
@@ -930,11 +977,12 @@
     }
 
     renderSchedule();
+    if(currentScheduleView==="shift") renderShiftView();
     saveData();
   }
 
   // =========================
-  // RENDER SCHEDULE + REPORT
+  // RENDER: employee view
   // =========================
   function renderSchedule(){
     const grid = document.getElementById("scheduleGrid");
@@ -944,7 +992,7 @@
     let html = `<thead><tr><th class="emp-col">الموظف</th>`;
     for(let d=1; d<=numDays; d++){
       const wd = new Date(appConfig.year, appConfig.month-1, d).getDay();
-      html += `<th>${d}<br>${WEEKDAYS[wd]}</th>`;
+      html += `<th>${d} <span style="color:var(--muted);font-weight:1000;">${WEEKDAYS[wd]}</span></th>`;
     }
     html += `</tr></thead><tbody>`;
 
@@ -956,7 +1004,12 @@
         const c = (data[emp.id] && data[emp.id][d]) ? data[emp.id][d] : {shift:"", depot:""};
         const s = c.shift || "";
         const v = isShiftFlipViolation(prev, s) ? "violation" : "";
-        row += `<td class="cell shift-${s} ${v}" onclick="openCellEditorById('${emp.id}', ${d})">${s}</td>`;
+        const depotBadge = (c.depot && WORK_SHIFTS.includes(s)) ? `<div class="badge-depot">${c.depot}</div>` : "";
+        row += `
+          <td class="cell shift-${s} ${v}" onclick="openCellEditorById('${emp.id}', ${d})">
+            <div class="shift-pill">${s || "-"}</div>
+            ${depotBadge}
+          </td>`;
         prev = s || "OFF";
       }
 
@@ -967,6 +1020,67 @@
     analyzeCoverage();
   }
 
+  // =========================
+  // RENDER: shift view
+  // =========================
+  function renderShiftView(){
+    const grid = document.getElementById("shiftGrid");
+    const numDays = daysInMonth(appConfig.year, appConfig.month);
+    const data = state.schedule[getMonthKey()] || {};
+
+    // build map: day -> shift -> array of {name,depot,patternType}
+    const map = {};
+    for(let d=1; d<=numDays; d++){
+      map[d] = {};
+      SHIFTS.forEach(s=>map[d][s]=[]);
+    }
+
+    state.employees.forEach(emp=>{
+      for(let d=1; d<=numDays; d++){
+        const c = data[emp.id]?.[d];
+        const s = c?.shift || "OFF";
+        const depot = c?.depot || "";
+        map[d][s].push({ name: emp.name, depot, type: emp.patternType });
+      }
+    });
+
+    let html = `<thead><tr><th class="emp-col">الشفت</th>`;
+    for(let d=1; d<=numDays; d++){
+      const wd = new Date(appConfig.year, appConfig.month-1, d).getDay();
+      html += `<th>${d} <span style="color:var(--muted);font-weight:1000;">${WEEKDAYS[wd]}</span></th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    SHIFTS.forEach(shift=>{
+      html += `<tr>
+        <td class="emp-col">
+          <span class="shift-pill" style="border:1px solid var(--border); background:#fff;">${shift}</span>
+        </td>`;
+
+      for(let d=1; d<=numDays; d++){
+        const list = map[d][shift] || [];
+        // sort to keep stable (optional)
+        list.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+
+        const namesHtml = list.length
+          ? `<div class="names">` + list.map(x=>{
+              const depotTag = (x.depot && WORK_SHIFTS.includes(shift)) ? `<span class="mini-tag">${x.depot}</span>` : "";
+              return `<div class="name-chip"><span>${x.name}</span>${depotTag}</div>`;
+            }).join("") + `</div>`
+          : `<div style="color:var(--muted); font-weight:900;">—</div>`;
+
+        html += `<td class="shift-${shift}">${namesHtml}</td>`;
+      }
+
+      html += `</tr>`;
+    });
+
+    grid.innerHTML = html + `</tbody>`;
+  }
+
+  // =========================
+  // COVERAGE REPORT (as-is)
+  // =========================
   function analyzeCoverage(){
     const report = document.getElementById("coverageReport");
     const numDays = daysInMonth(appConfig.year, appConfig.month);
@@ -975,7 +1089,6 @@
     const reqs = state.meta.requirements || {};
     let issues = [];
 
-    // إذا ما وزعت depots، نعرض تنبيه بسيط بدل نقص غلط
     let anyDepotAssigned = false;
     for(let d=1; d<=numDays; d++){
       for(const e of state.employees){
@@ -1011,7 +1124,7 @@
   }
 
   // =========================
-  // MANUAL CELL EDITOR
+  // Manual editor (unchanged logic)
   // =========================
   let ceContext = { empId:null, day:null };
 
@@ -1088,6 +1201,7 @@
 
     closeCellEditor();
     renderSchedule();
+    if(currentScheduleView==="shift") renderShiftView();
     saveData();
   }
 
@@ -1098,10 +1212,10 @@
     if(state.schedule[key]?.[empId]?.[day]) delete state.schedule[key][empId][day];
     closeCellEditor();
     renderSchedule();
+    if(currentScheduleView==="shift") renderShiftView();
     saveData();
   }
 
-  // NEW: Apply same shift+depot to same weekday for rest of month (this employee only)
   function applyWeekdayToMonth(){
     const key = getMonthKey();
     const {empId, day} = ceContext;
@@ -1117,7 +1231,6 @@
       const wd = new Date(appConfig.year, appConfig.month-1, d).getDay();
       if(wd !== targetWD) continue;
 
-      // لا نلمس VAC
       const existing = state.schedule[key]?.[empId]?.[d];
       if(existing && existing.shift==="VAC") continue;
 
@@ -1128,6 +1241,7 @@
 
     closeCellEditor();
     renderSchedule();
+    if(currentScheduleView==="shift") renderShiftView();
     saveData();
   }
 
@@ -1137,12 +1251,13 @@
   }
 
   // =========================
-  // CLEAR / EXPORT
+  // Clear / Export
   // =========================
   function clearMonth(){
     if(confirm("مسح؟")){
       state.schedule[getMonthKey()] = {};
       renderSchedule();
+      if(currentScheduleView==="shift") renderShiftView();
       saveData();
     }
   }
@@ -1169,6 +1284,5 @@
     a.click();
   }
 </script>
-
 </body>
 </html>
