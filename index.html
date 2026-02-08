@@ -48,13 +48,13 @@
 <body>
 
 <div id="loader">
-    <div style="font-size: 2rem;">⚙️</div>
-    <div>جاري المعالجة...</div>
+    <div style="font-size: 2rem;">🔄</div>
+    <div>جاري توزيع الجدول...</div>
 </div>
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ جدول السيدة زينب</h1>
+        <h1>🗓️ نظام السيدة زينب للجداول</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()">🔄 تحديث</button>
@@ -72,11 +72,11 @@
 
     <div id="view-schedule" class="view active">
         <div class="alert">
-            ⚡ النظام يعمل بوضع الأمان: ممنوع القلبة نهائياً (LN➔D/EN ممنوع) | (EN➔D ممنوع) | تصفير الرصيد كل أحد.
+            ⚡ القواعد الجديدة: الجوكر يحصل على يوم إجازة واحد أسبوعياً (متفرقين عن بعض) | منع قلبة الشفت نهائياً.
         </div>
         <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
             <div>
-                <button onclick="generateScheduleSafe()" class="primary">⚡ توزيع الشفتات (بدون تعليق)</button>
+                <button onclick="generateScheduleSafe()" class="primary">⚡ توزيع الشفتات</button>
                 <button onclick="fillDepots()">🏭 توزيع المواقع</button>
             </div>
             <div>
@@ -113,7 +113,7 @@
 
 <script>
     // --- CONFIGURATION ---
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ⚠️⚠️ ضع الرابط هنا ⚠️⚠️
+    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ضع الرابط هنا
     
     // --- STATE ---
     let state = { employees: [], schedule: {}, meta: { requirements: {} } };
@@ -121,17 +121,14 @@
     const SHIFTS = ["D", "EN", "LN", "OFF", "X"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
 
-    // --- SAFETY CHECK (THE GATEKEEPER) ---
+    // --- SAFETY CHECK ---
     function isShiftFlipViolation(prev, next) {
         if (!prev || prev === 'OFF' || prev === 'X') return false;
         if (next === 'OFF' || next === 'X') return false;
-        
-        // LN ممنوع يجي وراه D أو EN
+        // LN -> ممنوع D أو EN
         if (prev === 'LN') return (next === 'D' || next === 'EN');
-        
-        // EN ممنوع يجي وراه D
+        // EN -> ممنوع D
         if (prev === 'EN') return (next === 'D');
-        
         return false;
     }
 
@@ -171,7 +168,7 @@
                 renderEmployees(); renderRequirementsTable(); renderSchedule();
                 if(state.meta.updatedAt) document.getElementById('lastUpdated').innerText = new Date(state.meta.updatedAt).toLocaleTimeString();
             }
-        } catch(e) { console.error(e); alert("فشل الاتصال: تأكد من الرابط."); } finally { showLoader(false); }
+        } catch(e) { console.error(e); alert("فشل الاتصال."); } finally { showLoader(false); }
     }
 
     async function saveData(reset=false) {
@@ -185,12 +182,11 @@
         } catch(e) { alert("فشل الحفظ"); } finally { showLoader(false); }
     }
 
-    // --- GENERATOR: SAFE & FAST ---
+    // --- GENERATOR: SMART JOKER OFF DISTRIBUTION ---
     function generateScheduleSafe() {
-        if(!confirm("سيتم توزيع الشفتات.\nالقواعد: منع القلبة، تصفير أسبوعي، جوكر ليلي.\nهل تريد المتابعة؟")) return;
+        if(!confirm("سيتم توزيع الشفتات.\n- الجوكر: إجازة واحدة فقط أسبوعياً (موزعة لعدم التعارض).\n- الشفت الدوار: دلو أسبوعي.\n- السلامة: منع قلبة الشفت.")) return;
         
         showLoader(true);
-        // Timeout to let UI render the loader
         setTimeout(() => {
             try {
                 const key = getMonthKey();
@@ -200,16 +196,14 @@
                 const reqs = state.meta.requirements || {};
                 const cleanDepots = appConfig.depots.map(d => d.trim());
 
-                // 1. حساب الحاجة
+                // 1. Daily Needs
                 let dailyNeeds = {};
                 for(let d=1; d<=numDays; d++) {
                     dailyNeeds[d] = { D:0, EN:0, LN:0 };
                     cleanDepots.forEach(dep => {
                         let r = reqs[dep] || reqs[dep.trim()];
                         if(r) {
-                            dailyNeeds[d].D += (r.D||0);
-                            dailyNeeds[d].EN += (r.EN||0);
-                            dailyNeeds[d].LN += (r.LN||0);
+                            dailyNeeds[d].D += (r.D||0); dailyNeeds[d].EN += (r.EN||0); dailyNeeds[d].LN += (r.LN||0);
                         }
                     });
                 }
@@ -218,60 +212,98 @@
                 let prevShifts = {};
                 state.employees.forEach(e => { workStreaks[e.id]=0; prevShifts[e.id]='OFF'; });
 
-                // 2. الموظف الثابت (Fixed)
+                // 2. Fixed Weekly
                 state.employees.forEach(emp => {
                     if(emp.patternType === 'weekly' || !emp.patternType) {
                         applyFixed(emp, numDays, sched, dailyNeeds, workStreaks, prevShifts);
                     } else {
-                        sched[emp.id] = {}; // Init for others
+                        sched[emp.id] = {}; 
                     }
                 });
 
-                // 3. الموظف الدوار + الجوكر (Loop Day by Day for stability)
+                // 3. Rolling & Joker Loop
                 const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
                 const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
 
-                // Buckets
-                let rollingBuckets = {};
-                let jokerBuckets = {}; // Joker: 1 OFF, 6 WORK
-
-                for(let d=1; d<=numDays; d++) {
-                    const date = new Date(appConfig.year, appConfig.month - 1, d);
-                    const isSunday = (date.getDay() === 0);
-
-                    // RESET BUCKETS ON SUNDAY
-                    if(isSunday || d === 1) {
-                        rollingEmps.forEach(e => {
-                            let f = e.flexCounts || {D:1,EN:2,LN:2,OFF:2};
-                            rollingBuckets[e.id] = { ...f };
-                        });
-                        jokerEmps.forEach(e => {
-                            // Joker gets 1 OFF per week logic
-                            jokerBuckets[e.id] = { WORK: 6, OFF: 1 };
-                        });
+                let currentDay = 1;
+                while(currentDay <= numDays) {
+                    // Determine Week (Sun-Sat)
+                    let daysInWeek = [];
+                    let d = currentDay;
+                    while(d <= numDays) {
+                        daysInWeek.push(d);
+                        let date = new Date(appConfig.year, appConfig.month - 1, d);
+                        if(date.getDay() === 6) break; 
+                        d++;
                     }
 
-                    let todaysNeeds = dailyNeeds[d];
+                    // A. PRE-DISTRIBUTE JOKER OFFS (The Staggering Logic)
+                    // We need to pick 1 OFF day for each Joker in this week.
+                    // We want to minimize overlap.
+                    let jokerOffCounts = {}; 
+                    daysInWeek.forEach(day => jokerOffCounts[day] = 0);
 
-                    // A. Assign Rolling (Prioritize Day/EN to save Night for Joker)
-                    let activeRol = [...rollingEmps].sort(() => Math.random() - 0.5);
-                    activeRol.forEach(emp => {
-                        assignSafe(emp, d, sched, todaysNeeds, rollingBuckets[emp.id], workStreaks, prevShifts, 'rolling');
+                    // Shuffle Jokers to randomize who gets which day
+                    let shuffledJokers = [...jokerEmps].sort(() => Math.random() - 0.5);
+                    
+                    shuffledJokers.forEach(emp => {
+                        // Check if manual exception forces OFF or WORK
+                        const exc = getExceptions(emp);
+                        let forcedDay = null;
+                        
+                        // Try to find a day to be OFF based on least congestion
+                        // Filter out days where user forced Work (X) - here assume X is absent/work depending on logic, let's assume exceptions override.
+                        
+                        // Sort days by current OFF count (ascending)
+                        let bestDays = daysInWeek.sort((a,b) => jokerOffCounts[a] - jokerOffCounts[b]);
+                        
+                        let assignedOffDay = bestDays[0]; // Pick the day with fewest Jokers OFF
+                        
+                        // Mark this day as PRE-ASSIGNED OFF
+                        if(!sched[emp.id]) sched[emp.id] = {};
+                        // Check constraints (user forced OFF on another day?)
+                        // For simplicity, we assign the algorithmic OFF here.
+                        // The daily loop below will respect it if it's set to OFF.
+                        
+                        // We store the "Planned OFF" in a temp map for the daily loop to use
+                        emp.plannedOffDay = assignedOffDay;
+                        jokerOffCounts[assignedOffDay]++;
                     });
 
-                    // B. Assign Joker (Prioritize Night)
-                    let activeJok = [...jokerEmps].sort(() => Math.random() - 0.5);
-                    activeJok.forEach(emp => {
-                        assignSafe(emp, d, sched, todaysNeeds, jokerBuckets[emp.id], workStreaks, prevShifts, 'joker');
+                    // B. Buckets for Rolling
+                    let rollingBuckets = {};
+                    rollingEmps.forEach(e => {
+                        let f = e.flexCounts || {D:1,EN:2,LN:2,OFF:2};
+                        rollingBuckets[e.id] = { ...f };
                     });
+
+                    // Process Days
+                    daysInWeek.sort((a,b)=>a-b).forEach(dayNum => {
+                        let todaysNeeds = dailyNeeds[dayNum];
+
+                        // 1. Rolling (Day First)
+                        let activeRol = [...rollingEmps].sort(() => Math.random() - 0.5);
+                        activeRol.forEach(emp => {
+                            assignSafe(emp, dayNum, sched, todaysNeeds, rollingBuckets[emp.id], workStreaks, prevShifts, 'rolling');
+                        });
+
+                        // 2. Joker (Night First, Respect Planned OFF)
+                        let activeJok = [...jokerEmps].sort(() => Math.random() - 0.5);
+                        activeJok.forEach(emp => {
+                            let isPlannedOff = (emp.plannedOffDay === dayNum);
+                            assignJokerSafe(emp, dayNum, sched, todaysNeeds, workStreaks, prevShifts, isPlannedOff);
+                        });
+                    });
+
+                    currentDay = d + 1;
                 }
 
                 renderSchedule();
                 saveData();
-                alert("تم التوزيع بنجاح!");
+                alert("تم التوزيع.\n- الجواكر: تم تشتيت إجازاتهم على أيام الأسبوع.");
             } catch(e) {
                 console.error(e);
-                alert("حدث خطأ أثناء التوزيع: " + e.message);
+                alert("خطأ: " + e.message);
             } finally {
                 showLoader(false);
             }
@@ -280,7 +312,6 @@
 
     function applyFixed(emp, numDays, sched, needs, streaks, prevs) {
         const exc = getExceptions(emp);
-        sched[emp.id] = {};
         for(let d=1; d<=numDays; d++) {
             let shift = "";
             let date = new Date(appConfig.year, appConfig.month - 1, d);
@@ -289,88 +320,97 @@
             if(exc.xDates.includes(d)) shift = "X";
             else if(exc.offDates.includes(d)) shift = "OFF";
 
-            // Safety Check
             if(isShiftFlipViolation(prevs[emp.id], shift) || (streaks[emp.id] >= 5 && shift !== 'OFF')) {
                 shift = "OFF";
             }
 
             sched[emp.id][d] = { shift: shift, depot: "" };
             prevs[emp.id] = shift;
-            
             if(['D','EN','LN'].includes(shift)) {
                 if(needs[d][shift] > 0) needs[d][shift]--;
                 streaks[emp.id]++;
-            } else {
-                streaks[emp.id] = 0;
-            }
+            } else streaks[emp.id] = 0;
         }
     }
 
     function assignSafe(emp, d, sched, needs, bucket, streaks, prevs, type) {
         const exc = getExceptions(emp);
         if(exc.xDates.includes(d)) { setShift(emp,d,"X",sched,prevs,streaks); return; }
-        if(exc.offDates.includes(d)) { 
-            setShift(emp,d,"OFF",sched,prevs,streaks); 
-            if(bucket.OFF > 0) bucket.OFF--; 
-            return; 
+        if(exc.offDates.includes(d)) { setShift(emp,d,"OFF",sched,prevs,streaks); if(bucket.OFF > 0) bucket.OFF--; return; }
+
+        let prev = prevs[emp.id];
+        let streak = streaks[emp.id];
+        let assigned = "OFF";
+
+        if(streak >= 5) {
+            assigned = "OFF";
+        } else {
+            let canD = (prev !== 'LN' && prev !== 'EN');
+            let canEN = (prev !== 'LN');
+            let canLN = true; 
+
+            // Rolling: Priority D > EN > LN
+            if(canD && needs.D > 0 && bucket.D > 0) { assigned = 'D'; needs.D--; bucket.D--; }
+            else if(canEN && needs.EN > 0 && bucket.EN > 0) { assigned = 'EN'; needs.EN--; bucket.EN--; }
+            else if(canLN && needs.LN > 0 && bucket.LN > 0) { assigned = 'LN'; needs.LN--; bucket.LN--; }
+            else {
+                if(bucket.OFF > 0) { assigned = 'OFF'; bucket.OFF--; }
+                else if(canD && bucket.D > 0) { assigned = 'D'; bucket.D--; }
+                else if(canEN && bucket.EN > 0) { assigned = 'EN'; bucket.EN--; }
+                else if(canLN && bucket.LN > 0) { assigned = 'LN'; bucket.LN--; }
+            }
+        }
+        setShift(emp, d, assigned, sched, prevs, streaks);
+    }
+
+    function assignJokerSafe(emp, d, sched, needs, streaks, prevs, isPlannedOff) {
+        const exc = getExceptions(emp);
+        if(exc.xDates.includes(d)) { setShift(emp,d,"X",sched,prevs,streaks); return; }
+        if(exc.offDates.includes(d)) { setShift(emp,d,"OFF",sched,prevs,streaks); return; }
+
+        // If this is the planned OFF day from the staggering algorithm
+        if (isPlannedOff) {
+            setShift(emp, d, "OFF", sched, prevs, streaks);
+            return;
         }
 
         let prev = prevs[emp.id];
         let streak = streaks[emp.id];
         let assigned = "OFF";
 
-        // Max Streak Check
-        if(streak >= 5) {
-            assigned = "OFF";
-        } else {
-            // Determine possible shifts based on Anti-Flip
-            // Rules:
-            // Prev LN -> Only LN allowed (or OFF)
-            // Prev EN -> EN or LN allowed (or OFF)
-            // Prev D/OFF -> Any allowed
-            
-            let canD = (prev !== 'LN' && prev !== 'EN');
-            let canEN = (prev !== 'LN');
-            let canLN = true; // LN is always safe after anything (except maybe hard physical limits, but logic wise ok)
-
-            if(type === 'rolling') {
-                // Priority: D > EN > LN (Save night for joker)
-                if(canD && needs.D > 0 && bucket.D > 0) { assigned = 'D'; needs.D--; bucket.D--; }
-                else if(canEN && needs.EN > 0 && bucket.EN > 0) { assigned = 'EN'; needs.EN--; bucket.EN--; }
-                else if(canLN && needs.LN > 0 && bucket.LN > 0) { assigned = 'LN'; needs.LN--; bucket.LN--; }
-                else {
-                    // Dump bucket logic
-                    if(bucket.OFF > 0) { assigned = 'OFF'; bucket.OFF--; }
-                    else if(canD && bucket.D > 0) { assigned = 'D'; bucket.D--; }
-                    else if(canEN && bucket.EN > 0) { assigned = 'EN'; bucket.EN--; }
-                    else if(canLN && bucket.LN > 0) { assigned = 'LN'; bucket.LN--; }
-                }
-            } else {
-                // Joker: Priority LN > EN > D
-                if(canLN && needs.LN > 0) { assigned = 'LN'; needs.LN--; bucket.WORK--; }
-                else if(canEN && needs.EN > 0) { assigned = 'EN'; needs.EN--; bucket.WORK--; }
-                else if(canD && needs.D > 0) { assigned = 'D'; needs.D--; bucket.WORK--; }
-                else {
-                    // Fill gaps or take OFF
-                    if(bucket.OFF > 0) { assigned = 'OFF'; bucket.OFF--; }
-                    else {
-                        // Must work
-                        if(canLN) assigned = 'LN';
-                        else if(canEN) assigned = 'EN';
-                        else if(canD) assigned = 'D';
-                    }
-                }
-            }
-        }
+        // Must work unless streak limit or flip violation prevents it
+        // Joker Priority: LN > EN > D
+        let canD = (prev !== 'LN' && prev !== 'EN');
+        let canEN = (prev !== 'LN');
         
+        // Check Needs first
+        if (needs.LN > 0) { assigned = "LN"; needs.LN--; }
+        else if (canEN && needs.EN > 0) { assigned = "EN"; needs.EN--; }
+        else if (canD && needs.D > 0) { assigned = "D"; needs.D--; }
+        else {
+            // No need, but MUST WORK (since it's not the OFF day)
+            // Pick any safe shift, prefer Night
+            if(true) assigned = "LN"; // Always safe logic-wise
+            else if(canEN) assigned = "EN";
+            else if(canD) assigned = "D";
+            else assigned = "OFF"; // Corner case, stuck
+        }
+
+        // Double check flip (Safety Net)
+        if(isShiftFlipViolation(prev, assigned)) {
+            // Try fallback
+            if(!isShiftFlipViolation(prev, 'LN')) assigned = 'LN';
+            else if(!isShiftFlipViolation(prev, 'EN')) assigned = 'EN';
+            else assigned = 'OFF';
+        }
+
         setShift(emp, d, assigned, sched, prevs, streaks);
     }
 
     function setShift(emp, d, s, sched, prevs, streaks) {
         sched[emp.id][d] = { shift: s, depot: "" };
         prevs[emp.id] = s;
-        if(s === 'OFF' || s === 'X') streaks[emp.id] = 0;
-        else streaks[emp.id]++;
+        if(s === 'OFF' || s === 'X') streaks[emp.id] = 0; else streaks[emp.id]++;
     }
 
     function getExceptions(emp) {
@@ -386,19 +426,16 @@
         const key = getMonthKey();
         const sched = state.schedule[key];
         if(!sched || !confirm("توزيع المواقع؟")) return;
-        
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const reqs = state.meta.requirements || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
 
-        // Clear existing
         for(let d=1; d<=numDays; d++) {
             state.employees.forEach(e => {
                 if(sched[e.id][d] && ['D','EN','LN'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = "";
             });
         }
 
-        // Assign
         let empUsage = {}; state.employees.forEach(e => empUsage[e.id] = {});
         for(let d=1; d<=numDays; d++) {
             let counts = {}; cleanDepots.forEach(dep => counts[dep] = {D:0,EN:0,LN:0});
@@ -410,9 +447,7 @@
 
             ['D','EN','LN'].forEach(s => {
                 let list = workers[s];
-                // Sort by quota preference
-                list.sort((a,b) => Math.random() - 0.5); // Simple shuffle for now
-
+                list.sort((a,b) => Math.random() - 0.5); 
                 cleanDepots.forEach(dep => {
                     let r = reqs[dep] || reqs[dep.trim()];
                     let needed = r ? (r[s]||0) : 0;
@@ -426,8 +461,6 @@
                         i++;
                     }
                 });
-                
-                // Overflow
                 list.forEach(e => {
                     if(!sched[e.id][d].depot) {
                         let target = cleanDepots.reduce((a,b) => counts[a][s] < counts[b][s] ? a : b);
