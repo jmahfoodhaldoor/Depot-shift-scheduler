@@ -1,666 +1,1538 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة (الإصدار المصحح V7)</title>
-    <style>
-        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --border: #cbd5e1; }
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); font-size: 13.5px; direction: rtl; }
-        .app-container { max-width: 1400px; margin: 0 auto; padding: 10px; }
-        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; align-items: center; }
-        h1 { margin: 0; font-size: 1.3rem; margin-left: auto; color: #1e293b; font-weight: 800; }
-        button { cursor: pointer; padding: 8px 16px; border: 1px solid var(--border); background: white; border-radius: 6px; font-weight: 600; transition: all 0.2s; font-family: inherit; }
-        button:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        button.primary { background: var(--primary); color: white; border-color: var(--primary); }
-        button.success { background: var(--success); color: white; border-color: var(--success); }
-        button.danger { background: var(--danger); color: white; border-color: var(--danger); }
-        input, select { padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; }
-        .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; background: white; border-radius: 8px 8px 0 0; padding: 0 10px; }
-        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; color: #64748b; font-weight: 600; }
-        .tab:hover { background: #f8fafc; color: var(--primary); }
-        .tab.active { border-bottom-color: var(--primary); color: var(--primary); }
-        .view { display: none; }
-        .view.active { display: block; }
-        .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-        .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; }
-        .schedule-table th, .schedule-table td { border: 1px solid #e2e8f0; text-align: center; padding: 4px; height: 38px; font-size: 0.85rem; }
-        .schedule-table th { background: #f8fafc; position: sticky; top: 0; z-index: 10; font-weight: 700; color: #334155; }
-        .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; width: 170px; text-align: right; padding-right: 12px; border-left: 2px solid #cbd5e1; background: #f8fafc; }
-        .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 12px; font-weight: 600; border-left: 2px solid #cbd5e1; color: #1e293b; }
-        .cell { cursor: pointer; user-select: none; transition: background 0.15s; font-weight: 600; }
-        .cell:hover { filter: brightness(0.95); }
-        .cell.shift-M { background-color: #dbeafe; color: #1e40af; } 
-        .cell.shift-A { background-color: #fef3c7; color: #92400e; } 
-        .cell.shift-N { background-color: #1e293b; color: #f8fafc; } 
-        .cell.shift-OFF { background-color: #f0fdf4; color: #166534; } 
-        .cell.shift-VAC { background-color: #f3e8ff; color: #7e22ce; } 
-        .cell.shift-X { background-color: #fee2e2; color: #991b1b; } 
-        .violation { border: 3px solid var(--danger) !important; position: relative; }
-        .emp-card { border: 1px solid var(--border); background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .emp-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; }
-        .pattern-editor { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed var(--border); margin-top: 10px; }
-        .flex-counts { display: flex; gap: 10px; flex-wrap: wrap; }
-        .flex-counts div { display: flex; flex-direction: column; align-items: center; }
-        .flex-counts label { font-size: 0.7rem; font-weight: 700; color: #64748b; }
-        .flex-counts input { width: 45px; text-align: center; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; }
-        .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
-        .depot-quotas div { background: #fff7ed; padding: 6px; border: 1px solid #ffedd5; border-radius: 6px; }
-        .depot-quotas label { font-size: 0.7rem; font-weight: 700; color: #9a3412; display: block; }
-        .depot-quotas input { width: 100%; text-align: center; font-weight: 600; margin-top: 2px; }
-        .vacation-input { background: #f3e8ff; padding: 8px; border-radius: 6px; border: 1px solid #e9d5ff; margin-top: 10px; }
-        .vacation-input input { width: 100%; padding: 5px; border: 1px solid #d8b4fe; border-radius: 4px; }
-        #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .report-box { margin-top: 20px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: 10px; }
-        .report-item { margin-bottom: 4px; padding: 6px 10px; background: #fff1f2; color: #9f1239; border-radius: 4px; border-right: 3px solid var(--danger); font-size: 0.9rem; font-weight: 500; }
-        .report-ok { background: #d1fae5; color: #065f46; padding: 15px; text-align: center; font-weight: 700; border-radius: 8px; }
-        .alert-box { background: #dbeafe; border: 1px solid #93c5fd; padding: 12px; border-radius: 8px; margin: 10px 0; color: #1e40af; font-weight: 600; font-size: 0.9rem; text-align: center; }
-        .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .req-table th, .req-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
-        .req-input { width: 50px; text-align: center; font-weight: 600; }
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-right: 5px; }
-        .badge.success { background: #d1fae5; color: #065f46; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shift Scheduling SPA (Safety-Gated Tiered Scheduler)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f1b33; --panel2:#0c162b; --text:#e7eefc; --muted:#9ab0d0;
+      --border:#1f335d; --primary:#4f8cff; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+      --chip:#132550;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;color:var(--text);background:linear-gradient(180deg,var(--bg),#070d18)}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,18,32,.92);backdrop-filter:blur(10px);z-index:50}
+    header .left{display:flex;gap:10px;align-items:center}
+    h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.2px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    select,input,button,textarea{font:inherit}
+    select,input{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:10px}
+    button{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:10px;font-weight:700;cursor:pointer}
+    button:hover{border-color:#2b4a85;transform:translateY(-1px)}
+    button.primary{background:linear-gradient(180deg,#3d7cff,#2f66ff);border-color:#2f66ff}
+    button.good{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:#16a34a}
+    button.bad{background:linear-gradient(180deg,#ef4444,#dc2626);border-color:#dc2626}
+    button.ghost{background:transparent}
+    main{max-width:1500px;margin:0 auto;padding:14px 16px 24px}
+    .tabs{display:flex;gap:8px;margin:10px 0 14px}
+    .tab{padding:10px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--border);cursor:pointer;font-weight:800;color:var(--muted)}
+    .tab.active{background:var(--panel);color:var(--text);border-color:#2b4a85}
+    .grid{display:grid;gap:12px}
+    .card{background:rgba(15,27,51,.9);border:1px solid var(--border);border-radius:16px;padding:12px}
+    .card h2{margin:0 0 10px;font-size:13px;color:var(--muted);letter-spacing:.3px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .hint{color:var(--muted);font-size:12px}
+    .split{display:grid;grid-template-columns: 1.1fr .9fr;gap:12px}
+    @media (max-width: 980px){.split{grid-template-columns:1fr}}
+    table{border-collapse:collapse;width:100%;min-width:1050px}
+    th,td{border:1px solid rgba(31,51,93,.7);padding:6px 6px;text-align:center;font-size:12px}
+    th{position:sticky;top:58px;background:rgba(12,22,43,.95);z-index:10}
+    th.emp,td.emp{position:sticky;left:0;background:rgba(12,22,43,.95);z-index:15;text-align:left;font-weight:900;min-width:170px}
+    td{background:rgba(9,15,28,.55)}
+    .cell{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;min-height:32px;border-radius:10px}
+    .chip{display:inline-flex;gap:6px;align-items:center;padding:3px 8px;border-radius:999px;background:var(--chip);border:1px solid rgba(31,51,93,.6);font-size:11px;color:var(--muted)}
+    .s-M{background:rgba(79,140,255,.18);border:1px solid rgba(79,140,255,.45)}
+    .s-A{background:rgba(245,158,11,.16);border:1px solid rgba(245,158,11,.45)}
+    .s-N{background:rgba(231,238,252,.08);border:1px solid rgba(231,238,252,.20)}
+    .s-OFF{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35)}
+    .s-VAC{background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.40)}
+    .s-X{background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.40)}
+    .viol{outline:2px solid var(--bad);box-shadow:0 0 0 2px rgba(239,68,68,.22) inset}
+    .warn{outline:2px solid var(--warn)}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(12,22,43,.9);border:1px solid var(--border);font-weight:800}
+    .kv{display:grid;grid-template-columns: 150px 1fr;gap:8px;align-items:center}
+    .kv label{color:var(--muted);font-weight:800;font-size:12px}
+    textarea{width:100%;min-height:120px;resize:vertical;background:rgba(9,15,28,.55);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:14px}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .empCard{padding:10px;border-radius:14px;border:1px solid var(--border);background:rgba(9,15,28,.55)}
+    .empTop{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .empTop b{font-size:13px}
+    .mini{font-size:11px;color:var(--muted)}
+    .dangerText{color:#ffb4b4}
+    .okText{color:#bfffd2}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .footerNote{margin-top:10px;color:var(--muted);font-size:12px}
+  </style>
 </head>
 <body>
+<header>
+  <div class="left">
+    <h1>🗓️ Shift Scheduling SPA — Safety Gate + Tiered Distribution</h1>
+    <span class="chip" id="statusChip">Offline</span>
+  </div>
+  <div class="toolbar">
+    <select id="yearSel"></select>
+    <select id="monthSel"></select>
+    <button class="ghost" id="btnLoad">Load</button>
+    <button class="ghost" id="btnSave">Save</button>
+    <button class="primary" id="btnGenerate">Generate</button>
+    <button class="ghost" id="btnAssignDepots">Assign Depots</button>
+    <button class="ghost" id="btnExport">Export CSV</button>
+  </div>
+</header>
 
-<div id="loader">
-    <div style="font-size: 2.5rem;">⚙️</div>
-    <div style="margin-top: 10px; font-weight: 700; color: #334155;">جاري المعالجة الدقيقة...</div>
-</div>
+<main>
+  <div class="tabs">
+    <div class="tab active" data-tab="schedule">Schedule</div>
+    <div class="tab" data-tab="employees">Employees</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
 
-<div class="app-container">
-    <div class="toolbar">
-        <h1>🗓️ نظام السيدة زينب (V7 - المصحح)</h1>
-        <select id="selYear"></select>
-        <select id="selMonth"></select>
-        <button onclick="loadData()">🔄 تحديث</button>
-        <button class="primary" onclick="saveData()">💾 حفظ</button>
-        <div style="flex-grow:1; text-align:left; font-size:0.8rem; color:#64748b;">
-             <span id="lastUpdated"></span>
+  <div id="view-schedule">
+    <div class="split">
+      <div class="card">
+        <h2>Monthly Schedule</h2>
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <span class="pill">Safety Gate: <span class="mono">N→M/A forbidden</span>, <span class="mono">A→M forbidden</span>, max <span class="mono">6</span> consecutive workdays</span>
+          <span class="pill">Tier Flow: 1 Fixed → 2 Rolling(Happy) → 3 Rolling(M-force) → 4 Rolling(Cleanup) → 5 Joker</span>
         </div>
+        <div style="overflow:auto;border-radius:14px;border:1px solid var(--border)">
+          <table id="schedTable"></table>
+        </div>
+        <div class="footerNote">
+          Tip: VAC always overrides. X is treated like non-working for flip/streak (configurable in code).
+        </div>
+      </div>
+      <div class="card">
+        <h2>Diagnostics</h2>
+        <div class="row" style="margin-bottom:10px">
+          <span class="chip">Coverage deficits are computed per Depot + Shift</span>
+          <span class="chip">Violations are flagged per employee day</span>
+        </div>
+        <div id="diagBox" class="list"></div>
+      </div>
     </div>
+  </div>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('schedule')">الجدول</div>
-        <div class="tab" onclick="switchTab('employees')">الموظفين</div>
-        <div class="tab" onclick="switchTab('settings')">الإعدادات</div>
+  <div id="view-employees" style="display:none">
+    <div class="card">
+      <h2>Employees</h2>
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <div class="hint">
+          Types: <b>A</b> Fixed weekly pattern · <b>B</b> Rolling weekly bucket · <b>C</b> Joker (6 work + 1 OFF, prefers N/A, avoids M unless critical)
+        </div>
+        <button class="good" id="btnAddEmp">+ Add Employee</button>
+      </div>
+      <div id="empList" class="list"></div>
     </div>
+  </div>
 
-    <div id="view-schedule" class="view active">
-        <div class="alert-box">
-            ✅ <strong>التصحيحات:</strong> إصلاح اختفاء الثابت | توزيع الدوار حسب الحاجة | أولوية النهار
+  <div id="view-settings" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <h2>API + Storage</h2>
+        <div class="kv">
+          <label>Google Apps Script Web App URL</label>
+          <input id="apiUrl" placeholder="https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec" />
         </div>
-        <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
-            <div>
-                <button onclick="generateScheduleFinal()" class="primary">⚡ توزيع (التصحيح النهائي)</button>
-                <button onclick="fillDepots()" class="success">🏭 توزيع المواقع</button>
-            </div>
-            <div>
-                <button onclick="clearMonth()" class="danger">🗑️ مسح</button>
-                <button onclick="exportCSV()">📄 Excel</button>
-            </div>
+        <div class="hint" style="margin-top:8px">
+          Expected endpoints:
+          <span class="mono">GET ?action=load</span> → { ok:true, data:{...} } ·
+          <span class="mono">POST</span> body { action:"save", payload:{...} }.
         </div>
-        <div class="grid-container">
-            <table class="schedule-table" id="scheduleGrid"></table>
-        </div>
-        <div id="coverageReport" class="report-box"></div>
-    </div>
+      </div>
 
-    <div id="view-employees" class="view">
-        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">➕ إضافة موظف</button>
-        <div id="employeeList"></div>
-    </div>
+      <div class="card">
+        <h2>Depots + Requirements</h2>
+        <div class="kv">
+          <label>Depots (comma-separated)</label>
+          <input id="depotsInput" placeholder="Budaiya, IsaTown" />
+        </div>
+        <div class="hint" style="margin-top:8px">
+          Requirements are per-depot per-shift (same for every day). You can extend this to per-day if you want.
+        </div>
+        <div style="margin-top:10px;overflow:auto">
+          <table id="reqTable"></table>
+        </div>
+      </div>
 
-    <div id="view-settings" class="view">
-        <div class="emp-card">
-            <h3>1️⃣ المواقع (Depots)</h3>
-            <input type="text" id="settingDepots" style="width: 100%;" onchange="updateDepots()">
+      <div class="card">
+        <h2>Advanced (JSON)</h2>
+        <div class="hint">If you want to edit everything quickly, paste JSON here and click “Apply JSON”.</div>
+        <textarea id="jsonArea" class="mono"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="btnRefreshJson" class="ghost">Refresh JSON</button>
+          <button id="btnApplyJson" class="primary">Apply JSON</button>
+          <button id="btnReset" class="bad">Reset All</button>
         </div>
-        <div class="emp-card">
-            <h3>2️⃣ العدد المطلوب (M, A, N)</h3>
-            <div id="requirementsContainer"></div>
-        </div>
-        <div class="emp-card">
-            <h3>3️⃣ تحكم</h3>
-            <button class="danger" onclick="saveData(true)">⚠️ تصفير قاعدة البيانات</button>
-        </div>
+      </div>
     </div>
-</div>
+  </div>
+</main>
 
 <script>
-    // ==========================================
-    // === CONFIGURATION ===
-    // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️⚠️ ضع الرابط هنا ⚠️
-    
-    // ==========================================
-    // === STATE MANAGEMENT ===
-    // ==========================================
-    let state = { 
-        employees: [], 
-        schedule: {}, 
-        meta: { requirements: {}, depots: [] } 
+/* ============================
+   SHIFT SCHEDULER SPA (Single-file)
+   - Safety Gate (anti-flip, max streak)
+   - Tiered distribution algorithm
+   - Depot balancing (fair rotation)
+   - Save/Load via Google Apps Script
+   ============================ */
+
+(() => {
+  // ---- Constants ----
+  const SHIFTS = ["M","A","N","OFF","VAC","X"];
+  const WORK_SHIFTS = new Set(["M","A","N"]);
+  const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  // Treat these as "rest-like" for flip/streak purposes:
+  const REST_LIKE = new Set(["OFF","VAC","X"]);
+
+  // ---- App State ----
+  const state = {
+    apiUrl: "",
+    meta: {
+      depots: ["Budaiya","IsaTown"],
+      requirements: { // per depot
+        Budaiya: { M:1, A:1, N:1 },
+        IsaTown: { M:1, A:1, N:1 }
+      }
+    },
+    employees: [
+      // Sample:
+      // { id:"e1", name:"A-Fixed-1", type:"A", fixedPattern:{Sun:"M",Mon:"M",Tue:"M",Wed:"M",Thu:"M",Fri:"OFF",Sat:"OFF"}, vacations:["2026-02-10"], depotWeights:{Budaiya:1, IsaTown:1} },
+      // { id:"e2", name:"B-Rolling-1", type:"B", weeklyBucket:{M:1,A:2,N:2,OFF:2}, vacations:[], depotWeights:{Budaiya:1, IsaTown:1} },
+      // { id:"e3", name:"C-Joker-1", type:"C", vacations:[], depotWeights:{Budaiya:1, IsaTown:1} },
+    ],
+    schedule: {
+      // key "YYYY-MM": { empId: { "YYYY-MM-DD": {shift:"M", depot:"Budaiya"} } }
+    }
+  };
+
+  // ---- UI Elements ----
+  const el = {
+    statusChip: document.getElementById("statusChip"),
+    yearSel: document.getElementById("yearSel"),
+    monthSel: document.getElementById("monthSel"),
+    btnLoad: document.getElementById("btnLoad"),
+    btnSave: document.getElementById("btnSave"),
+    btnGenerate: document.getElementById("btnGenerate"),
+    btnAssignDepots: document.getElementById("btnAssignDepots"),
+    btnExport: document.getElementById("btnExport"),
+    schedTable: document.getElementById("schedTable"),
+    diagBox: document.getElementById("diagBox"),
+    empList: document.getElementById("empList"),
+    btnAddEmp: document.getElementById("btnAddEmp"),
+    apiUrl: document.getElementById("apiUrl"),
+    depotsInput: document.getElementById("depotsInput"),
+    reqTable: document.getElementById("reqTable"),
+    jsonArea: document.getElementById("jsonArea"),
+    btnRefreshJson: document.getElementById("btnRefreshJson"),
+    btnApplyJson: document.getElementById("btnApplyJson"),
+    btnReset: document.getElementById("btnReset"),
+  };
+
+  // ---- Helpers (dates, ids, deep copy) ----
+  const pad2 = n => String(n).padStart(2,"0");
+  const ymKey = (y,m) => `${y}-${pad2(m)}`;
+  const isoDate = (y,m,d) => `${y}-${pad2(m)}-${pad2(d)}`;
+  const daysInMonth = (y,m) => new Date(y, m, 0).getDate(); // m=1..12
+  const randId = () => "e_" + Math.random().toString(36).slice(2,10);
+  const deepClone = obj => JSON.parse(JSON.stringify(obj));
+
+  function monthDays(y,m){
+    const n = daysInMonth(y,m);
+    const days = [];
+    for(let d=1; d<=n; d++){
+      const dt = new Date(y, m-1, d);
+      days.push({
+        d,
+        iso: isoDate(y,m,d),
+        dow: dt.getDay(),
+        dowName: DOW[dt.getDay()],
+        // week index counted by Sundays inside the month:
+        weekIndex: getWeekIndexInMonth(y,m,d)
+      });
+    }
+    return days;
+  }
+
+  // Week index based on Sundays; resets each Sunday. If month starts mid-week, first partial week is weekIndex 0.
+  function getWeekIndexInMonth(y,m,d){
+    const dt = new Date(y,m-1,d);
+    // count how many Sundays have occurred up to this date within the month
+    let count = 0;
+    for(let i=1;i<=d;i++){
+      const t = new Date(y,m-1,i);
+      if(t.getDay()===0) count++;
+    }
+    // If day itself is Sunday, it belongs to its own (new) week bucket.
+    // We want first Sunday to be weekIndex 0. So subtract 1.
+    return Math.max(0, count - 1);
+  }
+
+  function isSunday(iso){
+    const dt = new Date(iso+"T00:00:00");
+    return dt.getDay()===0;
+  }
+
+  // ---- Safety Gate ----
+  function isFlipViolation(prevShift, nextShift){
+    if(!prevShift) return false;
+    if(REST_LIKE.has(prevShift) || REST_LIKE.has(nextShift)) return false;
+    if(prevShift==="N" && (nextShift==="M" || nextShift==="A")) return true; // zero tolerance
+    if(prevShift==="A" && nextShift==="M") return true;
+    return false;
+  }
+
+  // Max consecutive WORK days: 6. Day 7 must be OFF (or VAC).
+  function wouldBreakMaxStreak(currStreak, nextShift){
+    if(!WORK_SHIFTS.has(nextShift)) return false;
+    return currStreak >= 6;
+  }
+
+  // ---- Requirements ----
+  function totalReqPerShift(){
+    const out = {M:0,A:0,N:0};
+    for(const depot of state.meta.depots){
+      const r = state.meta.requirements[depot] || {M:0,A:0,N:0};
+      out.M += (r.M||0); out.A += (r.A||0); out.N += (r.N||0);
+    }
+    return out;
+  }
+
+  // ---- Schedule accessors ----
+  function getMonthStore(y,m){
+    const k = ymKey(y,m);
+    if(!state.schedule[k]) state.schedule[k] = {};
+    return state.schedule[k];
+  }
+  function ensureEmpStore(monthStore, empId){
+    if(!monthStore[empId]) monthStore[empId] = {};
+    return monthStore[empId];
+  }
+  function getCell(monthStore, empId, iso){
+    return monthStore?.[empId]?.[iso] || null;
+  }
+  function setCell(monthStore, empId, iso, cell){
+    ensureEmpStore(monthStore, empId)[iso] = cell;
+  }
+
+  // ---- Core scheduler (Tiered) ----
+  function generateMonth(y,m){
+    const k = ymKey(y,m);
+    const monthStore = getMonthStore(y,m);
+
+    // init storage for all emps
+    for(const e of state.employees) ensureEmpStore(monthStore, e.id);
+
+    const days = monthDays(y,m);
+    const reqTotal = totalReqPerShift();
+
+    // runtime trackers
+    const prevShift = {};     // empId -> last non-null shift as we iterate by date
+    const streak = {};        // empId -> consecutive workdays
+    for(const e of state.employees){ prevShift[e.id] = "OFF"; streak[e.id] = 0; }
+
+    // 0) VAC override
+    applyVacations(monthStore, days);
+
+    // 1) Tier 1 — Fixed employees first (whole month)
+    for(const e of state.employees.filter(x=>x.type==="A")){
+      for(const day of days){
+        const cell = getCell(monthStore, e.id, day.iso);
+        if(cell && cell.shift==="VAC") { prevShift[e.id]="VAC"; streak[e.id]=0; continue; }
+
+        const desired = (e.fixedPattern?.[day.dowName] || "OFF");
+        const safe = makeSafeShift(prevShift[e.id], streak[e.id], desired);
+
+        setCell(monthStore, e.id, day.iso, { shift:safe, depot:"" });
+        if(WORK_SHIFTS.has(safe)){ streak[e.id] += 1; } else { streak[e.id]=0; }
+        prevShift[e.id] = safe;
+      }
+    }
+
+    // 2..5) Week-by-week for Rolling + Joker (B + C), respecting weekly reset Sunday
+    // Prepare Joker OFF staggering: exactly 1 OFF per week (unless VAC)
+    // Rolling weekly buckets reset every Sunday.
+    const rolling = state.employees.filter(x=>x.type==="B");
+    const jokers  = state.employees.filter(x=>x.type==="C");
+
+    // For fairness, we track per-employee shift counts + forced-M counts
+    const fair = {};
+    for(const e of state.employees){
+      fair[e.id] = { forcedM:0, assigned: {M:0,A:0,N:0,OFF:0,VAC:0,X:0} };
+    }
+
+    // Build week groups by weekIndex
+    const weeks = new Map();
+    for(const day of days){
+      if(!weeks.has(day.weekIndex)) weeks.set(day.weekIndex, []);
+      weeks.get(day.weekIndex).push(day);
+    }
+
+    // Iterate weeks in order
+    for(const [weekIndex, weekDays] of [...weeks.entries()].sort((a,b)=>a[0]-b[0])){
+      // Reset rolling buckets at Sunday boundary, but for partial first week:
+      // If the week contains a Sunday OR it's the first week in the month, reset at the first day in that group.
+      const weekHasSunday = weekDays.some(d=>d.dow===0);
+      if(weekHasSunday || weekIndex===0){
+        for(const e of rolling){
+          e._bucket = deepClone( normalizeBucket(e.weeklyBucket) );
+        }
+      }
+
+      // Joker staggered OFF day: (employeeIndex + weekIndex) % 7 mapped onto day.dow
+      const jokerOffDow = {};
+      jokers.forEach((e, idx) => {
+        jokerOffDow[e.id] = (idx + weekIndex) % 7; // 0..6 (Sun..Sat)
+      });
+
+      // Pre-calc remaining working shifts to enforce Rolling cleanup later
+      // We’ll update as we assign.
+      for(const day of weekDays){
+        // Compute deficits (global first)
+        const deficits = calcDeficitsGlobal(monthStore, day.iso, reqTotal);
+
+        // --- Tier 2: Rolling Happy Path (match bucket AND fills deficit) ---
+        tier2RollingHappy(rolling, monthStore, day.iso, deficits, prevShift, streak, fair);
+
+        // --- Tier 3: Rolling Morning Force (if M deficit still exists) ---
+        tier3RollingForceMorning(rolling, monthStore, day.iso, deficits, prevShift, streak, fair);
+
+        // --- Tier 4: Rolling Cleanup (prevent slacking; meet weekly work quota) ---
+        // If we are near the end of the week, or if bucket remaining work is too high for remaining days,
+        // force assignments (still safety-gated).
+        tier4RollingCleanup(rolling, monthStore, day, weekDays, deficits, prevShift, streak, fair);
+
+        // --- Tier 5: Joker Last Resort (N → A → M, exactly 1 OFF per week, prefers N/A; avoids M unless critical) ---
+        tier5Joker(jokers, monthStore, day, deficits, prevShift, streak, fair, jokerOffDow);
+
+        // Fill remaining unassigned (for B & C) as OFF by default (but respect remaining OFF quota for rolling when possible)
+        fillUnassignedRest(rolling, jokers, monthStore, day.iso, prevShift, streak, fair);
+      }
+
+      // At end of week: if any rolling still has leftover bucket counts (work or OFF),
+      // we do a final pass within the week to place remaining work shifts into OFF slots, respecting safety.
+      finalizeRollingWeek(rolling, monthStore, weekDays, prevShift, streak, fair);
+    }
+
+    // Done: We purposely keep depot assignment separate.
+    return { ok:true, key:k };
+  }
+
+  function normalizeBucket(b){
+    const base = {M:0,A:0,N:0,OFF:0};
+    if(!b) return { ...base, M:1, A:2, N:2, OFF:2 };
+    for(const k of ["M","A","N","OFF"]) base[k] = Math.max(0, (b[k]||0)|0);
+    return base;
+  }
+
+  function applyVacations(monthStore, days){
+    for(const e of state.employees){
+      const vac = (e.vacations || []).filter(Boolean);
+      if(!vac.length) continue;
+      for(const iso of vac){
+        // only apply if in this month
+        const dt = new Date(iso+"T00:00:00");
+        const y = dt.getFullYear(), m = dt.getMonth()+1;
+        if(ymKey(y,m) !== ymKey(selectedYear(), selectedMonth())) continue;
+        // if valid date in month, set VAC
+        if(days.some(d=>d.iso===iso)){
+          setCell(monthStore, e.id, iso, { shift:"VAC", depot:"" });
+        }
+      }
+    }
+  }
+
+  function makeSafeShift(prev, currStreak, desired){
+    let s = desired;
+    // VAC always allowed (already applied)
+    if(s==="VAC") return "VAC";
+    // anti-flip
+    if(isFlipViolation(prev, s)) s = "OFF";
+    // max streak
+    if(wouldBreakMaxStreak(currStreak, s)) s = "OFF";
+    return s;
+  }
+
+  function isAssigned(monthStore, empId, iso){
+    const c = getCell(monthStore, empId, iso);
+    return !!c; // any value means assigned
+  }
+  function isVac(monthStore, empId, iso){
+    const c = getCell(monthStore, empId, iso);
+    return c && c.shift==="VAC";
+  }
+
+  function assign(monthStore, emp, iso, shift, prevShift, streak, fair, meta={}){
+    const prev = prevShift[emp.id] || "OFF";
+    const safe = makeSafeShift(prev, streak[emp.id]||0, shift);
+
+    // If already VAC, keep VAC (override)
+    if(isVac(monthStore, emp.id, iso)){
+      fair[emp.id].assigned.VAC++;
+      prevShift[emp.id]="VAC"; streak[emp.id]=0;
+      return { shift:"VAC", forced:false };
+    }
+
+    setCell(monthStore, emp.id, iso, { shift:safe, depot:"", ...meta });
+
+    // update counters
+    fair[emp.id].assigned[safe] = (fair[emp.id].assigned[safe]||0) + 1;
+    if(WORK_SHIFTS.has(safe)){ streak[emp.id] = (streak[emp.id]||0) + 1; }
+    else { streak[emp.id] = 0; }
+    prevShift[emp.id] = safe;
+
+    return { shift:safe, forced: !!meta.forced };
+  }
+
+  function calcDeficitsGlobal(monthStore, iso, reqTotal){
+    const filled = {M:0,A:0,N:0};
+    for(const e of state.employees){
+      const c = getCell(monthStore, e.id, iso);
+      if(c && WORK_SHIFTS.has(c.shift)) filled[c.shift] += 1;
+    }
+    return {
+      M: Math.max(0, reqTotal.M - filled.M),
+      A: Math.max(0, reqTotal.A - filled.A),
+      N: Math.max(0, reqTotal.N - filled.N),
+      _filled: filled
     };
-    let appConfig = { 
-        depots: ["Budaiya", "IsaTown"], 
-        year: new Date().getFullYear(), 
-        month: new Date().getMonth() + 1 
-    };
-    
-    const SHIFTS = ["M", "A", "N", "OFF", "VAC", "X"];
-    const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
-    const MAX_CONSECUTIVE = 6; 
+  }
 
-    // --- RULES ---
-    function isShiftFlipViolation(prev, next) {
-        if (!prev || ['OFF', 'X', 'VAC'].includes(prev)) return false;
-        if (next === 'OFF' || next === 'X' || next === 'VAC') return false;
-        if (prev === 'N') return (next === 'M' || next === 'A');
-        if (prev === 'A') return (next === 'M');
-        return false;
+  // -------- Tier 2: Rolling Happy Path --------
+  function tier2RollingHappy(rolling, monthStore, iso, deficits, prevShift, streak, fair){
+    // prioritize by "most constrained" first: those with fewer options due to flip/streak + bucket
+    const list = rolling
+      .filter(e => !isAssigned(monthStore, e.id, iso) && !isVac(monthStore, e.id, iso))
+      .map(e => {
+        const b = e._bucket || normalizeBucket(e.weeklyBucket);
+        const options = ["N","A","M"].filter(s => b[s]>0 && !isFlipViolation(prevShift[e.id], s) && !wouldBreakMaxStreak(streak[e.id]||0, s));
+        return { e, optionsCount: options.length, b };
+      })
+      .sort((a,b)=> a.optionsCount - b.optionsCount || (fair[a.e.id].forcedM - fair[b.e.id].forcedM));
+
+    for(const item of list){
+      const e = item.e;
+      const b = e._bucket;
+      // pick shift that both matches bucket and reduces a deficit (priority: largest deficit)
+      const picks = ["M","A","N"]
+        .filter(s => deficits[s]>0 && b[s]>0)
+        .sort((s1,s2)=> deficits[s2]-deficits[s1]);
+      let chosen = null;
+      for(const s of picks){
+        if(!isFlipViolation(prevShift[e.id], s) && !wouldBreakMaxStreak(streak[e.id]||0, s)){
+          chosen = s; break;
+        }
+      }
+      if(!chosen) continue;
+
+      const res = assign(monthStore, e, iso, chosen, prevShift, streak, fair);
+      if(WORK_SHIFTS.has(res.shift)){
+        deficits[res.shift] = Math.max(0, deficits[res.shift]-1);
+        b[chosen] = Math.max(0, b[chosen]-1); // consume ORIGINAL chosen from bucket
+      }
+    }
+  }
+
+  // -------- Tier 3: Rolling Morning Force --------
+  function tier3RollingForceMorning(rolling, monthStore, iso, deficits, prevShift, streak, fair){
+    if(deficits.M<=0) return;
+    // force M by converting A/N from bucket (prefer A first to preserve N for safety)
+    const candidates = rolling
+      .filter(e => !isAssigned(monthStore, e.id, iso) && !isVac(monthStore, e.id, iso))
+      .filter(e => !isFlipViolation(prevShift[e.id], "M") && !wouldBreakMaxStreak(streak[e.id]||0, "M"))
+      .map(e => {
+        const b = e._bucket || normalizeBucket(e.weeklyBucket);
+        const convertible = (b.A||0) + (b.N||0);
+        return { e, b, convertible };
+      })
+      .filter(x => x.convertible>0)
+      .sort((a,b)=> (fair[a.e.id].forcedM - fair[b.e.id].forcedM) || (b.convertible - a.convertible));
+
+    for(const c of candidates){
+      if(deficits.M<=0) break;
+      const b = c.b;
+      // convert A then N
+      let from = null;
+      if((b.A||0)>0) from="A";
+      else if((b.N||0)>0) from="N";
+      else continue;
+
+      const res = assign(monthStore, c.e, iso, "M", prevShift, streak, fair, { forced:true, convertedFrom:from });
+      if(res.shift==="M"){
+        deficits.M = Math.max(0, deficits.M-1);
+        b[from] = Math.max(0, b[from]-1);
+        fair[c.e.id].forcedM++;
+      }
+    }
+  }
+
+  // -------- Tier 4: Rolling Cleanup (prevent slacking) --------
+  function tier4RollingCleanup(rolling, monthStore, day, weekDays, deficits, prevShift, streak, fair){
+    const iso = day.iso;
+    // remaining days in this week including today
+    const remainingDays = weekDays.filter(d=>d.iso>=iso).length;
+
+    // decide which employees are in "panic" (too much remaining work for remaining days)
+    const candidates = rolling
+      .filter(e => !isAssigned(monthStore, e.id, iso) && !isVac(monthStore, e.id, iso))
+      .map(e => {
+        const b = e._bucket || normalizeBucket(e.weeklyBucket);
+        const workLeft = (b.M||0)+(b.A||0)+(b.N||0);
+        const offLeft  = (b.OFF||0);
+        // if workLeft >= remainingDays, we must work almost every day -> panic
+        const panic = workLeft >= remainingDays;
+        return { e, b, workLeft, offLeft, panic };
+      })
+      .sort((a,b)=> (b.panic - a.panic) || (b.workLeft - a.workLeft));
+
+    for(const c of candidates){
+      const e = c.e, b = c.b;
+      // If not panic and no deficits, skip (don’t create too much surplus)
+      const anyDef = deficits.M+deficits.A+deficits.N;
+      if(!c.panic && anyDef<=0) continue;
+
+      // Choose best shift to reduce deficits first, else consume bucket work.
+      const pref = ["N","A","M"]; // safer preference (avoids A->M problems)
+      let chosen = null;
+
+      // Try to satisfy deficit with available bucket
+      const deficitOrder = ["M","A","N"].sort((s1,s2)=>deficits[s2]-deficits[s1]);
+      for(const s of deficitOrder){
+        if(deficits[s]<=0) continue;
+        if((b[s]||0)<=0) continue;
+        if(isFlipViolation(prevShift[e.id], s)) continue;
+        if(wouldBreakMaxStreak(streak[e.id]||0, s)) continue;
+        chosen = s; break;
+      }
+
+      // Otherwise, just consume remaining work shifts from bucket (panic cleanup)
+      if(!chosen){
+        for(const s of pref){
+          if((b[s]||0)<=0) continue;
+          if(isFlipViolation(prevShift[e.id], s)) continue;
+          if(wouldBreakMaxStreak(streak[e.id]||0, s)) continue;
+          chosen = s; break;
+        }
+      }
+
+      if(!chosen) continue;
+      const res = assign(monthStore, e, iso, chosen, prevShift, streak, fair);
+      if(WORK_SHIFTS.has(res.shift)){
+        if(deficits[res.shift]>0) deficits[res.shift] = Math.max(0, deficits[res.shift]-1);
+        b[chosen] = Math.max(0, b[chosen]-1);
+      }
+    }
+  }
+
+  // -------- Tier 5: Joker Last Resort --------
+  function tier5Joker(jokers, monthStore, day, deficits, prevShift, streak, fair, jokerOffDow){
+    const iso = day.iso;
+    // If already fully covered, joker should avoid working unless it helps enforce 6/1 cadence.
+    // Joker rules: 6 work + 1 OFF per week; prefers N/A; avoids M unless critical deficit.
+    const list = jokers
+      .filter(e => !isAssigned(monthStore, e.id, iso) && !isVac(monthStore, e.id, iso))
+      .sort((a,b)=> (fair[a.id].assigned.OFF - fair[b.id].assigned.OFF)); // crude fairness
+
+    for(const e of list){
+      // weekly OFF day (staggered)
+      const mustOff = (day.dow === jokerOffDow[e.id]);
+
+      if(mustOff){
+        assign(monthStore, e, iso, "OFF", prevShift, streak, fair);
+        continue;
+      }
+
+      // If a joker is near max streak, force OFF
+      if(wouldBreakMaxStreak(streak[e.id]||0, "N")){
+        assign(monthStore, e, iso, "OFF", prevShift, streak, fair);
+        continue;
+      }
+
+      // Priority to fill deficits N -> A -> M (M only if critical)
+      let chosen = null;
+      if(deficits.N>0 && !isFlipViolation(prevShift[e.id], "N")) chosen="N";
+      else if(deficits.A>0 && !isFlipViolation(prevShift[e.id], "A")) chosen="A";
+      else if(deficits.M>0 && !isFlipViolation(prevShift[e.id], "M")) chosen="M";
+
+      // If no deficit, joker should still work to maintain 6/1, but prefer N/A and avoid M
+      if(!chosen){
+        if(!isFlipViolation(prevShift[e.id], "N")) chosen="N";
+        else if(!isFlipViolation(prevShift[e.id], "A")) chosen="A";
+        else chosen="OFF";
+      }
+
+      const res = assign(monthStore, e, iso, chosen, prevShift, streak, fair);
+      if(WORK_SHIFTS.has(res.shift) && deficits[res.shift]>0){
+        deficits[res.shift] = Math.max(0, deficits[res.shift]-1);
+      }
+    }
+  }
+
+  function fillUnassignedRest(rolling, jokers, monthStore, iso, prevShift, streak, fair){
+    // Rolling: if they still have OFF quota, consume OFF; else default OFF anyway (we’ll correct at finalize)
+    for(const e of rolling){
+      if(isAssigned(monthStore, e.id, iso) || isVac(monthStore, e.id, iso)) continue;
+      const b = e._bucket || normalizeBucket(e.weeklyBucket);
+      if((b.OFF||0)>0){
+        assign(monthStore, e, iso, "OFF", prevShift, streak, fair);
+        b.OFF = Math.max(0, b.OFF-1);
+      } else {
+        assign(monthStore, e, iso, "OFF", prevShift, streak, fair);
+      }
+    }
+    // Jokers: if still unassigned, OFF
+    for(const e of jokers){
+      if(isAssigned(monthStore, e.id, iso) || isVac(monthStore, e.id, iso)) continue;
+      assign(monthStore, e, iso, "OFF", prevShift, streak, fair);
+    }
+  }
+
+  function finalizeRollingWeek(rolling, monthStore, weekDays, prevShift, streak, fair){
+    // Goal: empty remaining work in bucket into OFF slots (still safety-gated).
+    // We iterate through weekDays and try to upgrade OFF -> work if bucket work remains and it won't violate safety.
+    for(const e of rolling){
+      const b = e._bucket || normalizeBucket(e.weeklyBucket);
+      let workLeft = (b.M||0)+(b.A||0)+(b.N||0);
+      if(workLeft<=0) continue;
+
+      for(const day of weekDays){
+        if(workLeft<=0) break;
+        const iso = day.iso;
+        const c = getCell(monthStore, e.id, iso);
+        if(!c || c.shift!=="OFF") continue; // only convert OFF
+        if(isVac(monthStore, e.id, iso)) continue;
+
+        // choose remaining work (prefer N then A then M for safety)
+        const choices = ["N","A","M"].filter(s => (b[s]||0)>0);
+        let chosen = null;
+        for(const s of choices){
+          // simulate previous day shift within this week by looking at actual previous date in month
+          const prevIso = prevDateIso(iso);
+          const prevC = getCell(monthStore, e.id, prevIso);
+          const prev = prevC?.shift || "OFF";
+          // compute streak up to previous day (approx within week; good enough for weekly finalize)
+          const st = computeStreakUpTo(monthStore, e.id, prevIso);
+          if(isFlipViolation(prev, s)) continue;
+          if(wouldBreakMaxStreak(st, s)) continue;
+          chosen = s; break;
+        }
+        if(!chosen) continue;
+
+        // assign & consume
+        setCell(monthStore, e.id, iso, { shift:chosen, depot:"", cleanup:true });
+        fair[e.id].assigned[chosen] = (fair[e.id].assigned[chosen]||0)+1;
+        b[chosen] = Math.max(0, b[chosen]-1);
+        workLeft = (b.M||0)+(b.A||0)+(b.N||0);
+      }
+    }
+  }
+
+  function prevDateIso(iso){
+    const dt = new Date(iso+"T00:00:00");
+    dt.setDate(dt.getDate()-1);
+    return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+  }
+
+  function computeStreakUpTo(monthStore, empId, iso){
+    // counts consecutive work days ending at iso
+    let dt = new Date(iso+"T00:00:00");
+    let count = 0;
+    for(let i=0;i<40;i++){ // safe cap
+      const curIso = `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+      const c = getCell(monthStore, empId, curIso);
+      const s = c?.shift || "OFF";
+      if(WORK_SHIFTS.has(s)) count++;
+      else break;
+      dt.setDate(dt.getDate()-1);
+    }
+    return count;
+  }
+
+  // ---- Depot Balancing ----
+  function assignDepotsForMonth(y,m){
+    const monthStore = getMonthStore(y,m);
+    const days = monthDays(y,m);
+    const depots = state.meta.depots;
+
+    // usage tracker per employee per depot
+    const usage = {};
+    for(const e of state.employees){
+      usage[e.id] = {};
+      for(const d of depots) usage[e.id][d]=0;
     }
 
-    // --- INIT ---
-    window.onload = () => { initDateSelectors(); loadData(); };
-
-    function initDateSelectors() {
-        const ySel = document.getElementById('selYear');
-        const mSel = document.getElementById('selMonth');
-        const curr = new Date().getFullYear();
-        for(let y=curr-1; y<=curr+2; y++) ySel.add(new Option(y, y));
-        ySel.value = curr;
-        ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"].forEach((m, i) => mSel.add(new Option(m, i+1)));
-        mSel.value = new Date().getMonth()+1;
-        ySel.onchange = () => { appConfig.year = parseInt(ySel.value); renderSchedule(); };
-        mSel.onchange = () => { appConfig.month = parseInt(mSel.value); renderSchedule(); };
+    // prime usage from existing schedule (so repeated runs keep rotation)
+    for(const e of state.employees){
+      const store = monthStore[e.id] || {};
+      for(const iso in store){
+        const c = store[iso];
+        if(c?.depot && depots.includes(c.depot)) usage[e.id][c.depot]++;
+      }
     }
 
-    function switchTab(t) {
-        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById(`view-${t}`).classList.add('active');
-    }
+    for(const day of days){
+      // for each shift, fill depot requirements using a greedy fair allocator
+      for(const shift of ["M","A","N"]){
+        // employees working this shift
+        const workers = state.employees
+          .filter(e => (getCell(monthStore, e.id, day.iso)?.shift === shift))
+          .map(e => e.id);
 
-    // --- API ---
-    async function loadData() {
-        showLoader(true);
-        try {
-            const res = await fetch(`${API_URL}?action=load`);
-            const json = await res.json();
-            if(json.ok) {
-                const data = json.data || {};
-                state.employees = data.employees || [];
-                state.schedule = data.schedule || {};
-                state.meta = data.meta || { requirements: {}, depots: [] };
-                if(state.meta.depots && state.meta.depots.length) appConfig.depots = state.meta.depots;
-                document.getElementById('settingDepots').value = appConfig.depots.join(', ');
+        // clear previous depots for this day+shift (we reassign)
+        for(const empId of workers){
+          const c = getCell(monthStore, empId, day.iso);
+          if(c) c.depot = "";
+        }
 
-                state.employees.forEach(emp => {
-                    if(!emp.id) emp.id = 'emp_' + Math.random().toString(36).substr(2, 9);
-                    if(!emp.patternType) emp.patternType = 'weekly';
-                    if(!emp.weeklyTemplate) emp.weeklyTemplate = Array(7).fill("M");
-                    if(!emp.flexCounts) emp.flexCounts = { M: 1, A: 2, N: 2, OFF: 2 };
-                    if(!emp.depotQuotas) emp.depotQuotas = {};
-                    if(!emp.vacationDates) emp.vacationDates = "";
-                });
-
-                const reqs = state.meta.requirements;
-                for(let d in reqs) {
-                    if(reqs[d].D !== undefined) {
-                        reqs[d].M = reqs[d].D; reqs[d].A = reqs[d].EN; reqs[d].N = reqs[d].LN;
-                        delete reqs[d].D; delete reqs[d].EN; delete reqs[d].LN;
-                    }
-                }
-
-                renderEmployees(); renderRequirementsTable(); renderSchedule();
-                if(state.meta.updatedAt) document.getElementById('lastUpdated').innerText = new Date(state.meta.updatedAt).toLocaleTimeString();
-            }
-        } catch(e) { console.error(e); alert("فشل الاتصال."); } finally { showLoader(false); }
-    }
-
-    async function saveData(reset = false) {
-        showLoader(true);
-        if(reset && !confirm("⚠️ مسح الكل؟")) { showLoader(false); return; }
-        if(reset) state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
-        state.meta.depots = appConfig.depots;
-        state.meta.updatedAt = new Date().toISOString();
-        try {
-            await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } }) });
-            if(reset) { renderEmployees(); renderRequirementsTable(); renderSchedule(); document.getElementById('settingDepots').value = "Budaiya, IsaTown"; }
-            document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
-        } catch(e) { alert("خطأ حفظ."); } finally { showLoader(false); }
-    }
-
-    // --- UI RENDERING ---
-    function renderRequirementsTable() {
-        const container = document.getElementById('requirementsContainer');
-        if(!container) return;
-        if(!state.meta.requirements) state.meta.requirements = {};
-        let html = `<table class="req-table"><thead><tr><th>الموقع</th><th>M</th><th>A</th><th>N</th></tr></thead><tbody>`;
-        appConfig.depots.forEach(depot => {
-            const req = state.meta.requirements[depot] || { M:0, A:0, N:0 };
-            html += `<tr><td style="font-weight:700;">${depot}</td>
-                <td><input type="number" min="0" class="req-input" value="${req.M || 0}" onchange="updateReq('${depot}', 'M', this.value)"></td>
-                <td><input type="number" min="0" class="req-input" value="${req.A || 0}" onchange="updateReq('${depot}', 'A', this.value)"></td>
-                <td><input type="number" min="0" class="req-input" value="${req.N || 0}" onchange="updateReq('${depot}', 'N', this.value)"></td></tr>`;
-        });
-        container.innerHTML = html + `</tbody></table>`;
-    }
-    function updateReq(depot, shift, value) { if(!state.meta.requirements[depot]) state.meta.requirements[depot] = {}; state.meta.requirements[depot][shift] = parseInt(value) || 0; }
-
-    function renderEmployees() {
-        const container = document.getElementById('employeeList'); container.innerHTML = "";
-        state.employees.forEach(emp => {
-            const div = document.createElement('div'); div.className = "emp-card";
-            let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:6px;'>";
-            WEEKDAYS.forEach((day, i) => {
-                const opts = SHIFTS.filter(s => s !== 'VAC' && s !== 'X').map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
-                weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#64748b;">${day}</label><select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%; font-size:0.85rem;">${opts}</select></div>`;
-            });
-            weekHtml += "</div>";
-            
-            let quotasHtml = `<div class="depot-quotas">`;
-            appConfig.depots.forEach(depot => {
-                const val = (emp.depotQuotas && emp.depotQuotas[depot]) || 0;
-                quotasHtml += `<div><label>${depot}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${depot}', this.value)"></div>`;
-            });
-            quotasHtml += `</div>`;
-            
-            let vacationHtml = `<div class="vacation-input"><label>🏖️ أيام الإجازات (مثال: 5, 6)</label><input type="text" value="${emp.vacationDates || ''}" onchange="updateVacationDates('${emp.id}', this.value)"></div>`;
-            const flex = emp.flexCounts || { M: 1, A: 2, N: 2, OFF: 2 };
-            let patternHtml = "";
-            
-            if(emp.patternType === 'rolling') {
-                patternHtml = `<div class="pattern-editor"><div class="flex-counts">
-                        <div><label>M</label><input type="number" value="${flex.M}" onchange="updateFlexCount('${emp.id}', 'M', this.value)"></div>
-                        <div><label>A</label><input type="number" value="${flex.A}" onchange="updateFlexCount('${emp.id}', 'A', this.value)"></div>
-                        <div><label>N</label><input type="number" value="${flex.N}" onchange="updateFlexCount('${emp.id}', 'N', this.value)"></div>
-                        <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
-                    </div></div>`;
-            } else if(emp.patternType === 'joker') {
-                patternHtml = `<div class="pattern-editor"><div style="color:#d97706; font-weight:700;">🃏 جوكر</div><p style="font-size:0.8rem;">يغطي النقص. آخر خيار للنهار. 6 عمل + 1 راحة.</p></div>`;
-            } else {
-                patternHtml = `<div class="pattern-editor">${weekHtml}</div>`;
-            }
-            
-            div.innerHTML = `<div class="emp-header"><input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️</button></div>${vacationHtml}<div style="margin:10px 0;"><strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>${quotasHtml}</div>${patternHtml}`;
-            container.appendChild(div);
-        });
-    }
-
-    // --- HELPERS ---
-    function addEmployee() { state.employees.push({ id: 'emp_'+Math.random().toString(36).substr(2,9), name: "جديد", patternType: "weekly", weeklyTemplate: Array(7).fill("M"), flexCounts: { M:1, A:2, N:2, OFF:2 }, depotQuotas: {}, vacationDates: "" }); renderEmployees(); }
-    function updateEmployee(id, k, v) { const e = state.employees.find(x=>x.id===id); if(e){e[k]=v; if(k==='patternType') renderEmployees();} }
-    function updateWeeklyTemplate(id, i, v) { const e = state.employees.find(x=>x.id===id); if(e) e.weeklyTemplate[i]=v; }
-    function updateFlexCount(id, s, v) { const e = state.employees.find(x=>x.id===id); if(e){if(!e.flexCounts) e.flexCounts={}; e.flexCounts[s]=parseInt(v)||0;} }
-    function updateDepotQuota(id, d, v) { const e = state.employees.find(x=>x.id===id); if(e){if(!e.depotQuotas) e.depotQuotas={}; e.depotQuotas[d]=parseInt(v)||0;} }
-    function updateVacationDates(id, v) { const e = state.employees.find(x=>x.id===id); if(e) e.vacationDates=v; }
-    function deleteEmployee(id) { if(confirm('حذف؟')) { state.employees=state.employees.filter(x=>x.id!==id); renderEmployees(); renderSchedule(); saveData(); } }
-    function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderRequirementsTable(); renderEmployees(); }
-
-    // ==========================================
-    // === GENERATOR: V7 CORRECTOR ===
-    // ==========================================
-    function generateScheduleFinal() {
-        if(!confirm("🚀 بدء التوزيع (V7)؟\n\n1. تثبيت الثابت (الشهر كاملاً)\n2. الدوار (حسب الحاجة + الدلو)\n3. الجوكر (سد العجز)")) return;
-        showLoader(true);
-        setTimeout(() => {
-            try {
-                const key = getMonthKey();
-                const numDays = daysInMonth(appConfig.year, appConfig.month);
-                if(!state.schedule[key]) state.schedule[key] = {};
-                const sched = state.schedule[key];
-                
-                state.employees.forEach(e => { if(!sched[e.id]) sched[e.id] = {}; });
-                
-                // 0. Apply Vacations
-                applyVacations(numDays, sched);
-                
-                // 1. Calculate Needs
-                const dailyNeeds = calculateDailyNeeds(numDays);
-                const workStreaks = {};
-                const empPrevShift = {};
-                state.employees.forEach(emp => { workStreaks[emp.id] = 0; empPrevShift[emp.id] = 'OFF'; });
-
-                // 2. FIXED EMPLOYEES (WHOLE MONTH FIRST)
-                // This ensures continuity across weeks
-                applyFixedEmployees(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
-
-                // 3. ROLLING & JOKER (WEEK BY WEEK)
-                const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
-                const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-
-                // Joker Staggering Logic
-                const jokerOffMap = {};
-                jokerEmps.forEach((e, idx) => {
-                    jokerOffMap[e.id] = [];
-                    let base = (idx % 7) + 1;
-                    for(let x=base; x<=numDays; x+=7) jokerOffMap[e.id].push(x);
-                });
-
-                let currentDay = 1;
-                while(currentDay <= numDays) {
-                    let weekEnd = Math.min(currentDay + 6 - new Date(appConfig.year, appConfig.month-1, currentDay).getDay(), numDays);
-                    let daysInWeek = [];
-                    for(let i=currentDay; i<=weekEnd; i++) daysInWeek.push(i);
-
-                    // Reset Buckets
-                    if(new Date(appConfig.year, appConfig.month-1, currentDay).getDay() === 0 || currentDay === 1) {
-                        rollingEmps.forEach(e => {
-                            let f = e.flexCounts || {M:1,A:2,N:2,OFF:2};
-                            e._bucket = { ...f };
-                        });
-                    }
-
-                    daysInWeek.forEach(d => {
-                        let todaysNeeds = dailyNeeds[d];
-                        let rollingList = [...rollingEmps].sort(() => Math.random() - 0.5);
-                        let jokerList = [...jokerEmps].sort(() => Math.random() - 0.5);
-
-                        // --- ROLLING LOGIC (NEED + BUCKET) ---
-                        rollingList.forEach(emp => {
-                            if(isAssigned(emp, d, sched)) return;
-                            let prev = empPrevShift[emp.id];
-                            let bucket = emp._bucket;
-                            let streak = workStreaks[emp.id] || 0;
-                            let assigned = 'OFF';
-
-                            // Check End of Week Panic (Must clear bucket?)
-                            let daysLeft = (daysInWeek[daysInWeek.length-1] - d) + 1;
-                            // Panic if working shifts remaining >= days left
-                            let workRemaining = bucket.M + bucket.A + bucket.N;
-                            let panicMode = (workRemaining >= daysLeft);
-
-                            if(streak >= MAX_CONSECUTIVE) {
-                                assigned = 'OFF';
-                            } else {
-                                let canM = !isShiftFlipViolation(prev, 'M');
-                                let canA = !isShiftFlipViolation(prev, 'A');
-                                let canN = !isShiftFlipViolation(prev, 'N');
-
-                                if(panicMode) {
-                                    // Just fill slots to empty bucket
-                                    if(bucket.N>0 && canN) { assigned='N'; bucket.N--; }
-                                    else if(bucket.A>0 && canA) { assigned='A'; bucket.A--; }
-                                    else if(bucket.M>0 && canM) { assigned='M'; bucket.M--; }
-                                } else {
-                                    // Need based logic
-                                    if(todaysNeeds.M > 0 && canM && bucket.M > 0) { assigned='M'; bucket.M--; }
-                                    else if(todaysNeeds.A > 0 && canA && bucket.A > 0) { assigned='A'; bucket.A--; }
-                                    else if(todaysNeeds.N > 0 && canN && bucket.N > 0) { assigned='N'; bucket.N--; }
-                                    else {
-                                        // No need match? Check if we should convert? 
-                                        // Rule 3: If Deficit in M, steal from A/N?
-                                        if(todaysNeeds.M > 0 && canM) {
-                                            // Check if we have spare A/N to burn
-                                            if(bucket.A > 0) { assigned='M'; bucket.A--; }
-                                            else if(bucket.N > 0) { assigned='M'; bucket.N--; }
-                                        }
-                                    }
-                                    
-                                    // Still nothing? Wait (OFF) unless bucket full of OFFs is empty
-                                    if(assigned === 'OFF' && bucket.OFF > 0) {
-                                        assigned = 'OFF'; bucket.OFF--;
-                                    }
-                                }
-                            }
-
-                            if(assigned !== 'OFF') {
-                                if(todaysNeeds[assigned] > 0) todaysNeeds[assigned]--;
-                                workStreaks[emp.id]++;
-                            } else {
-                                workStreaks[emp.id] = 0;
-                            }
-                            assignShift(emp, d, assigned, sched, empPrevShift);
-                        });
-
-                        // --- JOKER LOGIC ---
-                        jokerList.forEach(emp => {
-                            if(isAssigned(emp, d, sched)) return;
-                            let prev = empPrevShift[emp.id];
-                            let streak = workStreaks[emp.id] || 0;
-                            let assigned = 'OFF';
-                            let isOffDay = jokerOffMap[emp.id].includes(d);
-
-                            if(!isOffDay && streak < MAX_CONSECUTIVE) {
-                                let canM = !isShiftFlipViolation(prev, 'M');
-                                let canA = !isShiftFlipViolation(prev, 'A');
-                                let canN = !isShiftFlipViolation(prev, 'N');
-
-                                // Priority N -> A -> M
-                                if(todaysNeeds.N > 0 && canN) assigned = 'N';
-                                else if(todaysNeeds.A > 0 && canA) assigned = 'A';
-                                else if(todaysNeeds.M > 0 && canM) assigned = 'M';
-                                else {
-                                    // Fill up (6 days)
-                                    if(canN) assigned='N'; else if(canA) assigned='A'; else if(canM) assigned='M';
-                                }
-                            }
-
-                            if(assigned !== 'OFF') {
-                                if(todaysNeeds[assigned] > 0) todaysNeeds[assigned]--;
-                                workStreaks[emp.id]++;
-                            } else {
-                                workStreaks[emp.id] = 0;
-                            }
-                            assignShift(emp, d, assigned, sched, empPrevShift);
-                        });
-                    });
-                    currentDay = daysInWeek[daysInWeek.length-1] + 1;
-                }
-
-                // Final Clean
-                state.employees.forEach(e => {
-                    let p = 'OFF';
-                    for(let d=1; d<=numDays; d++) {
-                        let c = sched[e.id][d];
-                        if(c && c.shift) {
-                            if(isShiftFlipViolation(p, c.shift)) c.shift = 'OFF';
-                            p = c.shift;
-                        }
-                    }
-                });
-
-                renderSchedule(); saveData(); showLoader(false);
-                alert("✅ تم التوزيع (إصلاح الثابت + توازن الدوار)");
-            } catch(e) { console.error(e); showLoader(false); alert("خطأ: " + e.message); }
-        }, 100);
-    }
-
-    // --- HELPERS ---
-    function isAssigned(emp, d, sched) { return !!(sched[emp.id] && sched[emp.id][d]); }
-    function assignShift(emp, d, s, sched, prevs) {
-        sched[emp.id][d] = { shift: s, depot: "" };
-        prevs[emp.id] = s;
-    }
-    function applyVacations(numDays, sched) {
-        state.employees.forEach(emp => {
-            if(emp.vacationDates) emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => { if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' }; });
-        });
-    }
-    function calculateDailyNeeds(numDays) {
+        // depot needs
         const needs = {};
-        const depots = appConfig.depots.map(d=>d.trim());
-        const reqs = state.meta.requirements || {};
-        for(let d=1; d<=numDays; d++) {
-            needs[d] = { M:0, A:0, N:0 };
-            depots.forEach(dep => { const r = reqs[dep] || {}; needs[d].M += (r.M||0); needs[d].A += (r.A||0); needs[d].N += (r.N||0); });
+        for(const depot of depots){
+          needs[depot] = (state.meta.requirements[depot]?.[shift]||0);
         }
-        return needs;
-    }
-    function applyFixedEmployees(numDays, sched, dailyNeeds, streaks, prevs) {
-        state.employees.filter(e => e.patternType === 'weekly').forEach(emp => {
-            for(let d=1; d<=numDays; d++) {
-                if(isAssigned(emp, d, sched)) { prevs[emp.id]='VAC'; streaks[emp.id]=0; continue; }
-                const dayOfWeek = new Date(appConfig.year, appConfig.month-1, d).getDay();
-                let shift = emp.weeklyTemplate[dayOfWeek];
-                const prev = prevs[emp.id];
-                if(isShiftFlipViolation(prev, shift) || (streaks[emp.id] >= MAX_CONSECUTIVE && ['M','A','N'].includes(shift))) shift = 'OFF';
-                
-                sched[emp.id][d] = { shift: shift, depot: "" };
-                prevs[emp.id] = shift;
-                
-                if(['M','A','N'].includes(shift)) {
-                    if(dailyNeeds[d][shift]>0) dailyNeeds[d][shift]--;
-                    streaks[emp.id]++;
-                } else streaks[emp.id] = 0;
+
+        // Greedy: repeatedly assign one person to the depot with remaining need,
+        // choosing employee with "lowest normalized usage" for that depot (fair rotation),
+        // also respecting employee depotWeights (quota preference).
+        const unassigned = new Set(workers);
+
+        // helper score
+        const score = (empId, depot) => {
+          const emp = state.employees.find(x=>x.id===empId);
+          const w = Math.max(0.1, (emp?.depotWeights?.[depot] ?? 1)); // higher weight = should go more often
+          // normalized: usage / weight
+          return (usage[empId][depot] || 0) / w;
+        };
+
+        // First satisfy hard needs per depot
+        for(const depot of depots){
+          while(needs[depot]>0 && unassigned.size>0){
+            let best = null, bestScore = Infinity;
+            for(const empId of unassigned){
+              const s = score(empId, depot);
+              if(s < bestScore){ bestScore=s; best=empId; }
             }
-        });
-    }
-
-    // --- DEPOT FILL ---
-    function fillDepots() {
-        const key = getMonthKey();
-        const sched = state.schedule[key];
-        if(!sched || !confirm("توزيع المواقع؟")) return;
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const reqs = state.meta.requirements || {};
-        const depots = appConfig.depots.map(d=>d.trim());
-
-        for(let d=1; d<=numDays; d++) {
-            state.employees.forEach(e => { if(sched[e.id][d] && ['M','A','N'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = ""; });
+            if(!best) break;
+            const c = getCell(monthStore, best, day.iso);
+            if(c){ c.depot = depot; usage[best][depot]++; }
+            unassigned.delete(best);
+            needs[depot]--;
+          }
         }
 
-        const usage = {}; state.employees.forEach(e=>usage[e.id]={});
-        for(let d=1; d<=numDays; d++) {
-            const counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
-            const workers = {M:[],A:[],N:[]};
-            state.employees.forEach(e => {
-                let s = sched[e.id][d].shift;
-                if(['M','A','N'].includes(s)) workers[s].push(e);
-            });
-            ['M','A','N'].forEach(s => {
-                let list = workers[s];
-                list.sort((a,b) => ((b.depotQuotas[depots[0]]||0) - (a.depotQuotas[depots[0]]||0))); 
-                depots.forEach(dep => {
-                    let need = (reqs[dep]||{})[s] || 0;
-                    let i = 0;
-                    while(i<list.length && counts[dep][s] < need) {
-                        let e = list[i];
-                        if(!sched[e.id][d].depot) { sched[e.id][d].depot = dep; counts[dep][s]++; }
-                        i++;
-                    }
-                });
-                list.forEach(e => {
-                    if(!sched[e.id][d].depot) {
-                        let target = depots.reduce((a,b)=>counts[a][s]<counts[b][s]?a:b);
-                        sched[e.id][d].depot = target; counts[target][s]++;
-                    }
-                });
-            });
+        // Any leftover workers: place into depot with lowest current coverage for that shift (balance)
+        const countByDepot = {};
+        for(const depot of depots) countByDepot[depot]=0;
+        for(const empId of workers){
+          const c = getCell(monthStore, empId, day.iso);
+          if(c?.depot) countByDepot[c.depot] = (countByDepot[c.depot]||0)+1;
         }
-        renderSchedule(); saveData();
-    }
-
-    // --- RENDER ---
-    function renderRequirementsTable() {
-        let html = `<table class="req-table"><thead><tr><th>الموقع</th><th>M</th><th>A</th><th>N</th></tr></thead><tbody>`;
-        appConfig.depots.forEach(d => {
-            let r = (state.meta.requirements && state.meta.requirements[d]) || {M:0,A:0,N:0};
-            html += `<tr><td>${d}</td>
-            <td><input type="number" class="req-input" value="${r.M||0}" onchange="updReq('${d}','M',this.value)"></td>
-            <td><input type="number" class="req-input" value="${r.A||0}" onchange="updReq('${d}','A',this.value)"></td>
-            <td><input type="number" class="req-input" value="${r.N||0}" onchange="updReq('${d}','N',this.value)"></td></tr>`;
-        });
-        document.getElementById('requirementsContainer').innerHTML = html + `</tbody></table>`;
-    }
-    function updReq(d,s,v) { if(!state.meta.requirements[d]) state.meta.requirements[d]={}; state.meta.requirements[d][s]=parseInt(v)||0; }
-
-    function renderEmployees() {
-        const list = document.getElementById('employeeList'); list.innerHTML = "";
-        state.employees.forEach(e => {
-            let weekHtml = WEEKDAYS.map((day,i) => `<div><small>${day}</small><select onchange="updEmpWeek('${e.id}',${i},this.value)" style="width:100%">${SHIFTS.filter(x=>!['VAC','X'].includes(x)).map(s=>`<option ${e.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join('')}</select></div>`).join('');
-            let quotas = `<div class="depot-quotas">` + appConfig.depots.map(d => `<div><span>${d}</span><input type="number" value="${(e.depotQuotas&&e.depotQuotas[d])||0}" onchange="updQuota('${e.id}','${d}',this.value)"></div>`).join('') + `</div>`;
-            let flex = e.flexCounts || {M:1,A:2,N:2,OFF:2};
-            let typeHtml = e.patternType === 'rolling' ? 
-                `<div class="pattern-editor"><div class="flex-counts"><div>M<input type="number" value="${flex.M}" onchange="updFlex('${e.id}','M',this.value)"></div><div>A<input type="number" value="${flex.A}" onchange="updFlex('${e.id}','A',this.value)"></div><div>N<input type="number" value="${flex.N}" onchange="updFlex('${e.id}','N',this.value)"></div><div>OFF<input type="number" value="${flex.OFF}" onchange="updFlex('${e.id}','OFF',this.value)"></div></div></div>` :
-                (e.patternType === 'joker' ? `<div class="pattern-editor" style="color:#d97706;font-weight:700;">🃏 جوكر</div>` : `<div class="pattern-editor">${weekHtml}</div>`);
-            
-            let div = document.createElement('div'); div.className = "emp-card";
-            div.innerHTML = `<div class="emp-header"><input type="text" value="${e.name}" onchange="updateEmployee('${e.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${e.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${e.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${e.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${e.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${e.id}')">🗑️</button></div>
-            <div class="vacation-input"><label>🏖️ إجازات:</label><input type="text" value="${e.vacationDates||''}" onchange="updateVacationDates('${e.id}',this.value)"></div>
-            <div style="margin:10px 0;">${quotas}</div>${typeHtml}`;
-            list.appendChild(div);
-        });
-    }
-
-    function renderSchedule() {
-        const grid = document.getElementById('scheduleGrid');
-        if(!grid) return;
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const data = state.schedule[getMonthKey()] || {};
-        let html = `<thead><tr><th class="emp-col">الموظف</th>`;
-        for(let d=1; d<=numDays; d++) html += `<th>${d}<br>${WEEKDAYS[new Date(appConfig.year,appConfig.month-1,d).getDay()]}</th>`;
-        html += `</tr></thead><tbody>`;
-        state.employees.forEach(e => {
-            let row = `<tr><td class="emp-col">${e.name}</td>`;
-            let prev='OFF';
-            for(let d=1; d<=numDays; d++) {
-                let c = (data[e.id] && data[e.id][d]) || {shift:''};
-                let s = c.shift||'';
-                let v = isShiftFlipViolation(prev, s) ? 'violation' : '';
-                row += `<td class="cell shift-${s} ${v}">${s}${c.depot?`<span class="depot-tag">${c.depot}</span>`:''}</td>`;
-                if(['M','A','N','VAC','X'].includes(s)) prev=s; else prev='OFF';
+        for(const empId of unassigned){
+          // choose depot with minimum count (tie -> best fairness score)
+          let target = depots[0];
+          for(const depot of depots){
+            if(countByDepot[depot] < countByDepot[target]) target = depot;
+          }
+          // tie-break with fairness
+          let bestDepot = target, bestScore = score(empId, target);
+          for(const depot of depots){
+            if(countByDepot[depot]===countByDepot[target]){
+              const s = score(empId, depot);
+              if(s < bestScore){ bestScore=s; bestDepot=depot; }
             }
-            html += row + `</tr>`;
-        });
-        grid.innerHTML = html + `</tbody>`;
-        analyzeCoverage();
-    }
-
-    function analyzeCoverage() {
-        const report = document.getElementById('coverageReport');
-        if(!report) return;
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const sched = state.schedule[getMonthKey()] || {};
-        const depots = appConfig.depots.map(d=>d.trim());
-        const reqs = state.meta.requirements || {};
-        let issues = [];
-        
-        for(let d=1; d<=numDays; d++) {
-            let counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
-            state.employees.forEach(e => {
-                let c = sched[e.id] && sched[e.id][d];
-                if(c && c.depot && ['M','A','N'].includes(c.shift)) counts[c.depot.trim()][c.shift]++;
-            });
-            depots.forEach(dep => {
-                let r = reqs[dep] || {};
-                ['M','A','N'].forEach(s => {
-                    let req = r[s]||0;
-                    let act = counts[dep][s]||0;
-                    if(act < req) issues.push(`يوم ${d} ${dep} (${s}): مطلوب ${req}، موجود ${act}`);
-                });
-            });
+          }
+          const c = getCell(monthStore, empId, day.iso);
+          if(c){ c.depot = bestDepot; usage[empId][bestDepot]++; countByDepot[bestDepot]++; }
         }
-        
-        report.innerHTML = issues.length ? issues.map(i=>`<div class="report-item">${i}</div>`).join('') : `<div class="report-ok">✅ الجدول ممتاز!</div>`;
+      }
+    }
+  }
+
+  // ---- Diagnostics (deficits + violations) ----
+  function analyzeMonth(y,m){
+    const monthStore = getMonthStore(y,m);
+    const days = monthDays(y,m);
+    const depots = state.meta.depots;
+
+    const issues = [];
+
+    // 1) Anti-flip violations + max streak warnings (streak>6 should not happen; flag if it does)
+    for(const e of state.employees){
+      let prev = "OFF";
+      let st = 0;
+      for(const day of days){
+        const c = getCell(monthStore, e.id, day.iso);
+        const s = c?.shift || "";
+        if(s==="") continue;
+        const viol = isFlipViolation(prev, s);
+        if(WORK_SHIFTS.has(s)) st++; else st=0;
+        if(viol){
+          issues.push({ type:"bad", msg:`Safety violation: ${e.name} ${day.iso} (${prev} → ${s})` });
+        }
+        if(st>6){
+          issues.push({ type:"warn", msg:`Max-streak warning: ${e.name} reached ${st} workdays by ${day.iso}` });
+        }
+        // prev shift: treat OFF/VAC/X as "rest-like" to not cause flip checks later
+        prev = s;
+      }
     }
 
-    // UTILS
-    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
-    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
-    function clearMonth() { if(confirm('مسح؟')) { state.schedule[getMonthKey()] = {}; renderSchedule(); saveData(); } }
-    function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
-    function exportCSV() {
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        let csv = "\uFEFFM,";
-        for(let d=1; d<=numDays; d++) csv += `${d},`; csv += "\n";
-        let data = state.schedule[getMonthKey()] || {};
-        state.employees.forEach(e => {
-            csv += `"${e.name}",`;
-            for(let d=1; d<=numDays; d++) {
-                let c = (data[e.id] && data[e.id][d]) || {};
-                csv += `"${c.shift||''} ${c.depot||''}",`;
-            }
-            csv += "\n";
-        });
-        const blob = new Blob([csv], {type:'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'schedule.csv'; a.click();
+    // 2) Coverage deficits per depot & shift (requires depot assignment to be meaningful)
+    for(const day of days){
+      for(const depot of depots){
+        for(const shift of ["M","A","N"]){
+          const req = state.meta.requirements[depot]?.[shift] || 0;
+          let have = 0;
+          for(const e of state.employees){
+            const c = getCell(monthStore, e.id, day.iso);
+            if(c && c.shift===shift && c.depot===depot) have++;
+          }
+          if(have < req){
+            issues.push({ type:"bad", msg:`Coverage deficit: ${day.iso} — ${depot} ${shift}: need ${req}, have ${have}` });
+          }
+        }
+      }
     }
+
+    // 3) Rolling bucket compliance (informational)
+    // We summarize per rolling per week: assigned counts vs bucket
+    const rolling = state.employees.filter(x=>x.type==="B");
+    const weeks = new Map();
+    for(const day of days){
+      if(!weeks.has(day.weekIndex)) weeks.set(day.weekIndex, []);
+      weeks.get(day.weekIndex).push(day);
+    }
+    for(const e of rolling){
+      for(const [w, wDays] of weeks){
+        const assigned = {M:0,A:0,N:0,OFF:0};
+        for(const d of wDays){
+          const s = getCell(monthStore, e.id, d.iso)?.shift;
+          if(assigned[s]!==undefined) assigned[s]++;
+        }
+        const bucket = normalizeBucket(e.weeklyBucket);
+        // We only flag if they are *below total work* significantly (slacking)
+        const workA = assigned.M+assigned.A+assigned.N;
+        const workB = bucket.M+bucket.A+bucket.N;
+        if(workA < workB){
+          issues.push({ type:"warn", msg:`Rolling under-fill: ${e.name} week#${w} work ${workA}/${workB} (bucket).` });
+        }
+      }
+    }
+
+    return issues;
+  }
+
+  // ---- Rendering ----
+  function render(){
+    renderSettings();
+    renderEmployees();
+    renderRequirementsTable();
+    renderSchedule();
+  }
+
+  function renderSettings(){
+    el.apiUrl.value = state.apiUrl || "";
+    el.depotsInput.value = (state.meta.depots||[]).join(", ");
+    setStatus(state.apiUrl ? "API configured" : "Offline", !!state.apiUrl);
+    refreshJsonArea();
+  }
+
+  function renderRequirementsTable(){
+    const depots = state.meta.depots;
+    const header = `<thead><tr><th>Depot</th><th>M</th><th>A</th><th>N</th></tr></thead>`;
+    let body = "<tbody>";
+    for(const d of depots){
+      const r = state.meta.requirements[d] || {M:0,A:0,N:0};
+      body += `<tr>
+        <td style="text-align:left;font-weight:900">${escapeHtml(d)}</td>
+        <td><input data-depot="${escapeAttr(d)}" data-shift="M" type="number" min="0" value="${r.M||0}" style="width:70px"/></td>
+        <td><input data-depot="${escapeAttr(d)}" data-shift="A" type="number" min="0" value="${r.A||0}" style="width:70px"/></td>
+        <td><input data-depot="${escapeAttr(d)}" data-shift="N" type="number" min="0" value="${r.N||0}" style="width:70px"/></td>
+      </tr>`;
+    }
+    body += "</tbody>";
+    el.reqTable.innerHTML = header + body;
+
+    // hook inputs
+    el.reqTable.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("change", () => {
+        const depot = inp.getAttribute("data-depot");
+        const shift = inp.getAttribute("data-shift");
+        const v = Math.max(0, parseInt(inp.value||"0",10) || 0);
+        if(!state.meta.requirements[depot]) state.meta.requirements[depot] = {M:0,A:0,N:0};
+        state.meta.requirements[depot][shift] = v;
+        refreshJsonArea();
+        renderSchedule();
+      });
+    });
+  }
+
+  function renderEmployees(){
+    el.empList.innerHTML = "";
+    if(!state.employees.length){
+      el.empList.innerHTML = `<div class="empCard"><b>No employees yet.</b><div class="mini">Click “Add Employee”.</div></div>`;
+      return;
+    }
+
+    for(const e of state.employees){
+      const vac = (e.vacations||[]).join(", ");
+      const weights = state.meta.depots.map(d=>`${d}:${(e.depotWeights?.[d] ?? 1)}`).join(", ");
+
+      const fixedPattern = e.type==="A"
+        ? DOW.map(d=>`${d}:${e.fixedPattern?.[d]||"OFF"}`).join(", ")
+        : "";
+
+      const bucket = e.type==="B"
+        ? `M:${e.weeklyBucket?.M??1}, A:${e.weeklyBucket?.A??2}, N:${e.weeklyBucket?.N??2}, OFF:${e.weeklyBucket?.OFF??2}`
+        : "";
+
+      const card = document.createElement("div");
+      card.className = "empCard";
+      card.innerHTML = `
+        <div class="empTop">
+          <div>
+            <b>${escapeHtml(e.name||"Unnamed")}</b>
+            <div class="mini">ID: <span class="mono">${escapeHtml(e.id)}</span> · Type: <span class="mono">${escapeHtml(e.type)}</span></div>
+          </div>
+          <div class="row">
+            <button class="ghost" data-act="edit">Edit</button>
+            <button class="bad" data-act="del">Delete</button>
+          </div>
+        </div>
+        <div class="mini" style="margin-top:8px">
+          <div><span class="chip">Vacations:</span> <span class="mono">${escapeHtml(vac||"")}</span></div>
+          <div><span class="chip">Depot Weights:</span> <span class="mono">${escapeHtml(weights)}</span></div>
+          ${e.type==="A" ? `<div><span class="chip">Fixed Pattern:</span> <span class="mono">${escapeHtml(fixedPattern)}</span></div>` : ""}
+          ${e.type==="B" ? `<div><span class="chip">Weekly Bucket:</span> <span class="mono">${escapeHtml(bucket)}</span></div>` : ""}
+          ${e.type==="C" ? `<div class="okText">Joker: 6 work + 1 OFF weekly · priority N→A→M · avoids M unless critical</div>` : ""}
+        </div>
+      `;
+
+      card.querySelector('[data-act="del"]').addEventListener("click", () => {
+        if(confirm(`Delete ${e.name}?`)){
+          state.employees = state.employees.filter(x=>x.id!==e.id);
+          // also remove schedule rows
+          for(const k of Object.keys(state.schedule)){
+            if(state.schedule[k]?.[e.id]) delete state.schedule[k][e.id];
+          }
+          refreshJsonArea();
+          render();
+        }
+      });
+
+      card.querySelector('[data-act="edit"]').addEventListener("click", () => {
+        openEmpEditor(e.id);
+      });
+
+      el.empList.appendChild(card);
+    }
+  }
+
+  function openEmpEditor(empId){
+    const e = state.employees.find(x=>x.id===empId);
+    if(!e) return;
+
+    const depots = state.meta.depots;
+
+    const modal = document.createElement("div");
+    modal.style.position="fixed";
+    modal.style.inset="0";
+    modal.style.background="rgba(0,0,0,.55)";
+    modal.style.display="flex";
+    modal.style.alignItems="center";
+    modal.style.justifyContent="center";
+    modal.style.zIndex="9999";
+    modal.innerHTML = `
+      <div style="width:min(980px,92vw);max-height:86vh;overflow:auto;background:rgba(15,27,51,.97);border:1px solid var(--border);border-radius:18px;padding:12px">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div><b>Edit Employee</b> <span class="mini mono">${escapeHtml(e.id)}</span></div>
+          <button class="ghost" data-close>Close</button>
+        </div>
+        <div class="grid" style="margin-top:10px">
+          <div class="card">
+            <h2>Basics</h2>
+            <div class="kv"><label>Name</label><input data-k="name" value="${escapeAttr(e.name||"")}" /></div>
+            <div class="kv"><label>Type</label>
+              <select data-k="type">
+                <option value="A" ${e.type==="A"?"selected":""}>A (Fixed)</option>
+                <option value="B" ${e.type==="B"?"selected":""}>B (Rolling)</option>
+                <option value="C" ${e.type==="C"?"selected":""}>C (Joker)</option>
+              </select>
+            </div>
+            <div class="kv"><label>Vacations (ISO dates, comma)</label><input data-k="vacations" value="${escapeAttr((e.vacations||[]).join(", "))}" placeholder="2026-02-10, 2026-02-11"/></div>
+          </div>
+
+          <div class="card">
+            <h2>Depot Weights (Fair Rotation)</h2>
+            <div class="hint">Higher weight = employee should be assigned to that depot more often (relative).</div>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-top:8px;gap:8px">
+              ${depots.map(d=>{
+                const v = e.depotWeights?.[d] ?? 1;
+                return `<div class="kv"><label class="mono">${escapeHtml(d)}</label><input data-w="${escapeAttr(d)}" type="number" min="0" step="1" value="${v}"/></div>`;
+              }).join("")}
+            </div>
+          </div>
+
+          <div class="card" data-block="fixed" style="${e.type==="A"?"":"display:none"}">
+            <h2>Fixed Pattern (A)</h2>
+            <div class="hint">Use shifts M/A/N/OFF. VAC is managed via vacation dates.</div>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:8px">
+              ${DOW.map(d=>{
+                const v = e.fixedPattern?.[d] || "OFF";
+                return `
+                  <div class="kv">
+                    <label class="mono">${d}</label>
+                    <select data-f="${d}">
+                      ${["M","A","N","OFF"].map(s=>`<option value="${s}" ${v===s?"selected":""}>${s}</option>`).join("")}
+                    </select>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+
+          <div class="card" data-block="rolling" style="${e.type==="B"?"":"display:none"}">
+            <h2>Weekly Bucket (B)</h2>
+            <div class="hint">Resets every Sunday. Example: 1M, 2A, 2N, 2OFF.</div>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:8px">
+              ${["M","A","N","OFF"].map(s=>{
+                const v = e.weeklyBucket?.[s] ?? (s==="M"?1 : s==="OFF"?2 : 2);
+                return `<div class="kv"><label class="mono">${s}</label><input data-b="${s}" type="number" min="0" step="1" value="${v}"/></div>`;
+              }).join("")}
+            </div>
+          </div>
+
+          <div class="card" data-block="joker" style="${e.type==="C"?"":"display:none"}">
+            <h2>Joker Notes (C)</h2>
+            <div class="hint">
+              The algorithm enforces 1 staggered OFF/week (unless VAC). Work preference order: N → A → M.
+              Morning is only selected to cover deficits (or if N/A impossible).
+            </div>
+          </div>
+
+          <div class="row" style="justify-content:flex-end">
+            <button class="primary" data-save>Save Changes</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // show/hide blocks on type change
+    const typeSel = modal.querySelector('select[data-k="type"]');
+    const fixedBlock = modal.querySelector('[data-block="fixed"]');
+    const rollingBlock = modal.querySelector('[data-block="rolling"]');
+    const jokerBlock = modal.querySelector('[data-block="joker"]');
+    typeSel.addEventListener("change", ()=>{
+      const t = typeSel.value;
+      fixedBlock.style.display = (t==="A") ? "" : "none";
+      rollingBlock.style.display = (t==="B") ? "" : "none";
+      jokerBlock.style.display = (t==="C") ? "" : "none";
+    });
+
+    modal.querySelector("[data-close]").addEventListener("click", ()=> modal.remove());
+
+    modal.querySelector("[data-save]").addEventListener("click", ()=>{
+      // basics
+      e.name = modal.querySelector('input[data-k="name"]').value.trim() || "Unnamed";
+      e.type = modal.querySelector('select[data-k="type"]').value;
+
+      // vacations
+      const vacRaw = modal.querySelector('input[data-k="vacations"]').value;
+      e.vacations = vacRaw.split(",").map(s=>s.trim()).filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s));
+
+      // weights
+      e.depotWeights = e.depotWeights || {};
+      modal.querySelectorAll("input[data-w]").forEach(inp=>{
+        const depot = inp.getAttribute("data-w");
+        e.depotWeights[depot] = Math.max(0, parseInt(inp.value||"0",10) || 0);
+      });
+
+      // fixed pattern
+      if(e.type==="A"){
+        e.fixedPattern = e.fixedPattern || {};
+        modal.querySelectorAll("select[data-f]").forEach(sel=>{
+          const d = sel.getAttribute("data-f");
+          e.fixedPattern[d] = sel.value;
+        });
+        // remove rolling bucket
+        delete e.weeklyBucket;
+      }
+
+      // rolling bucket
+      if(e.type==="B"){
+        e.weeklyBucket = e.weeklyBucket || {M:1,A:2,N:2,OFF:2};
+        modal.querySelectorAll("input[data-b]").forEach(inp=>{
+          const s = inp.getAttribute("data-b");
+          e.weeklyBucket[s] = Math.max(0, parseInt(inp.value||"0",10) || 0);
+        });
+        // remove fixed pattern
+        delete e.fixedPattern;
+      }
+
+      // joker (no extra fields required)
+      if(e.type==="C"){
+        delete e.fixedPattern;
+        delete e.weeklyBucket;
+      }
+
+      refreshJsonArea();
+      render();
+      modal.remove();
+    });
+
+    document.body.appendChild(modal);
+  }
+
+  function renderSchedule(){
+    const y = selectedYear(), m = selectedMonth();
+    const monthStore = getMonthStore(y,m);
+    const days = monthDays(y,m);
+
+    // header
+    let html = `<thead><tr><th class="emp">Employee</th>`;
+    for(const day of days){
+      html += `<th>${day.d}<div class="mini">${day.dowName}</div></th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    // body
+    for(const e of state.employees){
+      html += `<tr><td class="emp">${escapeHtml(e.name)}<div class="mini mono">${escapeHtml(e.type)}</div></td>`;
+      let prev = "OFF";
+      for(const day of days){
+        const c = getCell(monthStore, e.id, day.iso) || null;
+        const s = c?.shift || "";
+        const depot = c?.depot || "";
+        const viol = s ? isFlipViolation(prev, s) : false;
+        const classS = s ? `s-${s}` : "";
+        const cls = ["cell", classS, viol ? "viol" : ""].join(" ");
+        html += `<td><div class="${cls}">
+          <div class="mono" style="font-weight:900">${escapeHtml(s)}</div>
+          <div class="mini">${escapeHtml(depot||"")}</div>
+        </div></td>`;
+        prev = s || prev;
+      }
+      html += `</tr>`;
+    }
+    html += `</tbody>`;
+    el.schedTable.innerHTML = html;
+
+    renderDiagnostics();
+  }
+
+  function renderDiagnostics(){
+    const y = selectedYear(), m = selectedMonth();
+    const issues = analyzeMonth(y,m);
+
+    el.diagBox.innerHTML = "";
+    if(!issues.length){
+      el.diagBox.innerHTML = `<div class="empCard"><b class="okText">✅ No deficits/violations detected (with current depot assignment).</b>
+        <div class="mini">If you haven’t clicked “Assign Depots” yet, coverage per depot may still show deficits.</div>
+      </div>`;
+      return;
+    }
+
+    // Show most important first
+    const sorted = issues.sort((a,b)=> (a.type===b.type?0 : (a.type==="bad"?-1:1)));
+    for(const it of sorted.slice(0,220)){
+      const div = document.createElement("div");
+      div.className = "empCard";
+      div.innerHTML = `<b class="${it.type==="bad"?"dangerText":""}">${it.type==="bad"?"❌":"⚠️"} ${escapeHtml(it.msg)}</b>`;
+      el.diagBox.appendChild(div);
+    }
+    if(sorted.length>220){
+      const div = document.createElement("div");
+      div.className = "empCard";
+      div.innerHTML = `<b class="mini">Showing 220 / ${sorted.length} issues.</b>`;
+      el.diagBox.appendChild(div);
+    }
+  }
+
+  // ---- JSON area ----
+  function refreshJsonArea(){
+    el.jsonArea.value = JSON.stringify({
+      apiUrl: state.apiUrl,
+      meta: state.meta,
+      employees: state.employees,
+      schedule: state.schedule
+    }, null, 2);
+  }
+  function applyJsonFromArea(){
+    const raw = el.jsonArea.value.trim();
+    if(!raw) return;
+    try{
+      const obj = JSON.parse(raw);
+      // shallow validate minimal shape
+      state.apiUrl = obj.apiUrl || "";
+      state.meta = obj.meta || state.meta;
+      state.employees = obj.employees || [];
+      state.schedule = obj.schedule || {};
+      // ensure requirements/depots exist
+      state.meta.depots = (state.meta.depots||[]).map(s=>String(s).trim()).filter(Boolean);
+      state.meta.requirements = state.meta.requirements || {};
+      for(const d of state.meta.depots){
+        if(!state.meta.requirements[d]) state.meta.requirements[d] = {M:0,A:0,N:0};
+      }
+      // ensure employee ids exist
+      for(const e of state.employees){
+        if(!e.id) e.id = randId();
+        if(!e.depotWeights) e.depotWeights = {};
+        for(const d of state.meta.depots){
+          if(e.depotWeights[d]===undefined) e.depotWeights[d]=1;
+        }
+        if(!["A","B","C"].includes(e.type)) e.type="A";
+        e.vacations = (e.vacations||[]).map(String);
+      }
+      render();
+      alert("JSON applied.");
+    }catch(err){
+      alert("Invalid JSON: " + err.message);
+    }
+  }
+
+  // ---- API calls ----
+  async function apiLoad(){
+    const url = (state.apiUrl||"").trim();
+    if(!url) return alert("Set the Apps Script URL in Settings first.");
+    setStatus("Loading...", true);
+    try{
+      const res = await fetch(url + "?action=load", { method:"GET" });
+      const json = await res.json();
+      if(!json?.ok) throw new Error("API returned not-ok");
+      const data = json.data || {};
+      state.apiUrl = url;
+      state.meta = data.meta || state.meta;
+      state.employees = data.employees || [];
+      state.schedule = data.schedule || {};
+      // normalize
+      state.meta.depots = (state.meta.depots||[]).map(s=>String(s).trim()).filter(Boolean);
+      state.meta.requirements = state.meta.requirements || {};
+      for(const d of state.meta.depots){
+        if(!state.meta.requirements[d]) state.meta.requirements[d] = {M:0,A:0,N:0};
+      }
+      for(const e of state.employees){
+        if(!e.id) e.id = randId();
+        if(!e.depotWeights) e.depotWeights = {};
+        for(const d of state.meta.depots){
+          if(e.depotWeights[d]===undefined) e.depotWeights[d]=1;
+        }
+        e.vacations = (e.vacations||[]).map(String);
+      }
+      render();
+      setStatus("Loaded", true);
+    }catch(err){
+      console.error(err);
+      setStatus("Load failed", false);
+      alert("Load failed: " + err.message);
+    }
+  }
+
+  async function apiSave(){
+    const url = (state.apiUrl||"").trim();
+    if(!url) return alert("Set the Apps Script URL in Settings first.");
+    setStatus("Saving...", true);
+    try{
+      const payload = { meta: state.meta, employees: state.employees, schedule: state.schedule };
+      const res = await fetch(url, {
+        method:"POST",
+        body: JSON.stringify({ action:"save", payload }),
+        headers: { "Content-Type":"text/plain;charset=utf-8" } // Apps Script friendly
+      });
+      // Apps Script might return text; attempt json
+      const text = await res.text();
+      let ok = true;
+      try{ const j = JSON.parse(text); ok = !!j.ok; }catch(_){}
+      if(!ok) throw new Error("API save not confirmed");
+      setStatus("Saved", true);
+      alert("Saved.");
+    }catch(err){
+      console.error(err);
+      setStatus("Save failed", false);
+      alert("Save failed: " + err.message);
+    }
+  }
+
+  function setStatus(text, ok){
+    el.statusChip.textContent = text;
+    el.statusChip.style.background = ok ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.14)";
+    el.statusChip.style.borderColor = ok ? "rgba(34,197,94,.35)" : "rgba(239,68,68,.40)";
+    el.statusChip.style.color = ok ? "#bfffd2" : "#ffb4b4";
+  }
+
+  // ---- Export CSV ----
+  function exportCSV(){
+    const y = selectedYear(), m = selectedMonth();
+    const monthStore = getMonthStore(y,m);
+    const days = monthDays(y,m);
+
+    let csv = "\uFEFFEmployee,Type," + days.map(d=>d.iso).join(",") + "\n";
+    for(const e of state.employees){
+      const row = [];
+      row.push(csvEscape(e.name||""));
+      row.push(csvEscape(e.type||""));
+      for(const d of days){
+        const c = getCell(monthStore, e.id, d.iso);
+        const v = c ? `${c.shift||""}${c.depot?(" @"+c.depot):""}` : "";
+        row.push(csvEscape(v));
+      }
+      csv += row.join(",") + "\n";
+    }
+
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `schedule_${ymKey(y,m)}.csv`;
+    a.click();
+  }
+  const csvEscape = (s)=> `"${String(s).replaceAll('"','""')}"`;
+
+  // ---- UI wiring ----
+  function selectedYear(){ return parseInt(el.yearSel.value,10); }
+  function selectedMonth(){ return parseInt(el.monthSel.value,10); }
+
+  function initDateSelectors(){
+    const now = new Date();
+    const curY = now.getFullYear();
+    for(let y=curY-1;y<=curY+3;y++){
+      const opt = document.createElement("option");
+      opt.value = String(y); opt.textContent = String(y);
+      el.yearSel.appendChild(opt);
+    }
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    months.forEach((name,i)=>{
+      const opt = document.createElement("option");
+      opt.value = String(i+1); opt.textContent = `${pad2(i+1)} - ${name}`;
+      el.monthSel.appendChild(opt);
+    });
+    el.yearSel.value = String(curY);
+    el.monthSel.value = String(now.getMonth()+1);
+
+    el.yearSel.addEventListener("change", ()=> renderSchedule());
+    el.monthSel.addEventListener("change", ()=> renderSchedule());
+  }
+
+  // tabs
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      t.classList.add("active");
+      const tab = t.getAttribute("data-tab");
+      document.getElementById("view-schedule").style.display = tab==="schedule" ? "" : "none";
+      document.getElementById("view-employees").style.display = tab==="employees" ? "" : "none";
+      document.getElementById("view-settings").style.display = tab==="settings" ? "" : "none";
+    });
+  });
+
+  // buttons
+  el.btnAddEmp.addEventListener("click", ()=>{
+    const e = {
+      id: randId(),
+      name: "New Employee",
+      type: "A",
+      fixedPattern: {Sun:"M",Mon:"M",Tue:"M",Wed:"M",Thu:"M",Fri:"OFF",Sat:"OFF"},
+      vacations: [],
+      depotWeights: Object.fromEntries(state.meta.depots.map(d=>[d,1]))
+    };
+    state.employees.push(e);
+    refreshJsonArea();
+    renderEmployees();
+  });
+
+  el.btnGenerate.addEventListener("click", ()=>{
+    const y = selectedYear(), m = selectedMonth();
+    if(!state.employees.length) return alert("Add employees first.");
+    if(!confirm(`Generate schedule for ${ymKey(y,m)}?\n\nThis will overwrite shifts for that month (VAC is preserved).`)) return;
+
+    // wipe month rows but keep VAC cells if already stored (we recompute VAC anyway)
+    const ms = getMonthStore(y,m);
+    for(const e of state.employees){
+      ms[e.id] = {}; // reset
+    }
+
+    generateMonth(y,m);
+    renderSchedule();
+    refreshJsonArea();
+    alert("Generated. Next: click “Assign Depots” to distribute by location fairly.");
+  });
+
+  el.btnAssignDepots.addEventListener("click", ()=>{
+    const y = selectedYear(), m = selectedMonth();
+    assignDepotsForMonth(y,m);
+    renderSchedule();
+    refreshJsonArea();
+    alert("Depots assigned (fair rotation using depot weights).");
+  });
+
+  el.btnExport.addEventListener("click", exportCSV);
+
+  el.btnLoad.addEventListener("click", ()=> {
+    // sync settings before load
+    state.apiUrl = el.apiUrl.value.trim();
+    apiLoad();
+  });
+  el.btnSave.addEventListener("click", ()=> {
+    state.apiUrl = el.apiUrl.value.trim();
+    apiSave();
+  });
+
+  // settings inputs
+  el.apiUrl.addEventListener("change", ()=>{
+    state.apiUrl = el.apiUrl.value.trim();
+    refreshJsonArea();
+    setStatus(state.apiUrl ? "API configured" : "Offline", !!state.apiUrl);
+  });
+
+  el.depotsInput.addEventListener("change", ()=>{
+    const depots = el.depotsInput.value.split(",").map(s=>s.trim()).filter(Boolean);
+    if(!depots.length) return alert("At least 1 depot required.");
+    state.meta.depots = depots;
+    // ensure requirements exist
+    state.meta.requirements = state.meta.requirements || {};
+    for(const d of depots){
+      if(!state.meta.requirements[d]) state.meta.requirements[d] = {M:0,A:0,N:0};
+    }
+    // remove requirements for deleted depots
+    for(const d of Object.keys(state.meta.requirements)){
+      if(!depots.includes(d)) delete state.meta.requirements[d];
+    }
+    // ensure employee depotWeights include new depots
+    for(const e of state.employees){
+      e.depotWeights = e.depotWeights || {};
+      for(const d of depots){
+        if(e.depotWeights[d]===undefined) e.depotWeights[d]=1;
+      }
+      for(const d of Object.keys(e.depotWeights)){
+        if(!depots.includes(d)) delete e.depotWeights[d];
+      }
+    }
+    renderRequirementsTable();
+    renderEmployees();
+    refreshJsonArea();
+  });
+
+  el.btnRefreshJson.addEventListener("click", refreshJsonArea);
+  el.btnApplyJson.addEventListener("click", applyJsonFromArea);
+  el.btnReset.addEventListener("click", ()=>{
+    if(!confirm("Reset everything (employees, schedule, settings)?")) return;
+    state.apiUrl = "";
+    state.meta = { depots:["Budaiya","IsaTown"], requirements:{ Budaiya:{M:1,A:1,N:1}, IsaTown:{M:1,A:1,N:1} } };
+    state.employees = [];
+    state.schedule = {};
+    render();
+    alert("Reset complete.");
+  });
+
+  // ---- Escape helpers ----
+  function escapeHtml(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+  function escapeAttr(s){ return escapeHtml(s).replaceAll('"',"&quot;"); }
+
+  // ---- Init ----
+  initDateSelectors();
+  render();
+})();
 </script>
 </body>
 </html>
