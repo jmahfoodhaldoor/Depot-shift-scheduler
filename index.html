@@ -5,85 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام السيدة زينب للجداول</title>
     <style>
-        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --border: #cbd5e1; }
+        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f1f5f9; --border: #cbd5e1; }
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); font-size: 14px; direction: rtl; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); font-size: 13.5px; direction: rtl; }
         .app-container { max-width: 1400px; margin: 0 auto; padding: 10px; }
         .toolbar { display: flex; flex-wrap: wrap; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; align-items: center; }
-        h1 { margin: 0; font-size: 1.3rem; margin-left: auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h1 { margin: 0; font-size: 1.3rem; margin-left: auto; color: #1e293b; font-weight: 800; }
         button { cursor: pointer; padding: 8px 16px; border: 1px solid var(--border); background: white; border-radius: 6px; font-weight: 600; transition: all 0.2s; font-family: inherit; }
-        button:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        button:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         button.primary { background: var(--primary); color: white; border-color: var(--primary); }
         button.success { background: var(--success); color: white; border-color: var(--success); }
         button.danger { background: var(--danger); color: white; border-color: var(--danger); }
         input, select { padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; }
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; background: white; border-radius: 8px 8px 0 0; padding: 0 10px; }
-        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
-        .tab:hover { background: #f8fafc; }
-        .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: bold; }
+        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; color: #64748b; font-weight: 600; }
+        .tab:hover { background: #f8fafc; color: var(--primary); }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); }
         .view { display: none; }
         .view.active { display: block; }
-        .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); }
         .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; }
-        .schedule-table th, .schedule-table td { border: 1px solid #e2e8f0; text-align: center; padding: 6px; height: 38px; font-size: 0.85rem; }
-        .schedule-table th { background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); position: sticky; top: 0; z-index: 10; font-weight: 600; }
-        .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; width: 160px; text-align: right; padding-right: 12px; border-left: 2px solid #cbd5e1; }
-        .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 12px; font-weight: 600; border-left: 2px solid #cbd5e1; }
-        .cell { cursor: pointer; user-select: none; transition: all 0.15s; font-weight: 500; }
-        .cell:hover { transform: scale(1.05); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.1); }
-        
-        .cell.shift-M { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1e40af; } 
-        .cell.shift-A { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; } 
-        .cell.shift-N { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: #f8fafc; } 
-        .cell.shift-OFF { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; } 
-        .cell.shift-VAC { background: linear-gradient(135deg, #fae8ff 0%, #f3e8ff 100%); color: #7e22ce; font-weight: 700; } 
-        .cell.shift-X { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; font-weight: 700; } 
-        
-        .violation { border: 3px solid var(--danger) !important; animation: pulse 1s infinite; position: relative; }
-        .violation::after { content: '⚠️'; position: absolute; top: 1px; right: 2px; font-size: 0.7rem; }
-        
-        .emp-card { border: 1px solid var(--border); background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .emp-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #f1f5f9; margin-bottom: 12px; }
-        .pattern-editor { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 12px; border-radius: 8px; border: 1px dashed var(--border); margin-top: 10px; }
-        .flex-counts { display: flex; gap: 12px; flex-wrap: wrap; }
-        .flex-counts > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .flex-counts label { font-size: 0.75rem; font-weight: 700; color: #64748b; }
-        .flex-counts input { width: 50px; text-align: center; font-weight: 600; }
-        .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
-        .depot-quotas > div { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); padding: 8px; border: 1px solid #fed7aa; border-radius: 6px; }
-        .depot-quotas label { font-size: 0.75rem; font-weight: 700; color: #9a3412; display: block; margin-bottom: 4px; }
-        .depot-quotas input { width: 100%; text-align: center; font-weight: 600; }
-        .vacation-input { background: linear-gradient(135deg, #fae8ff 0%, #f3e8ff 100%); padding: 10px; border-radius: 6px; border: 1px solid #e9d5ff; margin-top: 10px; }
-        .vacation-input input { width: 100%; padding: 6px; border: 1px solid #e9d5ff; border-radius: 4px; }
-
+        .schedule-table th, .schedule-table td { border: 1px solid #e2e8f0; text-align: center; padding: 4px; height: 38px; font-size: 0.85rem; }
+        .schedule-table th { background: #f8fafc; position: sticky; top: 0; z-index: 10; font-weight: 700; color: #334155; }
+        .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; width: 170px; text-align: right; padding-right: 12px; border-left: 2px solid #cbd5e1; background: #f8fafc; }
+        .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 12px; font-weight: 600; border-left: 2px solid #cbd5e1; color: #1e293b; }
+        .cell { cursor: pointer; user-select: none; transition: background 0.15s; font-weight: 600; }
+        .cell:hover { filter: brightness(0.95); }
+        .cell.shift-M { background-color: #dbeafe; color: #1e40af; } 
+        .cell.shift-A { background-color: #fef3c7; color: #92400e; } 
+        .cell.shift-N { background-color: #1e293b; color: #f8fafc; } 
+        .cell.shift-OFF { background-color: #f0fdf4; color: #166534; } 
+        .cell.shift-VAC { background-color: #f3e8ff; color: #7e22ce; } 
+        .cell.shift-X { background-color: #fee2e2; color: #991b1b; } 
+        .violation { border: 3px solid var(--danger) !important; position: relative; }
+        .emp-card { border: 1px solid var(--border); background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .emp-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; }
+        .pattern-editor { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed var(--border); margin-top: 10px; }
+        .flex-counts { display: flex; gap: 10px; flex-wrap: wrap; }
+        .flex-counts div { display: flex; flex-direction: column; align-items: center; }
+        .flex-counts label { font-size: 0.7rem; font-weight: 700; color: #64748b; }
+        .flex-counts input { width: 45px; text-align: center; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; }
+        .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
+        .depot-quotas div { background: #fff7ed; padding: 6px; border: 1px solid #ffedd5; border-radius: 6px; }
+        .depot-quotas label { font-size: 0.7rem; font-weight: 700; color: #9a3412; display: block; }
+        .depot-quotas input { width: 100%; text-align: center; font-weight: 600; margin-top: 2px; }
+        .vacation-input { background: #f3e8ff; padding: 8px; border-radius: 6px; border: 1px solid #e9d5ff; margin-top: 10px; }
+        .vacation-input input { width: 100%; padding: 5px; border: 1px solid #d8b4fe; border-radius: 4px; }
         #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .loader-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        .report-box { margin-top: 20px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-        .report-item { margin-bottom: 6px; padding: 8px 12px; background: #fff1f2; color: #9f1239; border-radius: 6px; border-left: 3px solid var(--danger); font-size: 0.9rem; }
-        .report-ok { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; padding: 16px; text-align: center; font-weight: 700; border-radius: 8px; font-size: 1.1rem; }
-        
-        .alert-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid var(--warning); padding: 14px; border-radius: 8px; margin: 12px 0; color: #92400e; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-        .alert-box.success { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: var(--success); color: #065f46; }
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
-        .badge.success { background: var(--success); color: white; }
-        .badge.warning { background: var(--warning); color: white; }
-        .badge.danger { background: var(--danger); color: white; }
-        .badge.info { background: #8b5cf6; color: white; }
-        .stat-box { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
-        .depot-tag { font-size: 0.65rem; display: block; opacity: 0.7; margin-top: 2px; }
+        .report-box { margin-top: 20px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: 10px; }
+        .report-item { margin-bottom: 4px; padding: 6px 10px; background: #fff1f2; color: #9f1239; border-radius: 4px; border-right: 3px solid var(--danger); font-size: 0.9rem; font-weight: 500; }
+        .report-ok { background: #d1fae5; color: #065f46; padding: 15px; text-align: center; font-weight: 700; border-radius: 8px; }
+        .alert-box { background: #dbeafe; border: 1px solid #93c5fd; padding: 12px; border-radius: 8px; margin: 10px 0; color: #1e40af; font-weight: 600; font-size: 0.9rem; text-align: center; }
         .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .req-table th, .req-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; }
-        .req-table th { background: #f8fafc; font-weight: 600; }
-        .req-input { width: 60px; text-align: center; font-weight: 600; }
+        .req-table th, .req-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
+        .req-input { width: 50px; text-align: center; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-right: 5px; }
+        .badge.success { background: #d1fae5; color: #065f46; }
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <div class="loader-spinner"></div>
-    <div style="margin-top: 20px; font-size: 1.1rem; font-weight: 600; color: var(--primary);">جاري حساب أفضل توزيع...</div>
+    <div style="font-size: 2.5rem;">⚙️</div>
+    <div style="margin-top: 10px; font-weight: 700; color: #334155;">جاري تطبيق نظام الطبقات...</div>
 </div>
 
 <div class="app-container">
@@ -91,7 +75,7 @@
         <h1>🗓️ نظام السيدة زينب للجداول</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
-        <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
+        <button onclick="loadData()">🔄 تحديث</button>
         <button class="primary" onclick="saveData()">💾 حفظ</button>
         <div style="flex-grow:1; text-align:left; font-size:0.8rem; color:#64748b;">
              <span id="lastUpdated"></span>
@@ -99,28 +83,23 @@
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('schedule')">📅 الجدول الشهري</div>
-        <div class="tab" onclick="switchTab('employees')">👥 الموظفين</div>
-        <div class="tab" onclick="switchTab('settings')">⚙️ الإعدادات</div>
+        <div class="tab active" onclick="switchTab('schedule')">الجدول</div>
+        <div class="tab" onclick="switchTab('employees')">الموظفين</div>
+        <div class="tab" onclick="switchTab('settings')">الإعدادات</div>
     </div>
 
     <div id="view-schedule" class="view active">
-        <div class="alert-box success">
-            <div>
-                <strong>✅ نظام الأولويات الجديد:</strong>
-                <span class="badge success">الأولوية القصوى: M (نهار) للدوار</span>
-                <span class="badge success">منع التكاسل (إجبار العمل)</span>
-                <span class="badge info">الجوكر: آخر خيار للنهار</span>
-            </div>
+        <div class="alert-box">
+            📊 <strong>التسلسل:</strong> 1.الثابت ⬅️ 2.الدوار (توافق الدلو) ⬅️ 3.الدوار (سد العجز) ⬅️ 4.الجوكر.
         </div>
         <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
             <div>
-                <button onclick="generateScheduleOptimized()" class="primary">⚡ توزيع الشفتات </button>
+                <button onclick="generateScheduleTiered()" class="primary">⚡ توزيع الشفتات</button>
                 <button onclick="fillDepots()" class="success">🏭 توزيع المواقع</button>
             </div>
             <div>
-                <button onclick="clearMonth()" class="danger">🗑️ مسح الشهر</button>
-                <button onclick="exportCSV()">📄 تصدير Excel</button>
+                <button onclick="clearMonth()" class="danger">🗑️ مسح</button>
+                <button onclick="exportCSV()">📄 Excel</button>
             </div>
         </div>
         <div class="grid-container">
@@ -130,14 +109,13 @@
     </div>
 
     <div id="view-employees" class="view">
-        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">➕ إضافة موظف جديد</button>
+        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">➕ إضافة موظف</button>
         <div id="employeeList"></div>
     </div>
 
     <div id="view-settings" class="view">
         <div class="emp-card">
-            <h3>1️⃣ إدارة المواقع (Depots)</h3>
-            <p style="font-size:0.85rem; color:#64748b; margin:8px 0;">افصل بين الأسماء بفاصلة</p>
+            <h3>1️⃣ المواقع (Depots)</h3>
             <input type="text" id="settingDepots" style="width: 100%;" onchange="updateDepots()">
         </div>
         <div class="emp-card">
@@ -145,8 +123,8 @@
             <div id="requirementsContainer"></div>
         </div>
         <div class="emp-card">
-            <h3>3️⃣ إعادة تعيين النظام</h3>
-            <button class="danger" onclick="saveData(true)">⚠️ مسح كافة البيانات وإعادة البدء</button>
+            <h3>3️⃣ تحكم</h3>
+            <button class="danger" onclick="saveData(true)">⚠️ تصفير قاعدة البيانات</button>
         </div>
     </div>
 </div>
@@ -155,7 +133,7 @@
     // ==========================================
     // === CONFIGURATION ===
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️⚠️ ضع رابط السكربت هنا ⚠️
+    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️⚠️ ضع الرابط هنا ⚠️
     
     // ==========================================
     // === STATE MANAGEMENT ===
@@ -173,64 +151,53 @@
     
     const SHIFTS = ["M", "A", "N", "OFF", "VAC", "X"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
-    const MAX_CONSECUTIVE_DAYS = 6;
+    const MAX_CONSECUTIVE = 6; 
 
-    // ==========================================
-    // === STRICT RULES ===
-    // ==========================================
-    function isShiftFlipViolation(previousShift, nextShift) {
-        if (!previousShift || ['OFF', 'X', 'VAC'].includes(previousShift)) return false;
-        if (nextShift === 'OFF' || nextShift === 'X' || nextShift === 'VAC') return false;
-        
-        // N -> M/A Forbidden
-        if (previousShift === 'N') return (nextShift === 'M' || nextShift === 'A');
-        
-        // A -> M Forbidden
-        if (previousShift === 'A') return (nextShift === 'M');
-        
+    // --- RULES ---
+    function isShiftFlipViolation(prev, next) {
+        if (!prev || ['OFF', 'X', 'VAC'].includes(prev)) return false;
+        if (next === 'OFF' || next === 'X' || next === 'VAC') return false;
+        if (prev === 'N') return (next === 'M' || next === 'A');
+        if (prev === 'A') return (next === 'M');
         return false;
     }
 
-    // ==========================================
-    // === INITIALIZATION & API ===
-    // ==========================================
+    // --- INIT ---
     window.onload = () => { initDateSelectors(); loadData(); };
 
     function initDateSelectors() {
         const ySel = document.getElementById('selYear');
         const mSel = document.getElementById('selMonth');
-        const currYear = new Date().getFullYear();
-        for(let y = currYear - 1; y <= currYear + 2; y++) ySel.add(new Option(y, y));
-        ySel.value = currYear;
-        const monthsAr = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-        monthsAr.forEach((m, i) => mSel.add(new Option(m, i+1)));
-        mSel.value = new Date().getMonth() + 1;
+        const curr = new Date().getFullYear();
+        for(let y=curr-1; y<=curr+2; y++) ySel.add(new Option(y, y));
+        ySel.value = curr;
+        ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"].forEach((m, i) => mSel.add(new Option(m, i+1)));
+        mSel.value = new Date().getMonth()+1;
         ySel.onchange = () => { appConfig.year = parseInt(ySel.value); renderSchedule(); };
         mSel.onchange = () => { appConfig.month = parseInt(mSel.value); renderSchedule(); };
     }
 
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    function switchTab(t) {
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
         event.target.classList.add('active');
-        document.getElementById(`view-${tabName}`).classList.add('active');
+        document.getElementById(`view-${t}`).classList.add('active');
     }
 
+    // --- API ---
     async function loadData() {
         showLoader(true);
         try {
             const res = await fetch(`${API_URL}?action=load`);
             const json = await res.json();
             if(json.ok) {
-                const loadedState = json.data || {};
-                state.employees = Array.isArray(loadedState.employees) ? loadedState.employees : [];
-                state.schedule = loadedState.schedule || {};
-                state.meta = loadedState.meta || { requirements: {}, depots: [] };
-                
-                if(state.meta.depots && state.meta.depots.length > 0) appConfig.depots = state.meta.depots;
+                const data = json.data || {};
+                state.employees = data.employees || [];
+                state.schedule = data.schedule || {};
+                state.meta = data.meta || { requirements: {}, depots: [] };
+                if(state.meta.depots && state.meta.depots.length) appConfig.depots = state.meta.depots;
                 document.getElementById('settingDepots').value = appConfig.depots.join(', ');
 
-                // Normalize Data
                 state.employees.forEach(emp => {
                     if(!emp.id) emp.id = 'emp_' + Math.random().toString(36).substr(2, 9);
                     if(!emp.patternType) emp.patternType = 'weekly';
@@ -240,7 +207,6 @@
                     if(!emp.vacationDates) emp.vacationDates = "";
                 });
 
-                // Fix Requirements keys
                 const reqs = state.meta.requirements;
                 for(let d in reqs) {
                     if(reqs[d].D !== undefined) {
@@ -250,30 +216,25 @@
                 }
 
                 renderEmployees(); renderRequirementsTable(); renderSchedule();
-                if(state.meta.updatedAt) document.getElementById('lastUpdated').innerText = "آخر تحديث: " + new Date(state.meta.updatedAt).toLocaleTimeString();
-            } else { alert("خطأ: " + json.error); }
+                if(state.meta.updatedAt) document.getElementById('lastUpdated').innerText = new Date(state.meta.updatedAt).toLocaleTimeString();
+            }
         } catch(e) { console.error(e); alert("فشل الاتصال."); } finally { showLoader(false); }
     }
 
     async function saveData(reset = false) {
         showLoader(true);
-        if(reset) {
-            if(!confirm("⚠️ سيتم مسح جميع البيانات!")) { showLoader(false); return; }
-            state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
-            appConfig.depots = ["Budaiya", "IsaTown"];
-        }
+        if(reset && !confirm("⚠️ مسح الكل؟")) { showLoader(false); return; }
+        if(reset) state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
         state.meta.depots = appConfig.depots;
         state.meta.updatedAt = new Date().toISOString();
         try {
             await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } }) });
             if(reset) { renderEmployees(); renderRequirementsTable(); renderSchedule(); document.getElementById('settingDepots').value = "Budaiya, IsaTown"; }
-            document.getElementById('lastUpdated').innerText = "آخر تحديث: " + new Date().toLocaleTimeString();
-        } catch(e) { alert("خطأ أثناء الحفظ."); } finally { showLoader(false); }
+            document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
+        } catch(e) { alert("خطأ حفظ."); } finally { showLoader(false); }
     }
 
-    // ==========================================
-    // === UI RENDERING ===
-    // ==========================================
+    // --- UI RENDERING ---
     function renderRequirementsTable() {
         const container = document.getElementById('requirementsContainer');
         if(!container) return;
@@ -341,10 +302,10 @@
     function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderRequirementsTable(); renderEmployees(); }
 
     // ==========================================
-    // === OPTIMIZED GENERATOR (MORNING FORCE) ===
+    // === TIERED GENERATOR (THE LOGIC CORE) ===
     // ==========================================
-    function generateScheduleOptimized() {
-        if(!confirm("🚀 بدء التوزيع؟\n\n✅ أولوية النهار للدوار\n✅ منع التكاسل (إجبار العمل)\n✅ توزيع إجازات الجوكر")) return;
+    function generateScheduleTiered() {
+        if(!confirm("🚀 بدء التوزيع (نظام الطبقات)؟\n\n1. الثابت\n2. الدوار (تطابق الدلو)\n3. الدوار (سد عجز M)\n4. الجوكر")) return;
         showLoader(true);
         setTimeout(() => {
             try {
@@ -364,14 +325,14 @@
                 const empPrevShift = {};
                 state.employees.forEach(emp => { workStreaks[emp.id] = 0; empPrevShift[emp.id] = 'OFF'; });
 
-                // 2. Fixed Employees
+                // 2. Fixed Employees (Tier 1)
                 applyFixedEmployees(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
 
                 // 3. Rolling & Joker Loop
                 const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
                 const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
 
-                // Joker Staggering Logic (Distributed OFFs)
+                // Joker Staggering Logic
                 const jokerOffMap = {};
                 jokerEmps.forEach((e, idx) => {
                     jokerOffMap[e.id] = [];
@@ -381,17 +342,15 @@
 
                 let currentDay = 1;
                 while(currentDay <= numDays) {
-                    // Determine Week
                     let weekEnd = Math.min(currentDay + 6 - new Date(appConfig.year, appConfig.month-1, currentDay).getDay(), numDays);
                     let daysInWeek = [];
                     for(let i=currentDay; i<=weekEnd; i++) daysInWeek.push(i);
 
-                    // Reset Buckets on Week Start
+                    // Reset Buckets
                     if(new Date(appConfig.year, appConfig.month-1, currentDay).getDay() === 0 || currentDay === 1) {
                         rollingEmps.forEach(e => {
                             let f = e.flexCounts || {M:1,A:2,N:2,OFF:2};
                             e._bucket = { ...f };
-                            // Calculate total work capacity for the week
                             e._totalWorkNeeded = f.M + f.A + f.N;
                             e._daysWorkedThisWeek = 0;
                         });
@@ -402,8 +361,30 @@
                         let rollingList = [...rollingEmps].sort(() => Math.random() - 0.5);
                         let jokerList = [...jokerEmps].sort(() => Math.random() - 0.5);
 
-                        // --- STEP 1: FORCE MORNING (Rolling) ---
-                        // If M needed, grab Rolling emps who are safe
+                        // --- TIER 2: ROLLING (HAPPY PATH) ---
+                        // Only assign if NEED > 0 AND BUCKET > 0
+                        rollingList.forEach(emp => {
+                            if(isAssigned(emp, d, sched)) return;
+                            let prev = empPrevShift[emp.id];
+                            let bucket = emp._bucket;
+                            
+                            let assigned = 'OFF';
+                            let canM = !isShiftFlipViolation(prev, 'M');
+                            let canA = !isShiftFlipViolation(prev, 'A');
+                            let canN = !isShiftFlipViolation(prev, 'N');
+
+                            if(todaysNeeds.M > 0 && canM && bucket.M > 0) { assigned='M'; bucket.M--; }
+                            else if(todaysNeeds.A > 0 && canA && bucket.A > 0) { assigned='A'; bucket.A--; }
+                            else if(todaysNeeds.N > 0 && canN && bucket.N > 0) { assigned='N'; bucket.N--; }
+
+                            if(assigned !== 'OFF') {
+                                assignShift(emp, d, assigned, sched, todaysNeeds, workStreaks, empPrevShift);
+                                emp._daysWorkedThisWeek++;
+                            }
+                        });
+
+                        // --- TIER 3: ROLLING (FORCED M CONVERSION) ---
+                        // Only if M is still needed, take from A/N bucket
                         if(todaysNeeds.M > 0) {
                             rollingList.forEach(emp => {
                                 if(todaysNeeds.M <= 0) return;
@@ -411,49 +392,44 @@
                                 
                                 let prev = empPrevShift[emp.id];
                                 if(!isShiftFlipViolation(prev, 'M')) {
+                                    // Steal from other buckets
+                                    let bucket = emp._bucket;
+                                    if(bucket.A > 0) bucket.A--;
+                                    else if(bucket.N > 0) bucket.N--;
+                                    // else if Bucket Empty (Overtime) or OFF bucket?
+                                    
                                     assignShift(emp, d, 'M', sched, todaysNeeds, workStreaks, empPrevShift);
-                                    if(emp._bucket.M > 0) emp._bucket.M--; // Reduce preferred M
-                                    else if(emp._bucket.A > 0) emp._bucket.A--; // Steal from A
-                                    else if(emp._bucket.N > 0) emp._bucket.N--; // Steal from N
                                     emp._daysWorkedThisWeek++;
                                 }
                             });
                         }
 
-                        // --- STEP 2: FILL A/N (Rolling) ---
+                        // --- TIER 4: ROLLING (CLEANUP / ANTI-SLACK) ---
                         rollingList.forEach(emp => {
                             if(isAssigned(emp, d, sched)) return;
                             
-                            // Anti-Slacking Check
-                            let daysLeftInWeek = (daysInWeek[daysInWeek.length-1] - d) + 1;
-                            let workLeft = emp._totalWorkNeeded - emp._daysWorkedThisWeek;
-                            let mustWork = (workLeft >= daysLeftInWeek); // Must work today to finish quota
-
                             let prev = empPrevShift[emp.id];
                             let bucket = emp._bucket;
+                            let streak = workStreaks[emp.id] || 0;
+                            
+                            let daysLeftInWeek = (daysInWeek[daysInWeek.length-1] - d) + 1;
+                            let workLeft = emp._totalWorkNeeded - emp._daysWorkedThisWeek;
+                            let mustWork = (workLeft >= daysLeftInWeek);
+                            let forcedOff = (streak >= MAX_CONSECUTIVE);
+
                             let assigned = 'OFF';
 
-                            // Determine safe options
-                            let canA = !isShiftFlipViolation(prev, 'A');
-                            let canN = !isShiftFlipViolation(prev, 'N');
-                            let canM = !isShiftFlipViolation(prev, 'M'); // Last resort
-
-                            if(mustWork) {
-                                // Forced Mode
-                                if(canN && (todaysNeeds.N > 0 || bucket.N > 0)) assigned = 'N';
-                                else if(canA && (todaysNeeds.A > 0 || bucket.A > 0)) assigned = 'A';
-                                else if(canM) assigned = 'M';
-                                else if(canN) assigned = 'N'; // Force N if nothing else
-                                else assigned = 'OFF'; // Physical flip violation
-                            } else {
-                                // Normal Mode (Needs based)
-                                if(todaysNeeds.N > 0 && canN && bucket.N > 0) { assigned='N'; bucket.N--; }
-                                else if(todaysNeeds.A > 0 && canA && bucket.A > 0) { assigned='A'; bucket.A--; }
-                                else if(bucket.OFF > 0) { assigned='OFF'; bucket.OFF--; } // Take OFF if available
-                                else {
-                                    // Empty bucket fill
+                            if(!forcedOff) {
+                                let canA = !isShiftFlipViolation(prev, 'A');
+                                let canN = !isShiftFlipViolation(prev, 'N');
+                                
+                                // Priority: Bucket > Need > Force
+                                if(bucket.A > 0 && canA) { assigned='A'; bucket.A--; }
+                                else if(bucket.N > 0 && canN) { assigned='N'; bucket.N--; }
+                                else if(mustWork) {
                                     if(canN) assigned='N'; else if(canA) assigned='A';
                                 }
+                                else if(bucket.OFF > 0) { assigned='OFF'; bucket.OFF--; }
                             }
 
                             if(assigned !== 'OFF') {
@@ -464,27 +440,27 @@
                             }
                         });
 
-                        // --- STEP 3: JOKER (Cleanup) ---
+                        // --- TIER 5: JOKER (LAST RESORT) ---
                         jokerList.forEach(emp => {
                             if(isAssigned(emp, d, sched)) return;
                             
                             let prev = empPrevShift[emp.id];
                             let assigned = 'OFF';
                             let isOffDay = jokerOffMap[emp.id].includes(d);
+                            let streak = workStreaks[emp.id] || 0;
 
-                            if(isOffDay) {
-                                assigned = 'OFF';
-                            } else {
-                                // Priority N -> A -> M
-                                if(todaysNeeds.N > 0 && !isShiftFlipViolation(prev, 'N')) assigned = 'N';
-                                else if(todaysNeeds.A > 0 && !isShiftFlipViolation(prev, 'A')) assigned = 'A';
-                                else if(todaysNeeds.M > 0 && !isShiftFlipViolation(prev, 'M')) assigned = 'M';
+                            if(!isOffDay && streak < MAX_CONSECUTIVE) {
+                                let canM = !isShiftFlipViolation(prev, 'M');
+                                let canA = !isShiftFlipViolation(prev, 'A');
+                                let canN = !isShiftFlipViolation(prev, 'N');
+
+                                // Priority: N -> A -> M
+                                if(todaysNeeds.N > 0 && canN) assigned = 'N';
+                                else if(todaysNeeds.A > 0 && canA) assigned = 'A';
+                                else if(todaysNeeds.M > 0 && canM) assigned = 'M';
                                 else {
-                                    // No need, but must work (6 days rule)
-                                    // Fill any safe slot (Prefer N)
-                                    if(!isShiftFlipViolation(prev, 'N')) assigned = 'N';
-                                    else if(!isShiftFlipViolation(prev, 'A')) assigned = 'A';
-                                    else if(!isShiftFlipViolation(prev, 'M')) assigned = 'M';
+                                    // Must Work (6 days)
+                                    if(canN) assigned='N'; else if(canA) assigned='A'; else if(canM) assigned='M';
                                 }
                             }
                             
@@ -492,69 +468,64 @@
                             else setOff(emp, d, sched, workStreaks, empPrevShift);
                         });
                     });
-
                     currentDay = daysInWeek[daysInWeek.length-1] + 1;
                 }
 
+                // Final Auto-Correct for safety
+                state.employees.forEach(e => {
+                    let p = 'OFF';
+                    for(let d=1; d<=numDays; d++) {
+                        let c = sched[e.id][d];
+                        if(c && c.shift) {
+                            if(isShiftFlipViolation(p, c.shift)) c.shift = 'OFF';
+                            p = c.shift;
+                        }
+                    }
+                });
+
                 renderSchedule(); saveData(); showLoader(false);
-                alert("✅ تم التوزيع بنجاح!");
+                alert("✅ تم التوزيع (نظام الطبقات المتوازن)!");
             } catch(e) { console.error(e); showLoader(false); alert("خطأ: " + e.message); }
         }, 100);
     }
 
+    // --- HELPERS ---
     function isAssigned(emp, d, sched) { return !!(sched[emp.id] && sched[emp.id][d]); }
-
     function assignShift(emp, d, s, sched, needs, streaks, prevs) {
         sched[emp.id][d] = { shift: s, depot: "" };
         prevs[emp.id] = s;
         if(needs[s] > 0) needs[s]--;
         streaks[emp.id]++;
     }
-
     function setOff(emp, d, sched, streaks, prevs) {
         sched[emp.id][d] = { shift: 'OFF', depot: "" };
         prevs[emp.id] = 'OFF';
         streaks[emp.id] = 0;
     }
-
     function applyVacations(numDays, sched) {
         state.employees.forEach(emp => {
-            if(emp.vacationDates) {
-                emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => {
-                    if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' };
-                });
-            }
+            if(emp.vacationDates) emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => { if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' }; });
         });
     }
-
     function calculateDailyNeeds(numDays) {
         const needs = {};
         const depots = appConfig.depots.map(d=>d.trim());
         const reqs = state.meta.requirements || {};
         for(let d=1; d<=numDays; d++) {
             needs[d] = { M:0, A:0, N:0 };
-            depots.forEach(dep => {
-                const r = reqs[dep] || {};
-                needs[d].M += (r.M||0); needs[d].A += (r.A||0); needs[d].N += (r.N||0);
-            });
+            depots.forEach(dep => { const r = reqs[dep] || {}; needs[d].M += (r.M||0); needs[d].A += (r.A||0); needs[d].N += (r.N||0); });
         }
         return needs;
     }
-
     function applyFixedEmployees(numDays, sched, dailyNeeds, streaks, prevs) {
         state.employees.filter(e => e.patternType === 'weekly').forEach(emp => {
             for(let d=1; d<=numDays; d++) {
-                if(isAssigned(emp, d, sched)) { // Vacation handling
-                    prevs[emp.id] = 'VAC'; streaks[emp.id] = 0; continue;
-                }
+                if(isAssigned(emp, d, sched)) { prevs[emp.id]='VAC'; streaks[emp.id]=0; continue; }
                 const dayOfWeek = new Date(appConfig.year, appConfig.month-1, d).getDay();
                 let shift = emp.weeklyTemplate[dayOfWeek];
                 const prev = prevs[emp.id];
-                
-                if(isShiftFlipViolation(prev, shift)) shift = 'OFF';
-                
-                if(shift !== 'OFF') assignShift(emp, d, shift, sched, dailyNeeds, streaks, prevs);
-                else setOff(emp, d, sched, streaks, prevs);
+                if(isShiftFlipViolation(prev, shift) || (streaks[emp.id] >= MAX_CONSECUTIVE && ['M','A','N'].includes(shift))) shift = 'OFF';
+                assignShift(emp, d, shift, sched, dailyNeeds, streaks, prevs);
             }
         });
     }
@@ -573,7 +544,6 @@
         }
 
         const usage = {}; state.employees.forEach(e=>usage[e.id]={});
-
         for(let d=1; d<=numDays; d++) {
             const counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
             const workers = {M:[],A:[],N:[]};
@@ -581,7 +551,6 @@
                 let s = sched[e.id][d].shift;
                 if(['M','A','N'].includes(s)) workers[s].push(e);
             });
-
             ['M','A','N'].forEach(s => {
                 let list = workers[s];
                 list.sort((a,b) => ((b.depotQuotas[depots[0]]||0) - (a.depotQuotas[depots[0]]||0))); 
@@ -590,18 +559,14 @@
                     let i = 0;
                     while(i<list.length && counts[dep][s] < need) {
                         let e = list[i];
-                        if(!sched[e.id][d].depot) {
-                            sched[e.id][d].depot = dep;
-                            counts[dep][s]++;
-                        }
+                        if(!sched[e.id][d].depot) { sched[e.id][d].depot = dep; counts[dep][s]++; }
                         i++;
                     }
                 });
                 list.forEach(e => {
                     if(!sched[e.id][d].depot) {
                         let target = depots.reduce((a,b)=>counts[a][s]<counts[b][s]?a:b);
-                        sched[e.id][d].depot = target;
-                        counts[target][s]++;
+                        sched[e.id][d].depot = target; counts[target][s]++;
                     }
                 });
             });
@@ -609,18 +574,45 @@
         renderSchedule(); saveData();
     }
 
-    // --- RENDER & EXPORT ---
+    // --- RENDER ---
+    function renderRequirementsTable() {
+        let html = `<table class="req-table"><thead><tr><th>الموقع</th><th>M</th><th>A</th><th>N</th></tr></thead><tbody>`;
+        appConfig.depots.forEach(d => {
+            let r = (state.meta.requirements && state.meta.requirements[d]) || {M:0,A:0,N:0};
+            html += `<tr><td>${d}</td>
+            <td><input type="number" class="req-input" value="${r.M||0}" onchange="updReq('${d}','M',this.value)"></td>
+            <td><input type="number" class="req-input" value="${r.A||0}" onchange="updReq('${d}','A',this.value)"></td>
+            <td><input type="number" class="req-input" value="${r.N||0}" onchange="updReq('${d}','N',this.value)"></td></tr>`;
+        });
+        document.getElementById('requirementsContainer').innerHTML = html + `</tbody></table>`;
+    }
+    function updReq(d,s,v) { if(!state.meta.requirements[d]) state.meta.requirements[d]={}; state.meta.requirements[d][s]=parseInt(v)||0; }
+
+    function renderEmployees() {
+        const list = document.getElementById('employeeList'); list.innerHTML = "";
+        state.employees.forEach(e => {
+            let weekHtml = WEEKDAYS.map((day,i) => `<div><small>${day}</small><select onchange="updEmpWeek('${e.id}',${i},this.value)" style="width:100%">${SHIFTS.filter(x=>!['VAC','X'].includes(x)).map(s=>`<option ${e.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join('')}</select></div>`).join('');
+            let quotas = `<div class="depot-quotas">` + appConfig.depots.map(d => `<div><span>${d}</span><input type="number" value="${(e.depotQuotas&&e.depotQuotas[d])||0}" onchange="updQuota('${e.id}','${d}',this.value)"></div>`).join('') + `</div>`;
+            let flex = e.flexCounts || {M:1,A:2,N:2,OFF:2};
+            let typeHtml = e.patternType === 'rolling' ? 
+                `<div class="pattern-editor"><div class="flex-counts"><div>M<input type="number" value="${flex.M}" onchange="updFlex('${e.id}','M',this.value)"></div><div>A<input type="number" value="${flex.A}" onchange="updFlex('${e.id}','A',this.value)"></div><div>N<input type="number" value="${flex.N}" onchange="updFlex('${e.id}','N',this.value)"></div><div>OFF<input type="number" value="${flex.OFF}" onchange="updFlex('${e.id}','OFF',this.value)"></div></div></div>` :
+                (e.patternType === 'joker' ? `<div class="pattern-editor" style="color:#d97706;font-weight:700;">🃏 جوكر</div>` : `<div class="pattern-editor">${weekHtml}</div>`);
+            
+            let div = document.createElement('div'); div.className = "emp-card";
+            div.innerHTML = `<div class="emp-header"><input type="text" value="${e.name}" onchange="updateEmployee('${e.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${e.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${e.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${e.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${e.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${e.id}')">🗑️</button></div>
+            <div class="vacation-input"><label>🏖️ إجازات:</label><input type="text" value="${e.vacationDates||''}" onchange="updateVacationDates('${e.id}',this.value)"></div>
+            <div style="margin:10px 0;">${quotas}</div>${typeHtml}`;
+            list.appendChild(div);
+        });
+    }
+
     function renderSchedule() {
         const grid = document.getElementById('scheduleGrid');
         if(!grid) return;
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const data = state.schedule[getMonthKey()] || {};
         let html = `<thead><tr><th class="emp-col">الموظف</th>`;
-        for(let d=1; d<=numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month-1, d);
-            const isWeekend = (date.getDay()===5 || date.getDay()===6);
-            html += `<th style="${isWeekend?'background:#e2e8f0':''}">${d}<br>${WEEKDAYS[date.getDay()]}</th>`;
-        }
+        for(let d=1; d<=numDays; d++) html += `<th>${d}<br>${WEEKDAYS[new Date(appConfig.year,appConfig.month-1,d).getDay()]}</th>`;
         html += `</tr></thead><tbody>`;
         state.employees.forEach(e => {
             let row = `<tr><td class="emp-col">${e.name}</td>`;
@@ -646,22 +638,7 @@
         const depots = appConfig.depots.map(d=>d.trim());
         const reqs = state.meta.requirements || {};
         let issues = [];
-        let flips = 0;
-
-        state.employees.forEach(emp => {
-            let prev = 'OFF';
-            for(let d=1; d<=numDays; d++) {
-                let s = (sched[emp.id] && sched[emp.id][d]) ? sched[emp.id][d].shift : '';
-                if(s) {
-                    if(isShiftFlipViolation(prev, s)) {
-                        flips++;
-                        issues.push(`🚨 قلبة شفت: ${emp.name} يوم ${d} (${prev}->${s})`);
-                    }
-                    if(['M','A','N','VAC','X'].includes(s)) prev=s; else prev='OFF';
-                }
-            }
-        });
-
+        
         for(let d=1; d<=numDays; d++) {
             let counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
             state.employees.forEach(e => {
@@ -677,12 +654,8 @@
                 });
             });
         }
-
-        let html = "";
-        if(flips > 0) html += `<div class="alert-box danger">⚠️ يوجد ${flips} قلبة شفت!</div>`;
-        if(issues.length === 0) html += `<div class="report-ok">✅ الجدول ممتاز!</div>`;
-        else html += issues.map(i=>`<div class="report-item">${i}</div>`).join('');
-        report.innerHTML = html;
+        
+        report.innerHTML = issues.length ? issues.map(i=>`<div class="report-item">${i}</div>`).join('') : `<div class="report-ok">✅ الجدول ممتاز!</div>`;
     }
 
     // UTILS
