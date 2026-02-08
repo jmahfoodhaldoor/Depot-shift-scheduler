@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>نظام الجدولة (V10.1 - إصلاح الدوّار بدون تغيير الواجهة)</title>
+  <title>نظام الجدولة (V10.1 - إصلاح OFF الدوّار)</title>
   <style>
     :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --border: #cbd5e1; }
     * { box-sizing: border-box; }
@@ -23,13 +23,15 @@
     .tab.active { border-bottom-color: var(--primary); color: var(--primary); }
     .view { display: none; }
     .view.active { display: block; }
+
     .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-    .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; }
-    .schedule-table th, .schedule-table td { border: 1px solid #e2e8f0; text-align: center; padding: 4px; height: 38px; font-size: 0.85rem; }
-    .schedule-table th { background: #f8fafc; position: sticky; top: 0; z-index: 10; font-weight: 700; color: #334155; }
-    .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; width: 170px; text-align: right; padding-right: 12px; border-left: 2px solid #cbd5e1; background: #f8fafc; }
-    .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 12px; font-weight: 600; border-left: 2px solid #cbd5e1; color: #1e293b; }
-    .cell { cursor: pointer; user-select: none; transition: background 0.15s; font-weight: 600; }
+    .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; table-layout: fixed; }
+    .schedule-table th, .schedule-table td { border: 1px solid #e2e8f0; text-align: center; padding: 4px; height: 42px; font-size: 0.85rem; vertical-align: middle; }
+    .schedule-table th { background: #f8fafc; position: sticky; top: 0; z-index: 10; font-weight: 700; color: #334155; white-space: nowrap; }
+    .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; width: 190px; text-align: right; padding-right: 12px; border-left: 2px solid #cbd5e1; background: #f8fafc; }
+    .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 12px; font-weight: 700; border-left: 2px solid #cbd5e1; color: #1e293b; }
+
+    .cell { cursor: pointer; user-select: none; transition: background 0.15s; font-weight: 700; line-height: 1.1; }
     .cell:hover { filter: brightness(0.95); }
     .cell.shift-M { background-color: #dbeafe; color: #1e40af; }
     .cell.shift-A { background-color: #fef3c7; color: #92400e; }
@@ -37,40 +39,46 @@
     .cell.shift-OFF { background-color: #f0fdf4; color: #166534; }
     .cell.shift-VAC { background-color: #f3e8ff; color: #7e22ce; }
     .cell.shift-X { background-color: #fee2e2; color: #991b1b; }
-    .violation { border: 3px solid var(--danger) !important; position: relative; }
+    .violation { outline: 3px solid var(--danger) !important; outline-offset: -2px; border-radius: 6px; }
+
     .emp-card { border: 1px solid var(--border); background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .emp-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; }
+    .emp-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; margin-bottom: 12px; gap: 8px; }
     .pattern-editor { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed var(--border); margin-top: 10px; }
-    .flex-counts { display: flex; gap: 10px; flex-wrap: wrap; }
+    .flex-counts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
     .flex-counts div { display: flex; flex-direction: column; align-items: center; }
-    .flex-counts label { font-size: 0.7rem; font-weight: 700; color: #64748b; }
-    .flex-counts input { width: 45px; text-align: center; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; }
-    .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
+    .flex-counts label { font-size: 0.7rem; font-weight: 800; color: #64748b; }
+    .flex-counts input { width: 52px; text-align: center; font-weight: 800; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; }
+
+    .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
     .depot-quotas div { background: #fff7ed; padding: 6px; border: 1px solid #ffedd5; border-radius: 6px; }
-    .depot-quotas label { font-size: 0.7rem; font-weight: 700; color: #9a3412; display: block; }
-    .depot-quotas input { width: 100%; text-align: center; font-weight: 600; margin-top: 2px; }
+    .depot-quotas label { font-size: 0.7rem; font-weight: 800; color: #9a3412; display: block; }
+    .depot-quotas input { width: 100%; text-align: center; font-weight: 800; margin-top: 2px; border-radius: 6px; }
+
     .vacation-input { background: #f3e8ff; padding: 8px; border-radius: 6px; border: 1px solid #e9d5ff; margin-top: 10px; }
-    .vacation-input input { width: 100%; padding: 5px; border: 1px solid #d8b4fe; border-radius: 4px; }
+    .vacation-input input { width: 100%; padding: 8px; border: 1px solid #d8b4fe; border-radius: 6px; font-weight: 700; }
+
     #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     .report-box { margin-top: 20px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: 10px; }
-    .report-item { margin-bottom: 4px; padding: 6px 10px; background: #fff1f2; color: #9f1239; border-radius: 4px; border-right: 3px solid var(--danger); font-size: 0.9rem; font-weight: 500; }
-    .report-ok { background: #d1fae5; color: #065f46; padding: 15px; text-align: center; font-weight: 700; border-radius: 8px; }
-    .alert-box { background: #dbeafe; border: 1px solid #93c5fd; padding: 12px; border-radius: 8px; margin: 10px 0; color: #1e40af; font-weight: 600; font-size: 0.9rem; text-align: center; }
+    .report-item { margin-bottom: 6px; padding: 8px 10px; background: #fff1f2; color: #9f1239; border-radius: 6px; border-right: 4px solid var(--danger); font-size: 0.9rem; font-weight: 700; }
+    .report-ok { background: #d1fae5; color: #065f46; padding: 15px; text-align: center; font-weight: 900; border-radius: 8px; }
+    .alert-box { background: #dbeafe; border: 1px solid #93c5fd; padding: 12px; border-radius: 8px; margin: 10px 0; color: #1e40af; font-weight: 800; font-size: 0.9rem; text-align: center; }
     .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .req-table th, .req-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
-    .req-input { width: 50px; text-align: center; font-weight: 600; }
+    .req-table th, .req-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; font-weight: 800; }
+    .req-input { width: 70px; text-align: center; font-weight: 900; border-radius: 6px; }
+
+    .depot-tag { display:block; font-size: 0.72rem; opacity: .9; margin-top: 2px; font-weight: 800; }
   </style>
 </head>
 <body>
 
 <div id="loader">
   <div style="font-size: 2.5rem;">🏗️</div>
-  <div style="margin-top: 10px; font-weight: 700; color: #334155;">جاري التوزيع...</div>
+  <div style="margin-top: 10px; font-weight: 900; color:#334155;">جاري التوزيع مع Balanced OFF...</div>
 </div>
 
 <div class="app-container">
   <div class="toolbar">
-    <h1>🗓️ نظام السيدة زينب (V10.1 - إصلاح الدوّار)</h1>
+    <h1>🗓️ نظام السيدة زينب (V10.1 - إصلاح إجازات الدوّار)</h1>
     <select id="selYear"></select>
     <select id="selMonth"></select>
     <button onclick="loadData()">🔄 تحديث</button>
@@ -88,7 +96,7 @@
 
   <div id="view-schedule" class="view active">
     <div class="alert-box">
-      ✅ تم إصلاح الدوّار: أسبوع (أحد→سبت) + Reset الأحد + OFF صارم (قدر الإمكان) + Safety Gate.
+      ✅ تم إصلاح المشكلة: <strong>OFF للدوّار صار موزون داخل كل أسبوع</strong> (الأحد→السبت) لمنع تجمّع الإجازات.
     </div>
     <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
       <div>
@@ -100,9 +108,11 @@
         <button onclick="exportCSV()">📄 Excel</button>
       </div>
     </div>
+
     <div class="grid-container">
       <table class="schedule-table" id="scheduleGrid"></table>
     </div>
+
     <div id="coverageReport" class="report-box"></div>
   </div>
 
@@ -139,7 +149,7 @@
   let state = {
     employees: [],
     schedule: {},
-    meta: { requirements: {}, depots: [] }
+    meta: { requirements: {}, depots: [], updatedAt: null }
   };
 
   let appConfig = {
@@ -156,18 +166,15 @@
   // === RULES ===
   // ==========================================
   function isShiftFlipViolation(prev, next) {
-    if (!prev) return false;
-    // حسب تعريفك: VAC و X لا يكسرون الستريك، لكن للـ flip rule نخليهم "محايدين" (ما يمنعون اليوم اللي بعده)
-    if (['OFF'].includes(prev)) return false;
-    if (['OFF','VAC','X'].includes(next)) return false;
-
+    if (!prev || ['OFF', 'X', 'VAC'].includes(prev)) return false;
+    if (next === 'OFF' || next === 'X' || next === 'VAC') return false;
     if (prev === 'N') return (next === 'M' || next === 'A');
     if (prev === 'A') return (next === 'M');
     return false;
   }
 
-  // فقط OFF يكسر الستريك (VAC/X لا)
-  function isOffBreaker(shift) {
+  // NOTE: حسب كلامك "فقط OFF يكسر الستريك"
+  function streakBreaks(shift) {
     return shift === 'OFF';
   }
 
@@ -180,11 +187,15 @@
     const ySel = document.getElementById('selYear');
     const mSel = document.getElementById('selMonth');
     const curr = new Date().getFullYear();
+
     for (let y = curr - 1; y <= curr + 2; y++) ySel.add(new Option(y, y));
     ySel.value = curr;
+
     ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]
       .forEach((m, i) => mSel.add(new Option(m, i + 1)));
+
     mSel.value = new Date().getMonth() + 1;
+
     ySel.onchange = () => { appConfig.year = parseInt(ySel.value); renderSchedule(); };
     mSel.onchange = () => { appConfig.month = parseInt(mSel.value); renderSchedule(); };
   }
@@ -192,7 +203,7 @@
   function switchTab(t, ev) {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-    if (ev && ev.target) ev.target.classList.add('active');
+    ev.target.classList.add('active');
     document.getElementById(`view-${t}`).classList.add('active');
   }
 
@@ -208,12 +219,14 @@
         const data = json.data || {};
         state.employees = data.employees || [];
         state.schedule = data.schedule || {};
-        state.meta = data.meta || { requirements: {}, depots: [] };
+        state.meta = data.meta || { requirements: {}, depots: [], updatedAt: null };
+
         if (state.meta.depots && state.meta.depots.length) appConfig.depots = state.meta.depots;
         document.getElementById('settingDepots').value = appConfig.depots.join(', ');
 
+        // Normalize employee defaults
         state.employees.forEach(emp => {
-          if (!emp.id) emp.id = 'emp_' + Math.random().toString(36).substr(2, 9);
+          if (!emp.id) emp.id = 'emp_' + Math.random().toString(36).slice(2, 9);
           if (!emp.patternType) emp.patternType = 'weekly';
           if (!emp.weeklyTemplate) emp.weeklyTemplate = Array(7).fill("M");
           if (!emp.flexCounts) emp.flexCounts = { M: 1, A: 2, N: 2, OFF: 2 };
@@ -221,12 +234,23 @@
           if (!emp.vacationDates) emp.vacationDates = "";
         });
 
+        // Normalize requirements keys if needed
+        const reqs = state.meta.requirements || {};
+        for (let d in reqs) {
+          if (reqs[d].D !== undefined) {
+            reqs[d].M = reqs[d].D; reqs[d].A = reqs[d].EN; reqs[d].N = reqs[d].LN;
+            delete reqs[d].D; delete reqs[d].EN; delete reqs[d].LN;
+          }
+        }
+
         renderEmployees();
         renderRequirementsTable();
         renderSchedule();
 
         if (state.meta.updatedAt) {
           document.getElementById('lastUpdated').innerText = new Date(state.meta.updatedAt).toLocaleTimeString();
+        } else {
+          document.getElementById('lastUpdated').innerText = "";
         }
       }
     } catch (e) {
@@ -240,19 +264,28 @@
   async function saveData(reset = false) {
     showLoader(true);
     if (reset && !confirm("⚠️ مسح الكل؟")) { showLoader(false); return; }
-    if (reset) state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
+
+    if (reset) state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [], updatedAt: null } };
+
     state.meta.depots = appConfig.depots;
     state.meta.updatedAt = new Date().toISOString();
 
     try {
       await fetch(API_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } })
+        body: JSON.stringify({
+          action: "save",
+          payload: { employees: state.employees, schedule: state.schedule, meta: state.meta }
+        })
       });
+
       if (reset) {
-        renderEmployees(); renderRequirementsTable(); renderSchedule();
+        renderEmployees();
+        renderRequirementsTable();
+        renderSchedule();
         document.getElementById('settingDepots').value = "Budaiya, IsaTown";
       }
+
       document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
     } catch (e) {
       alert("خطأ حفظ.");
@@ -268,11 +301,12 @@
     const container = document.getElementById('requirementsContainer');
     if (!container) return;
     if (!state.meta.requirements) state.meta.requirements = {};
+
     let html = `<table class="req-table"><thead><tr><th>الموقع</th><th>M</th><th>A</th><th>N</th></tr></thead><tbody>`;
     appConfig.depots.forEach(depot => {
       const req = state.meta.requirements[depot] || { M: 0, A: 0, N: 0 };
       html += `<tr>
-        <td style="font-weight:700;">${depot}</td>
+        <td style="font-weight:900;">${depot}</td>
         <td><input type="number" min="0" class="req-input" value="${req.M || 0}" onchange="updateReq('${depot}', 'M', this.value)"></td>
         <td><input type="number" min="0" class="req-input" value="${req.A || 0}" onchange="updateReq('${depot}', 'A', this.value)"></td>
         <td><input type="number" min="0" class="req-input" value="${req.N || 0}" onchange="updateReq('${depot}', 'N', this.value)"></td>
@@ -280,6 +314,7 @@
     });
     container.innerHTML = html + `</tbody></table>`;
   }
+
   function updateReq(depot, shift, value) {
     if (!state.meta.requirements[depot]) state.meta.requirements[depot] = {};
     state.meta.requirements[depot][shift] = parseInt(value) || 0;
@@ -296,73 +331,98 @@
       const div = document.createElement('div');
       div.className = "emp-card";
 
-      // weekly template
+      // Weekly template editor (for fixed)
       let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:6px;'>";
       WEEKDAYS.forEach((day, i) => {
-        const opts = SHIFTS.filter(s => s !== 'VAC' && s !== 'X')
-          .map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
-        weekHtml += `
-          <div style="text-align:center;">
-            <label style="font-size:0.7rem; color:#64748b;">${day}</label>
-            <select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%; font-size:0.85rem;">${opts}</select>
-          </div>`;
+        const opts = SHIFTS
+          .filter(s => s !== 'VAC' && s !== 'X')
+          .map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`)
+          .join('');
+        weekHtml += `<div style="text-align:center;">
+          <label style="font-size:0.72rem; color:#64748b; font-weight:900;">${day}</label>
+          <select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%; font-size:0.9rem; font-weight:800;">${opts}</select>
+        </div>`;
       });
       weekHtml += "</div>";
 
-      // depot quotas
+      // Depot quotas editor
       let quotasHtml = `<div class="depot-quotas">`;
       appConfig.depots.forEach(depot => {
         const val = (emp.depotQuotas && emp.depotQuotas[depot]) || 0;
-        quotasHtml += `<div><label>${depot}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${depot}', this.value)"></div>`;
+        quotasHtml += `<div>
+          <label>${depot}</label>
+          <input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${depot}', this.value)">
+        </div>`;
       });
       quotasHtml += `</div>`;
 
-      // vacations
-      let vacationHtml = `<div class="vacation-input"><label>🏖️ أيام الإجازات (مثال: 5, 6)</label><input type="text" value="${emp.vacationDates || ''}" onchange="updateVacationDates('${emp.id}', this.value)"></div>`;
+      // Vacation editor
+      let vacationHtml = `
+        <div class="vacation-input">
+          <label style="font-weight:900;">🏖️ أيام الإجازات (مثال: 5, 6)</label>
+          <input type="text" value="${emp.vacationDates || ''}" onchange="updateVacationDates('${emp.id}', this.value)">
+        </div>`;
 
+      // Pattern block
       const flex = emp.flexCounts || { M: 1, A: 2, N: 2, OFF: 2 };
       let patternHtml = "";
 
       if (emp.patternType === 'rolling') {
-        patternHtml = `
-          <div class="pattern-editor">
-            <div class="flex-counts">
-              <div><label>M</label><input type="number" value="${flex.M}" onchange="updateFlexCount('${emp.id}', 'M', this.value)"></div>
-              <div><label>A</label><input type="number" value="${flex.A}" onchange="updateFlexCount('${emp.id}', 'A', this.value)"></div>
-              <div><label>N</label><input type="number" value="${flex.N}" onchange="updateFlexCount('${emp.id}', 'N', this.value)"></div>
-              <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
-            </div>
-          </div>`;
+        patternHtml = `<div class="pattern-editor">
+          <div style="font-weight:900; color:#0f172a; margin-bottom:8px;">📦 Bucket أسبوعي (دوّار)</div>
+          <div class="flex-counts">
+            <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
+            <div><label>N</label><input type="number" value="${flex.N}" onchange="updateFlexCount('${emp.id}', 'N', this.value)"></div>
+            <div><label>A</label><input type="number" value="${flex.A}" onchange="updateFlexCount('${emp.id}', 'A', this.value)"></div>
+            <div><label>M</label><input type="number" value="${flex.M}" onchange="updateFlexCount('${emp.id}', 'M', this.value)"></div>
+          </div>
+          <div style="margin-top:8px; font-size:.8rem; color:#64748b; font-weight:800;">
+            ✅ OFF موزون أسبوعياً لمنع تجمع الإجازات.
+          </div>
+        </div>`;
       } else if (emp.patternType === 'joker') {
-        patternHtml = `<div class="pattern-editor"><div style="color:#d97706; font-weight:700;">🃏 جوكر</div><p style="font-size:0.8rem;">يغطي النقص. يفضل N ثم A ثم M. 6 عمل + 1 OFF أسبوعياً.</p></div>`;
+        patternHtml = `<div class="pattern-editor">
+          <div style="color:#d97706; font-weight:900;">🃏 جوكر</div>
+          <div style="font-size:0.85rem; font-weight:800; color:#64748b;">
+            يغطي العجز (N أولاً) و 1 OFF أسبوعياً (موزون).
+          </div>
+        </div>`;
       } else {
-        patternHtml = `<div class="pattern-editor">${weekHtml}</div>`;
+        patternHtml = `<div class="pattern-editor">
+          <div style="font-weight:900; color:#0f172a; margin-bottom:8px;">📌 ثابت (Weekly Template)</div>
+          ${weekHtml}
+        </div>`;
       }
 
       div.innerHTML = `
         <div class="emp-header">
-          <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;">
-          <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="margin:0 10px;">
+          <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:900; flex:1; border:none; outline:none; font-size:1rem;">
+          <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="min-width:120px; font-weight:900;">
             <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>ثابت</option>
             <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>دوار</option>
             <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>جوكر</option>
           </select>
           <button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️</button>
         </div>
+
         ${vacationHtml}
+
         <div style="margin:10px 0;">
-          <strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>
+          <strong style="font-size:0.9rem; color:#64748b; font-weight:900;">توزيع المواقع:</strong>
           ${quotasHtml}
         </div>
+
         ${patternHtml}
       `;
+
       container.appendChild(div);
     });
   }
 
+  // Helpers for employees
   function addEmployee() {
     state.employees.push({
-      id: 'emp_' + Math.random().toString(36).substr(2, 9),
+      id: 'emp_' + Math.random().toString(36).slice(2, 9),
       name: "جديد",
       patternType: "weekly",
       weeklyTemplate: Array(7).fill("M"),
@@ -372,479 +432,347 @@
     });
     renderEmployees();
   }
+
   function updateEmployee(id, k, v) {
-    const e = state.employees.find(x => x.id === id);
-    if (e) {
-      e[k] = v;
-      if (k === 'patternType') renderEmployees();
-    }
+    const emp = state.employees.find(x => x.id === id);
+    if (!emp) return;
+    emp[k] = v;
+    if (k === 'patternType') renderEmployees();
   }
+
   function updateWeeklyTemplate(id, i, v) {
-    const e = state.employees.find(x => x.id === id);
-    if (e) e.weeklyTemplate[i] = v;
+    const emp = state.employees.find(x => x.id === id);
+    if (emp) emp.weeklyTemplate[i] = v;
   }
+
   function updateFlexCount(id, s, v) {
-    const e = state.employees.find(x => x.id === id);
-    if (e) {
-      if (!e.flexCounts) e.flexCounts = {};
-      e.flexCounts[s] = Math.max(0, parseInt(v) || 0);
-    }
+    const emp = state.employees.find(x => x.id === id);
+    if (!emp) return;
+    if (!emp.flexCounts) emp.flexCounts = {};
+    emp.flexCounts[s] = Math.max(0, parseInt(v) || 0);
   }
-  function updateDepotQuota(id, d, v) {
-    const e = state.employees.find(x => x.id === id);
-    if (e) {
-      if (!e.depotQuotas) e.depotQuotas = {};
-      e.depotQuotas[d] = Math.max(0, parseInt(v) || 0);
-    }
+
+  function updateDepotQuota(id, depot, v) {
+    const emp = state.employees.find(x => x.id === id);
+    if (!emp) return;
+    if (!emp.depotQuotas) emp.depotQuotas = {};
+    emp.depotQuotas[depot] = Math.max(0, parseInt(v) || 0);
   }
+
   function updateVacationDates(id, v) {
-    const e = state.employees.find(x => x.id === id);
-    if (e) e.vacationDates = v;
+    const emp = state.employees.find(x => x.id === id);
+    if (emp) emp.vacationDates = v;
   }
+
   function deleteEmployee(id) {
-    if (confirm('حذف؟')) {
-      state.employees = state.employees.filter(x => x.id !== id);
-      renderEmployees();
-      renderSchedule();
-      saveData();
-    }
+    if (!confirm('حذف؟')) return;
+    state.employees = state.employees.filter(x => x.id !== id);
+    renderEmployees();
+    renderSchedule();
+    saveData();
   }
+
   function updateDepots() {
-    appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s => s.trim()).filter(s => s);
+    appConfig.depots = document.getElementById('settingDepots').value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
     renderRequirementsTable();
     renderEmployees();
   }
 
   // ==========================================
-  // === GENERATOR: V10.1 (FIX ROLLING) ===
+  // === SCHEDULER: V10.1 (Balanced OFF) ===
   // ==========================================
   function generateScheduleV101() {
-    if (!confirm("🚀 بدء التوزيع (V10.1)؟\n\n- أسبوع: الأحد→السبت\n- Reset يوم الأحد حتى لو الشهر بدا نص أسبوع\n- OFF للدوار صارم (قدر الإمكان)\n- Safety Gate شغال")) return;
+    if (!confirm("🚀 بدء التوزيع (V10.1)؟\n\n- إصلاح OFF للدوّار (موزون أسبوعياً)\n- الثابت أولاً\n- الدوّار يملأ M/A ثم N\n- الجوكر يسد العجز (N أولاً)\n")) return;
 
     showLoader(true);
+
     setTimeout(() => {
       try {
         const key = getMonthKey();
         const numDays = daysInMonth(appConfig.year, appConfig.month);
+
         if (!state.schedule[key]) state.schedule[key] = {};
         const sched = state.schedule[key];
 
-        // ensure employee rows
         state.employees.forEach(e => { if (!sched[e.id]) sched[e.id] = {}; });
 
-        // wipe only non-VAC? (نخلي VAC يعاد تطبيقه من input)
-        // أسلم: نمسح الشهر ثم نعيد تطبيق VAC
-        state.employees.forEach(e => { sched[e.id] = {}; });
-
-        // 0) Apply Vacations
+        // 0) Apply vacations first (override)
         applyVacations(numDays, sched);
 
-        // 1) Calculate Needs (Total daily needs summed across depots)
+        // 1) Calculate daily global needs (sum of depots)
         const dailyNeeds = calculateDailyNeeds(numDays);
 
-        // trackers across month
+        // 2) Track previous shift + streak
         const prevShift = {};
         const streak = {};
-        state.employees.forEach(e => {
-          prevShift[e.id] = 'OFF';
-          streak[e.id] = 0;
-        });
+        state.employees.forEach(e => { prevShift[e.id] = 'OFF'; streak[e.id] = 0; });
 
-        // 2) Tier 1: Fixed (weekly) — entire month
+        // 3) Apply fixed employees for the whole month
         applyFixedEmployees(numDays, sched, dailyNeeds, streak, prevShift);
 
-        // 3) Week-by-week for Rolling/Joker
+        // 4) Rolling + Joker week by week
         const rolling = state.employees.filter(e => e.patternType === 'rolling');
-        const jokers = state.employees.filter(e => e.patternType === 'joker');
+        const jokers  = state.employees.filter(e => e.patternType === 'joker');
 
-        // Pre-plan OFF distribution داخل الأسبوع (Stagger) — لكن لا يكسر VAC/X
-        const offPlanRolling = buildOffPlan(rolling, numDays, 2); // 2 OFF per week
-        const offPlanJoker   = buildOffPlan(jokers,  numDays, 1); // 1 OFF per week
+        const weeks = buildWeeks(appConfig.year, appConfig.month, numDays);
 
-        // Iterate days and reset bucket every Sunday
-        // weekId = based on Sunday boundaries (even if month starts midweek)
-        const weekInfo = buildWeeks(appConfig.year, appConfig.month, numDays); // array of {start,end}
-        // per-week remaining counts for rolling
-        const rollingWeekRemain = {}; // weekIndex -> empId -> {M,A,N,OFF}
-        weekInfo.forEach((w, wi) => {
-          rollingWeekRemain[wi] = {};
+        // === Balanced OFF Plans ===
+        // Rolling OFF per week from their bucket.OFF (default 2)
+        // Joker OFF fixed 1 per week (balanced)
+        const rollingOffPlan = buildBalancedOffPlan(rolling, weeks, 2);
+        const jokerOffPlan   = buildBalancedOffPlan(jokers,  weeks, 1);
+
+        // Main loop by week
+        weeks.forEach((w, wi) => {
+          // Reset weekly credits every Sunday/week start (حتى لو الشهر بدأ نص أسبوع)
           rolling.forEach(emp => {
-            const f = emp.flexCounts || {M:1,A:2,N:2,OFF:2};
-            rollingWeekRemain[wi][emp.id] = { M: f.M||0, A: f.A||0, N: f.N||0, OFF: f.OFF||0 };
+            const f = emp.flexCounts || { M: 1, A: 2, N: 2, OFF: 2 };
+            // Work credits is total work slots in week (M+A+N). OFF is handled by offPlan.
+            emp._workCredits = Math.max(0, (f.M || 0) + (f.A || 0) + (f.N || 0));
           });
-        });
-
-        // Day loop
-        for (let wi = 0; wi < weekInfo.length; wi++) {
-          const w = weekInfo[wi];
 
           for (let d = w.start; d <= w.end; d++) {
-            const needs = dailyNeeds[d]; // {M,A,N} deficits after fixed
+            const needs = dailyNeeds[d];
 
-            // ---- Tier 2: Rolling happy path (bucket match + fills deficit) ----
-            // We try fill M then A then N (لأن الناس تحب النهار) لكن نراعي bucket
-            fillRollingHappy(d, needs, rolling, sched, prevShift, streak, rollingWeekRemain[wi]);
+            const rollingList = [...rolling]; shuffleInPlace(rollingList);
+            const jokerList   = [...jokers];  shuffleInPlace(jokerList);
 
-            // ---- Tier 3: Rolling Morning Force (If M deficit, convert A/N) ----
-            forceRollingMorning(d, needs, rolling, sched, prevShift, streak, rollingWeekRemain[wi]);
+            // 4.1 Rolling OFF enforcement (balanced)
+            rollingList.forEach(emp => {
+              if (isAssigned(emp.id, d, sched)) return; // already VAC or fixed
+              if (shouldForceOff(emp.id, d, streak, rollingOffPlan, wi)) {
+                setShift(emp.id, d, 'OFF', sched, prevShift, streak);
+              }
+            });
 
-            // ---- Tier 4: Rolling Cleanup (fulfill weekly quota & OFF count) ----
-            cleanupRolling(d, needs, rolling, sched, prevShift, streak, rollingWeekRemain[wi], offPlanRolling, wi);
+            // 4.2 Joker OFF enforcement (balanced)
+            jokerList.forEach(emp => {
+              if (isAssigned(emp.id, d, sched)) return;
+              if (shouldForceOff(emp.id, d, streak, jokerOffPlan, wi)) {
+                setShift(emp.id, d, 'OFF', sched, prevShift, streak);
+              }
+            });
 
-            // ---- Tier 5: Joker last resort (N -> A -> M) + exactly 1 OFF per week ----
-            fillJoker(d, needs, jokers, sched, prevShift, streak, offPlanJoker, wi);
+            // 4.3 Rolling fills M/A (priority) respecting anti-flip
+            rollingList.forEach(emp => {
+              if (isAssigned(emp.id, d, sched)) return;
+              if (emp._workCredits <= 0) return; // finished weekly work
 
-            // Final: anyone still unassigned gets OFF (only if not VAC already)
-            state.employees.forEach(emp => {
-              if (!sched[emp.id][d]) {
-                sched[emp.id][d] = { shift: 'OFF', depot: "" };
-                prevShift[emp.id] = 'OFF';
-                // OFF breaks streak
-                streak[emp.id] = 0;
+              const prev = prevShift[emp.id];
+              let assigned = null;
+
+              if (needs.M > 0 && !isShiftFlipViolation(prev, 'M')) assigned = 'M';
+              else if (needs.A > 0 && !isShiftFlipViolation(prev, 'A')) assigned = 'A';
+
+              if (assigned) {
+                setShift(emp.id, d, assigned, sched, prevShift, streak);
+                if (needs[assigned] > 0) needs[assigned]--;
+                emp._workCredits--;
+              }
+            });
+
+            // 4.4 Jokers fill N first (as designed)
+            jokerList.forEach(emp => {
+              if (isAssigned(emp.id, d, sched)) return;
+              const prev = prevShift[emp.id];
+              if (needs.N > 0 && !isShiftFlipViolation(prev, 'N')) {
+                setShift(emp.id, d, 'N', sched, prevShift, streak);
+                needs.N--;
+              }
+            });
+
+            // 4.5 Rolling fills remaining N (if deficit)
+            if (needs.N > 0) {
+              rollingList.forEach(emp => {
+                if (needs.N <= 0) return;
+                if (isAssigned(emp.id, d, sched)) return;
+                if (emp._workCredits <= 0) return;
+                const prev = prevShift[emp.id];
+                if (!isShiftFlipViolation(prev, 'N')) {
+                  setShift(emp.id, d, 'N', sched, prevShift, streak);
+                  needs.N--;
+                  emp._workCredits--;
+                }
+              });
+            }
+
+            // 4.6 Desperate: Jokers cover remaining A/M
+            if (needs.A > 0 || needs.M > 0) {
+              jokerList.forEach(emp => {
+                if (isAssigned(emp.id, d, sched)) return;
+                const prev = prevShift[emp.id];
+                let assigned = null;
+                if (needs.A > 0 && !isShiftFlipViolation(prev, 'A')) assigned = 'A';
+                else if (needs.M > 0 && !isShiftFlipViolation(prev, 'M')) assigned = 'M';
+                if (assigned) {
+                  setShift(emp.id, d, assigned, sched, prevShift, streak);
+                  needs[assigned]--;
+                }
+              });
+            }
+
+            // 4.7 Anti-slack: Rolling still has credits → must work (prefer N then A then M)
+            rollingList.forEach(emp => {
+              if (isAssigned(emp.id, d, sched)) return;
+              if (emp._workCredits <= 0) {
+                // not forced OFF day? still give OFF to keep calm
+                setShift(emp.id, d, 'OFF', sched, prevShift, streak);
+                return;
+              }
+
+              const prev = prevShift[emp.id];
+              const order = ['N', 'A', 'M'];
+              let assigned = null;
+
+              for (const s of order) {
+                if (!isShiftFlipViolation(prev, s)) { assigned = s; break; }
+              }
+
+              if (assigned) {
+                setShift(emp.id, d, assigned, sched, prevShift, streak);
+                // needs may go negative, fine (هذا فقط لإكمال العمل)
+                emp._workCredits--;
+              } else {
+                // if nothing safe, OFF
+                setShift(emp.id, d, 'OFF', sched, prevShift, streak);
+              }
+            });
+
+            // 4.8 Ensure any unassigned employee gets OFF
+            [...rollingList, ...jokerList].forEach(emp => {
+              if (!isAssigned(emp.id, d, sched)) {
+                setShift(emp.id, d, 'OFF', sched, prevShift, streak);
               }
             });
           }
-        }
+        });
 
-        // Safety final pass (don’t mutate UI; just enforce worst-case OFF if violation)
-        enforceSafety(numDays, sched);
+        // Final pass: remove any flip violations by turning the offending day into OFF
+        state.employees.forEach(emp => {
+          let p = 'OFF';
+          for (let d = 1; d <= numDays; d++) {
+            const cell = sched[emp.id][d];
+            if (!cell) continue;
+            const s = cell.shift;
+            if (isShiftFlipViolation(p, s)) {
+              cell.shift = 'OFF';
+              // streak breaks only on OFF anyway
+              p = 'OFF';
+            } else {
+              p = s;
+            }
+          }
+        });
 
         renderSchedule();
         saveData();
         showLoader(false);
-        alert("✅ تم التوزيع (V10.1) — تم إصلاح الدوّار");
+        alert("✅ تم التوزيع (V10.1) مع منع تجمّع OFF للدوّار!");
       } catch (e) {
         console.error(e);
         showLoader(false);
         alert("خطأ: " + e.message);
       }
-    }, 50);
+    }, 120);
   }
 
   // ==========================================
-  // === Rolling helpers (core fix) ===
+  // === OFF PLAN (Balanced per week) ===
   // ==========================================
-  function fillRollingHappy(day, needs, rolling, sched, prevShift, streak, remain) {
-    // pass shifts in priority M->A->N
-    ['M','A','N'].forEach(shift => {
-      if (needs[shift] <= 0) return;
+  function buildBalancedOffPlan(employees, weeks, offPerWeekDefault) {
+    // plan[weekIndex][empId] = [day, day]
+    const plan = {};
 
-      // choose candidates: not assigned, not VAC, bucket has shift, safe, not forced streak 6
-      const cands = rolling
-        .filter(e => canAssign(e, day, shift, sched, prevShift, streak))
-        .filter(e => (remain[e.id]?.[shift] || 0) > 0);
+    const key = getMonthKey();
+    const sched = state.schedule[key] || {};
 
-      // simple fairness: sort by highest need-fit (and random tie)
-      shuffleInPlace(cands);
+    const isVac = (empId, day) => {
+      return sched[empId] && sched[empId][day] && sched[empId][day].shift === 'VAC';
+    };
 
-      for (const emp of cands) {
-        if (needs[shift] <= 0) break;
-        // also don't consume OFF plan here
-        assign(emp, day, shift, sched, prevShift, streak);
-        remain[emp.id][shift]--;
-        if (needs[shift] > 0) needs[shift]--;
-      }
-    });
-  }
-
-  function forceRollingMorning(day, needs, rolling, sched, prevShift, streak, remain) {
-    if (needs.M <= 0) return;
-
-    // candidates: not assigned, safe for M, have A or N remaining (convert)
-    const cands = rolling
-      .filter(e => canAssign(e, day, 'M', sched, prevShift, streak))
-      .filter(e => !sched[e.id][day])
-      .filter(e => ((remain[e.id]?.A || 0) > 0) || ((remain[e.id]?.N || 0) > 0));
-
-    shuffleInPlace(cands);
-
-    for (const emp of cands) {
-      if (needs.M <= 0) break;
-
-      // Convert preference: consume A first then N (لأن N ثقيل)
-      if ((remain[emp.id].A || 0) > 0) remain[emp.id].A--;
-      else if ((remain[emp.id].N || 0) > 0) remain[emp.id].N--;
-      else continue;
-
-      assign(emp, day, 'M', sched, prevShift, streak);
-      needs.M--;
-    }
-  }
-
-  function cleanupRolling(day, needs, rolling, sched, prevShift, streak, remain, offPlanRolling, weekIndex) {
-    for (const emp of rolling) {
-      if (sched[emp.id][day]) continue; // already assigned (or VAC)
-
-      // if VAC exists -> skip
-      // (ملاحظة: applyVacations أنشأت cell، فلو VAC موجود it is already assigned)
-      const plannedOff = offPlanRolling?.[weekIndex]?.[emp.id] || [];
-      const isPlannedOffToday = plannedOff.includes(day);
-
-      // enforce 6 streak rule: day 7 must be OFF
-      if (streak[emp.id] >= MAX_CONSECUTIVE) {
-        setOff(emp, day, sched, prevShift, streak);
-        // also consume OFF from remain if available (help consistency)
-        if ((remain[emp.id].OFF || 0) > 0) remain[emp.id].OFF--;
-        continue;
-      }
-
-      // enforce weekly OFF plan "قدر الإمكان"
-      if (isPlannedOffToday && (remain[emp.id].OFF || 0) > 0) {
-        setOff(emp, day, sched, prevShift, streak);
-        remain[emp.id].OFF--;
-        continue;
-      }
-
-      // If they still owe OFFs in this week and days left are few -> force OFF
-      // (لمنع أن يخلص الأسبوع وما أخذ OFFين)
-      const weekEnd = findWeekEnd(day);
-      const daysLeftIncl = (weekEnd - day) + 1;
-      const offLeft = remain[emp.id].OFF || 0;
-      // إذا offLeft == daysLeftIncl (يعني لازم ياخذهم من الآن)
-      if (offLeft > 0 && offLeft >= daysLeftIncl) {
-        setOff(emp, day, sched, prevShift, streak);
-        remain[emp.id].OFF--;
-        continue;
-      }
-
-      // Otherwise: ensure they fulfill work quota (M/A/N) if still remaining
-      // Prefer to also help deficits: N then A then M? لا — عندكم الناس تحب النهار، فنخلي A ثم M ثم N
-      // لكن لا نكسر Safety Gate.
-      const prefer = scoreWorkPreference(needs); // returns ordered shifts
-      let chosen = null;
-
-      for (const s of prefer) {
-        if ((remain[emp.id][s] || 0) <= 0) continue;
-        if (!canAssign(emp, day, s, sched, prevShift, streak)) continue;
-        chosen = s; break;
-      }
-
-      // If still nothing and have any work remaining, allow conversion towards day needs:
-      if (!chosen) {
-        // if needs.M>0 try M via A/N
-        if (needs.M > 0 && canAssign(emp, day, 'M', sched, prevShift, streak) && (((remain[emp.id].A||0)>0)||((remain[emp.id].N||0)>0))) {
-          chosen = 'M';
-          if ((remain[emp.id].A||0)>0) remain[emp.id].A--;
-          else remain[emp.id].N--;
-          assign(emp, day, 'M', sched, prevShift, streak);
-          needs.M = Math.max(0, needs.M-1);
-          continue;
-        }
-        // else: if any remaining A safe, do A; else N; else M
-        for (const s of ['A','N','M']) {
-          if ((remain[emp.id][s] || 0) <= 0) continue;
-          if (!canAssign(emp, day, s, sched, prevShift, streak)) continue;
-          chosen = s; break;
-        }
-      }
-
-      if (chosen) {
-        assign(emp, day, chosen, sched, prevShift, streak);
-        remain[emp.id][chosen]--;
-        if (needs[chosen] > 0) needs[chosen]--;
-      } else {
-        // If no work left, try OFF if still owed; otherwise OFF anyway
-        if ((remain[emp.id].OFF || 0) > 0) {
-          setOff(emp, day, sched, prevShift, streak);
-          remain[emp.id].OFF--;
-        } else {
-          setOff(emp, day, sched, prevShift, streak);
-        }
-      }
-    }
-  }
-
-  function fillJoker(day, needs, jokers, sched, prevShift, streak, offPlanJoker, weekIndex) {
-    const order = ['N','A','M'];
-    for (const emp of jokers) {
-      if (sched[emp.id][day]) continue;
-
-      // planned off this week
-      const plannedOff = offPlanJoker?.[weekIndex]?.[emp.id] || [];
-      const isPlannedOffToday = plannedOff.includes(day);
-
-      if (streak[emp.id] >= MAX_CONSECUTIVE || isPlannedOffToday) {
-        setOff(emp, day, sched, prevShift, streak);
-        continue;
-      }
-
-      // fill deficits first
-      let chosen = null;
-      for (const s of order) {
-        if (needs[s] > 0 && canAssign(emp, day, s, sched, prevShift, streak)) { chosen = s; break; }
-      }
-
-      // if no deficit, still keep joker working 6 days/week: prefer N if safe
-      if (!chosen) {
-        for (const s of order) {
-          if (canAssign(emp, day, s, sched, prevShift, streak)) { chosen = s; break; }
-        }
-      }
-
-      if (chosen) {
-        assign(emp, day, chosen, sched, prevShift, streak);
-        if (needs[chosen] > 0) needs[chosen]--;
-      } else {
-        setOff(emp, day, sched, prevShift, streak);
-      }
-    }
-  }
-
-  // ==========================================
-  // === Shared scheduling primitives ===
-  // ==========================================
-  function canAssign(emp, day, shift, sched, prevShift, streak) {
-    // Already assigned or VAC/X exists
-    if (sched[emp.id] && sched[emp.id][day]) return false;
-
-    // enforce 6 workdays: day 7 must be OFF (only OFF breaks)
-    if (streak[emp.id] >= MAX_CONSECUTIVE && shift !== 'OFF') return false;
-
-    // safety gate
-    const prev = prevShift[emp.id] || 'OFF';
-    if (isShiftFlipViolation(prev, shift)) return false;
-
-    return true;
-  }
-
-  function assign(emp, day, shift, sched, prevShift, streak) {
-    sched[emp.id][day] = { shift: shift, depot: "" };
-    prevShift[emp.id] = shift;
-    // streak only breaks with OFF
-    if (isOffBreaker(shift)) streak[emp.id] = 0;
-    else streak[emp.id] = (streak[emp.id] || 0) + 1;
-  }
-
-  function setOff(emp, day, sched, prevShift, streak) {
-    if (sched[emp.id] && sched[emp.id][day]) return; // don't override VAC
-    sched[emp.id][day] = { shift: 'OFF', depot: "" };
-    prevShift[emp.id] = 'OFF';
-    streak[emp.id] = 0;
-  }
-
-  function enforceSafety(numDays, sched) {
-    // If violation found, turn next day into OFF (safe fallback).
-    state.employees.forEach(emp => {
-      let prev = 'OFF';
-      let streakLocal = 0;
-
-      for (let d = 1; d <= numDays; d++) {
-        const cell = sched[emp.id][d];
-        if (!cell) continue;
-        const s = cell.shift;
-
-        // apply rule: only OFF breaks streak
-        if (isOffBreaker(s)) streakLocal = 0; else streakLocal++;
-
-        // enforce max 6: if streak > 6, force OFF (day becomes OFF)
-        if (!isOffBreaker(s) && streakLocal > MAX_CONSECUTIVE) {
-          cell.shift = 'OFF';
-          prev = 'OFF';
-          streakLocal = 0;
-          continue;
-        }
-
-        if (isShiftFlipViolation(prev, s)) {
-          // force OFF (do not override VAC)
-          if (s !== 'VAC') cell.shift = 'OFF';
-          prev = cell.shift;
-          // OFF breaks streak
-          if (cell.shift === 'OFF') streakLocal = 0;
-        } else {
-          prev = s;
-        }
-      }
-    });
-  }
-
-  function scoreWorkPreference(needs) {
-    // prioritize helping deficits: M then A then N if deficits exist
-    // otherwise prefer A then M then N (حسب واقعكم “نهار محبوب”)
-    const hasDef = (needs.M>0)||(needs.A>0)||(needs.N>0);
-    if (hasDef) {
-      // strict deficit order: M then A then N
-      return ['M','A','N'];
-    }
-    return ['A','M','N'];
-  }
-
-  // build week segments: start day to end day where week = Sunday..Saturday inside month boundaries
-  function buildWeeks(year, month, numDays) {
-    const weeks = [];
-    let d = 1;
-    while (d <= numDays) {
-      // week ends on Saturday (getDay()=6)
-      const dow = new Date(year, month-1, d).getDay(); // 0 Sun .. 6 Sat
-      const remainingToSat = 6 - dow;
-      const end = Math.min(numDays, d + remainingToSat);
-      weeks.push({ start: d, end });
-      d = end + 1;
-    }
-    return weeks;
-  }
-
-  // Off plan per week: choose OFF days "staggered" but within week segments
-  function buildOffPlan(employees, numDays, offPerWeek) {
-    const weekInfo = buildWeeks(appConfig.year, appConfig.month, numDays);
-    const plan = {}; // weekIndex -> empId -> [days]
-    weekInfo.forEach((w, wi) => {
+    weeks.forEach((w, wi) => {
       plan[wi] = {};
-      employees.forEach((emp, idx) => {
+      const days = [];
+      for (let d = w.start; d <= w.end; d++) days.push(d);
+
+      const offCount = {};
+      days.forEach(d => offCount[d] = 0);
+
+      const emps = [...employees];
+      shuffleInPlace(emps);
+
+      emps.forEach(emp => {
+        const offPerWeek = (emp.patternType === 'rolling')
+          ? (Math.max(0, (emp.flexCounts?.OFF ?? offPerWeekDefault)))
+          : offPerWeekDefault;
+
         plan[wi][emp.id] = [];
-        if (offPerWeek <= 0) return;
 
-        // choose off days using rotation: base offset by idx
-        const days = [];
-        for (let d = w.start; d <= w.end; d++) days.push(d);
+        for (let k = 0; k < offPerWeek; k++) {
+          let candidates = days
+            .filter(d => !plan[wi][emp.id].includes(d))
+            .filter(d => !isVac(emp.id, d))
+            .sort((a, b) => offCount[a] - offCount[b]);
 
-        // pick spaced indices
-        // ex: offPerWeek=2 => pick near (idx%len) and (idx+3)%len
-        const len = days.length;
-        if (len === 0) return;
+          if (!candidates.length) break;
 
-        const i1 = idx % len;
-        const i2 = (idx + Math.max(2, Math.floor(len/2))) % len;
+          // avoid adjacent OFF when possible
+          if (plan[wi][emp.id].length === 1) {
+            const prev = plan[wi][emp.id][0];
+            const nonAdj = candidates.filter(d => Math.abs(d - prev) > 1);
+            if (nonAdj.length) candidates = nonAdj;
+          }
 
-        const picks = [days[i1]];
-        if (offPerWeek >= 2 && len > 1) picks.push(days[i2]);
+          // pick from top 3 least loaded
+          const top = candidates.slice(0, Math.min(3, candidates.length));
+          const pick = top[Math.floor(Math.random() * top.length)];
 
-        // if more than 2 (not used here), extend
-        while (picks.length < offPerWeek && picks.length < len) {
-          const next = days[(idx + picks.length) % len];
-          if (!picks.includes(next)) picks.push(next);
-          else break;
+          plan[wi][emp.id].push(pick);
+          offCount[pick] += 1;
         }
-        plan[wi][emp.id] = picks.slice(0, offPerWeek);
       });
     });
+
     return plan;
   }
 
-  function findWeekEnd(day) {
-    // week ends Saturday
-    const dow = new Date(appConfig.year, appConfig.month-1, day).getDay(); // 0..6
-    const rem = 6 - dow;
-    return Math.min(daysInMonth(appConfig.year, appConfig.month), day + rem);
-  }
-
-  function shuffleInPlace(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
+  function shouldForceOff(empId, day, streak, offPlan, weekIndex) {
+    if (streak[empId] >= MAX_CONSECUTIVE) return true;
+    const arr = offPlan?.[weekIndex]?.[empId] || [];
+    return arr.includes(day);
   }
 
   // ==========================================
-  // === Apply Vacations / Needs / Fixed ===
+  // === SCHED HELPERS ===
   // ==========================================
+  function isAssigned(empId, day, sched) {
+    return !!(sched[empId] && sched[empId][day]);
+  }
+
+  function setShift(empId, day, shift, sched, prevShift, streak) {
+    sched[empId][day] = { shift, depot: "" };
+
+    // update prev shift
+    prevShift[empId] = shift;
+
+    // update streak: only OFF breaks
+    if (streakBreaks(shift)) streak[empId] = 0;
+    else streak[empId] = (streak[empId] || 0) + 1;
+  }
+
   function applyVacations(numDays, sched) {
     state.employees.forEach(emp => {
       if (!emp.vacationDates) return;
-      emp.vacationDates.split(',')
-        .map(d => parseInt(d.trim()))
-        .filter(d => !isNaN(d))
+      emp.vacationDates
+        .split(',')
+        .map(x => parseInt(x.trim()))
+        .filter(x => !isNaN(x) && x >= 1 && x <= numDays)
         .forEach(d => {
-          if (d >= 1 && d <= numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' };
+          sched[emp.id][d] = { shift: 'VAC', depot: '' };
         });
     });
   }
@@ -853,6 +781,7 @@
     const needs = {};
     const depots = appConfig.depots.map(d => d.trim());
     const reqs = state.meta.requirements || {};
+
     for (let d = 1; d <= numDays; d++) {
       needs[d] = { M: 0, A: 0, N: 0 };
       depots.forEach(dep => {
@@ -866,76 +795,99 @@
   }
 
   function applyFixedEmployees(numDays, sched, dailyNeeds, streak, prevShift) {
-    state.employees.filter(e => e.patternType === 'weekly').forEach(emp => {
-      for (let d = 1; d <= numDays; d++) {
-        // VAC already assigned
-        if (sched[emp.id][d]) {
-          // VAC does NOT break streak per your rule
-          prevShift[emp.id] = sched[emp.id][d].shift;
-          if (isOffBreaker(sched[emp.id][d].shift)) streak[emp.id] = 0;
-          else streak[emp.id] = (streak[emp.id] || 0) + 1;
-          continue;
+    state.employees
+      .filter(e => e.patternType === 'weekly')
+      .forEach(emp => {
+        for (let d = 1; d <= numDays; d++) {
+          // if VAC already set, keep it
+          if (sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') {
+            prevShift[emp.id] = 'VAC';
+            // VAC لا يكسر الستريك حسب كلامك
+            streak[emp.id] = (streak[emp.id] || 0) + 1;
+            continue;
+          }
+
+          const dayOfWeek = new Date(appConfig.year, appConfig.month - 1, d).getDay();
+          let shift = emp.weeklyTemplate[dayOfWeek] || 'OFF';
+
+          // safety gate
+          if (isShiftFlipViolation(prevShift[emp.id], shift)) shift = 'OFF';
+
+          // max consecutive (only breaks on OFF)
+          if (streak[emp.id] >= MAX_CONSECUTIVE && shift !== 'OFF') shift = 'OFF';
+
+          setShift(emp.id, d, shift, sched, prevShift, streak);
+
+          // decrement needs if working
+          if (dailyNeeds[d] && dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
         }
-
-        const dayOfWeek = new Date(appConfig.year, appConfig.month - 1, d).getDay();
-        let shift = emp.weeklyTemplate[dayOfWeek] || 'OFF';
-
-        // enforce 6-day rule (only OFF breaks)
-        if (streak[emp.id] >= MAX_CONSECUTIVE && shift !== 'OFF') shift = 'OFF';
-
-        // enforce safety gate
-        if (isShiftFlipViolation(prevShift[emp.id], shift)) shift = 'OFF';
-
-        sched[emp.id][d] = { shift: shift, depot: "" };
-
-        // update prev & streak
-        prevShift[emp.id] = shift;
-        if (isOffBreaker(shift)) streak[emp.id] = 0;
-        else streak[emp.id] = (streak[emp.id] || 0) + 1;
-
-        // consume needs only if working shift
-        if (['M','A','N'].includes(shift) && dailyNeeds[d][shift] > 0) dailyNeeds[d][shift]--;
-      }
-    });
+      });
   }
 
   // ==========================================
-  // === Depot Fill (as-is) ===
+  // === WEEKS: Sunday -> Saturday (reset each Sunday) ===
+  // ==========================================
+  function buildWeeks(year, month, numDays) {
+    const weeks = [];
+    let d = 1;
+
+    while (d <= numDays) {
+      // find end of this week segment (until Saturday)
+      const dow = new Date(year, month - 1, d).getDay(); // 0=Sun .. 6=Sat
+      const daysToSat = 6 - dow;
+      const end = Math.min(numDays, d + daysToSat);
+      weeks.push({ start: d, end });
+      d = end + 1;
+    }
+    return weeks;
+  }
+
+  // ==========================================
+  // === DEPOT FILL (as you had) ===
   // ==========================================
   function fillDepots() {
     const key = getMonthKey();
     const sched = state.schedule[key];
     if (!sched || !confirm("توزيع المواقع؟")) return;
+
     const numDays = daysInMonth(appConfig.year, appConfig.month);
     const reqs = state.meta.requirements || {};
     const depots = appConfig.depots.map(d => d.trim());
 
+    // clear depot on work shifts
     for (let d = 1; d <= numDays; d++) {
       state.employees.forEach(e => {
-        if (sched[e.id][d] && ['M','A','N'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = "";
+        if (sched[e.id][d] && ['M','A','N'].includes(sched[e.id][d].shift)) {
+          sched[e.id][d].depot = "";
+        }
       });
     }
 
     for (let d = 1; d <= numDays; d++) {
-      const counts = {}; depots.forEach(dp => counts[dp] = { M: 0, A: 0, N: 0 });
-      const workers = { M: [], A: [], N: [] };
+      const counts = {};
+      depots.forEach(dp => counts[dp] = { M:0, A:0, N:0 });
 
+      const workers = { M:[], A:[], N:[] };
       state.employees.forEach(e => {
-        let cell = sched[e.id] && sched[e.id][d];
+        const cell = sched[e.id][d];
         if (!cell) return;
-        let s = cell.shift;
+        const s = cell.shift;
         if (['M','A','N'].includes(s)) workers[s].push(e);
       });
 
       ['M','A','N'].forEach(s => {
-        let list = workers[s];
-        list.sort((a, b) => ((b.depotQuotas?.[depots[0]] || 0) - (a.depotQuotas?.[depots[0]] || 0)));
+        const list = workers[s];
 
+        // simple sort: higher quota first per first depot (kept as you had)
+        const dep0 = depots[0];
+        list.sort((a,b) => ((b.depotQuotas?.[dep0] || 0) - (a.depotQuotas?.[dep0] || 0)));
+
+        // fill according to requirements
         depots.forEach(dep => {
-          let need = (reqs[dep] || {})[s] || 0;
+          const need = (reqs[dep]?.[s] || 0);
           let i = 0;
           while (i < list.length && counts[dep][s] < need) {
-            let e = list[i];
+            const e = list[i];
             if (!sched[e.id][d].depot) {
               sched[e.id][d].depot = dep;
               counts[dep][s]++;
@@ -944,9 +896,10 @@
           }
         });
 
+        // assign leftovers to least-loaded depot for that shift
         list.forEach(e => {
           if (!sched[e.id][d].depot) {
-            let target = depots.reduce((a, b) => counts[a][s] < counts[b][s] ? a : b);
+            const target = depots.reduce((a,b) => counts[a][s] < counts[b][s] ? a : b);
             sched[e.id][d].depot = target;
             counts[target][s]++;
           }
@@ -954,11 +907,12 @@
       });
     }
 
-    renderSchedule(); saveData();
+    renderSchedule();
+    saveData();
   }
 
   // ==========================================
-  // === Render Schedule + Coverage ===
+  // === RENDER: Schedule ===
   // ==========================================
   function renderSchedule() {
     const grid = document.getElementById('scheduleGrid');
@@ -969,21 +923,30 @@
 
     let html = `<thead><tr><th class="emp-col">الموظف</th>`;
     for (let d = 1; d <= numDays; d++) {
-      html += `<th>${d}<br>${WEEKDAYS[new Date(appConfig.year, appConfig.month - 1, d).getDay()]}</th>`;
+      const dow = new Date(appConfig.year, appConfig.month - 1, d).getDay();
+      html += `<th>${d}<div style="font-size:.75rem; font-weight:900; color:#64748b; margin-top:2px;">${WEEKDAYS[dow]}</div></th>`;
     }
     html += `</tr></thead><tbody>`;
 
-    state.employees.forEach(e => {
-      let row = `<tr><td class="emp-col">${e.name}</td>`;
+    state.employees.forEach(emp => {
+      let row = `<tr><td class="emp-col">${emp.name}</td>`;
       let prev = 'OFF';
+
       for (let d = 1; d <= numDays; d++) {
-        let c = (data[e.id] && data[e.id][d]) || { shift: '' };
-        let s = c.shift || '';
-        let v = isShiftFlipViolation(prev, s) ? 'violation' : '';
-        row += `<td class="cell shift-${s} ${v}">${s}${c.depot ? `<span class="depot-tag">${c.depot}</span>` : ''}</td>`;
-        // for flip tracking, we track actual shift (VAC/X included)
-        prev = s || 'OFF';
+        const c = (data[emp.id] && data[emp.id][d]) ? data[emp.id][d] : { shift: '' };
+        const s = c.shift || '';
+        const v = isShiftFlipViolation(prev, s) ? 'violation' : '';
+
+        row += `<td class="cell shift-${s} ${v}">
+          <div>${s || ''}</div>
+          ${c.depot ? `<span class="depot-tag">${c.depot}</span>` : ``}
+        </td>`;
+
+        // prev shift tracking: keep same logic you used
+        if (['M','A','N','VAC','X'].includes(s)) prev = s;
+        else prev = 'OFF';
       }
+
       html += row + `</tr>`;
     });
 
@@ -999,21 +962,25 @@
     const sched = state.schedule[getMonthKey()] || {};
     const depots = appConfig.depots.map(d => d.trim());
     const reqs = state.meta.requirements || {};
-    let issues = [];
+    const issues = [];
 
     for (let d = 1; d <= numDays; d++) {
-      let counts = {}; depots.forEach(dp => counts[dp] = { M: 0, A: 0, N: 0 });
+      const counts = {};
+      depots.forEach(dp => counts[dp] = { M:0, A:0, N:0 });
 
       state.employees.forEach(e => {
-        let c = sched[e.id] && sched[e.id][d];
-        if (c && c.depot && ['M','A','N'].includes(c.shift)) counts[c.depot.trim()][c.shift]++;
+        const c = sched[e.id] && sched[e.id][d];
+        if (c && c.depot && ['M','A','N'].includes(c.shift)) {
+          const dep = c.depot.trim();
+          if (counts[dep]) counts[dep][c.shift]++;
+        }
       });
 
       depots.forEach(dep => {
-        let r = reqs[dep] || {};
+        const r = reqs[dep] || {};
         ['M','A','N'].forEach(s => {
-          let req = r[s] || 0;
-          let act = counts[dep][s] || 0;
+          const req = r[s] || 0;
+          const act = counts[dep][s] || 0;
           if (act < req) issues.push(`يوم ${d} ${dep} (${s}): مطلوب ${req}، موجود ${act}`);
         });
       });
@@ -1025,39 +992,54 @@
   }
 
   // ==========================================
-  // === Utils ===
+  // === UTILS ===
   // ==========================================
   function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
   function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
   function clearMonth() {
-    if (confirm('مسح؟')) {
-      state.schedule[getMonthKey()] = {};
-      renderSchedule();
-      saveData();
-    }
+    if (!confirm('مسح؟')) return;
+    state.schedule[getMonthKey()] = {};
+    renderSchedule();
+    saveData();
   }
-  function showLoader(s) {
-    document.getElementById('loader').style.display = s ? 'flex' : 'none';
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'flex' : 'none';
   }
 
   function exportCSV() {
     const numDays = daysInMonth(appConfig.year, appConfig.month);
-    let csv = "\uFEFFM,";
+    let csv = "\uFEFFEmployee,";
     for (let d = 1; d <= numDays; d++) csv += `${d},`;
     csv += "\n";
-    let data = state.schedule[getMonthKey()] || {};
+
+    const data = state.schedule[getMonthKey()] || {};
     state.employees.forEach(e => {
       csv += `"${e.name}",`;
       for (let d = 1; d <= numDays; d++) {
-        let c = (data[e.id] && data[e.id][d]) || {};
-        csv += `"${c.shift || ''} ${c.depot || ''}",`;
+        const c = (data[e.id] && data[e.id][d]) || {};
+        csv += `"${(c.shift||'')} ${(c.depot||'')}",`;
       }
       csv += "\n";
     });
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'schedule.csv'; a.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'schedule.csv';
+    a.click();
+  }
+
+  function shuffleInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 </script>
+
 </body>
 </html>
