@@ -3,153 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام السيدة زينب للجداول</title>
+    <title>نظام الجدولة (نسخة الطوارئ)</title>
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --border: #cbd5e1;
-            --cell-w: 45px;
-            --header-h: 40px;
-        }
+        :root { --primary: #2563eb; --bg: #f8fafc; --border: #cbd5e1; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); font-size: 14px; direction: rtl; }
         .app-container { max-width: 1400px; margin: 0 auto; padding: 10px; }
         .toolbar { display: flex; flex-wrap: wrap; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; align-items: center; }
-        .toolbar h1 { margin: 0; font-size: 1.2rem; margin-left: auto; }
-        button { cursor: pointer; padding: 6px 12px; border: 1px solid var(--border); background: white; border-radius: 4px; font-weight: 500; font-family: inherit; }
+        h1 { margin: 0; font-size: 1.2rem; margin-left: auto; color: #dc2626; }
+        button { cursor: pointer; padding: 8px 15px; border: 1px solid var(--border); background: white; border-radius: 5px; font-weight: bold; }
         button:hover { background: #f1f5f9; }
         button.primary { background: var(--primary); color: white; border-color: var(--primary); }
         button.danger { background: #ef4444; color: white; border-color: #ef4444; }
-        input, select { padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; }
-        .tabs { display: flex; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+        input, select { padding: 8px; border: 1px solid var(--border); border-radius: 5px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
         .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; }
         .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: bold; }
         .view { display: none; }
         .view.active { display: block; }
-        .grid-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding-bottom: 10px; }
+        .grid-container { overflow-x: auto; background: white; border-radius: 8px; border: 1px solid var(--border); }
         .schedule-table { border-collapse: collapse; width: 100%; min-width: 1000px; }
-        .schedule-table th, .schedule-table td { border: 1px solid var(--border); text-align: center; padding: 4px; height: 35px; }
-        .schedule-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 10; font-size: 0.85rem; }
-        .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; background: #f1f5f9; width: 160px; text-align: right; padding-right: 10px; border-left: 2px solid #ddd; }
-        .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 10px; font-weight: 500; border-left: 2px solid #ddd; }
-        .cell { cursor: pointer; font-size: 0.8rem; line-height: 1.1; user-select: none; }
+        .schedule-table th, .schedule-table td { border: 1px solid #e2e8f0; text-align: center; padding: 5px; height: 35px; }
+        .schedule-table th { background: #f1f5f9; position: sticky; top: 0; }
+        .schedule-table th.emp-col { position: sticky; right: 0; z-index: 20; background: #f1f5f9; width: 160px; }
+        .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; font-weight: bold; }
+        .cell { cursor: pointer; font-size: 0.85rem; user-select: none; }
         .cell.shift-D { background-color: #dbeafe; color: #1e40af; } 
         .cell.shift-EN { background-color: #fef3c7; color: #92400e; } 
         .cell.shift-LN { background-color: #1e293b; color: #f8fafc; } 
-        .cell.shift-OFF { background-color: #ecfdf5; color: #047857; } 
-        .cell.shift-X { background-color: #fee2e2; color: #b91c1c; font-weight: bold; } 
-        .stat-box { font-size: 0.70rem; color: #64748b; margin-top: 2px; display:flex; gap:3px; flex-wrap:wrap;}
-        .violation { border: 3px solid #ef4444 !important; position: relative; }
-        .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .req-table th, .req-table td { border: 1px solid #eee; padding: 8px; text-align: center; }
-        .req-table th { background: #f8fafc; }
-        .req-input { width: 50px; text-align: center; }
-        .emp-card { border: 1px solid var(--border); background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
-        .emp-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px;}
-        .pattern-editor { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; }
-        .flex-counts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .flex-counts div { display: flex; flex-direction: column; align-items: center; }
-        .flex-counts label { font-size: 0.75rem; font-weight: bold; margin-bottom: 2px; }
-        .flex-counts input { width: 40px; text-align: center; }
-        .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; background: #fff7ed; padding: 10px; border-radius: 4px; border: 1px solid #ffedd5; }
-        .depot-quotas div { display: flex; flex-direction: column; }
-        .depot-quotas label { font-size: 0.75rem; color: #9a3412; }
-        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; font-size: 1.2rem; color: var(--primary); display: none; flex-direction: column; gap: 10px;}
-        .depot-tag { font-size: 0.65rem; display: block; opacity: 0.8; }
-        .note { font-size: 0.75rem; color: #64748b; margin-top: 5px; }
+        .cell.shift-OFF { background-color: #f0fdf4; color: #166534; } 
+        .cell.shift-X { background-color: #fef2f2; color: #991b1b; } 
+        .violation { border: 3px solid #ef4444 !important; }
+        .emp-card { border: 1px solid var(--border); background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .pattern-editor { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: 10px; }
+        .flex-counts { display: flex; gap: 10px; flex-wrap: wrap; }
+        .depot-quotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+        .depot-quotas div { background: #fff7ed; padding: 5px; border: 1px solid #ffedd5; border-radius: 4px; }
+        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; font-weight: bold; color: var(--primary); display: none; }
         .report-box { margin-top: 20px; padding: 15px; background: white; border: 1px solid var(--border); border-radius: 8px; }
-        .report-item { color: #b91c1c; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
-        .report-ok { color: #047857; font-weight: bold; }
-        .report-analysis { background: #fff7ed; border: 1px solid #fdba74; padding: 10px; margin-bottom: 10px; border-radius: 4px; color: #9a3412; font-size: 0.9rem;}
+        .report-item { margin-bottom: 5px; padding: 5px; background: #fff1f2; color: #9f1239; border-radius: 4px; }
+        .report-ok { background: #ecfdf5; color: #065f46; padding: 10px; text-align: center; font-weight: bold; }
         .alert-box { background: #fef3c7; border: 2px solid #fbbf24; padding: 12px; border-radius: 6px; margin: 10px 0; color: #92400e; font-weight: 500; }
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <div>جاري الاتصال بقاعدة البيانات...</div>
-    <div style="font-size:0.9rem; font-weight:normal;">يرجى الانتظار</div>
+    <div style="font-size: 2rem;">🛠️</div>
+    <div>جاري تحميل النظام...</div>
 </div>
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ نظام الجدولة (مصحح الأخطاء)</h1>
+        <h1>🗓️ المجدول (نسخة الطوارئ)</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
-        <button onclick="loadData()" title="تحديث البيانات">🔄 تحديث</button>
+        <button onclick="loadData()">🔄 تحديث</button>
         <button class="primary" onclick="saveData()">💾 حفظ التغييرات</button>
-        <div style="flex-grow:1; text-align:left;">
-             <span id="lastUpdated" style="font-size:0.8rem; color:gray;"></span>
+        <div style="flex-grow:1; text-align:left; font-size:0.8rem; color:gray;">
+             <span id="lastUpdated"></span>
         </div>
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('schedule')">الجدول الشهري</div>
-        <div class="tab" onclick="switchTab('employees')">الموظفين والأنماط</div>
-        <div class="tab" onclick="switchTab('settings')">الإعدادات والعدد المطلوب</div>
+        <div class="tab active" onclick="switchTab('schedule')">الجدول</div>
+        <div class="tab" onclick="switchTab('employees')">الموظفين</div>
+        <div class="tab" onclick="switchTab('settings')">الإعدادات</div>
     </div>
 
     <div id="view-schedule" class="view active">
         <div class="alert-box">
-            ✅ <strong>تم الإصلاح:</strong> حل مشكلة "Setting 1" | توزيع شرس للإجازات | منع كامل للقلبات.
+            ⚙️ النظام يعمل بوضع الأمان. إذا واجهت مشاكل، اضغط "تصفير قاعدة البيانات" في الإعدادات.
         </div>
-        <div class="toolbar" style="background: transparent; padding: 0; box-shadow: none; justify-content: space-between;">
+        <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
             <div>
-                <button onclick="runSmartOptimizer()" class="primary">⚡ توزيع الشفتات (النسخة الآمنة)</button>
-                <button onclick="fillDepots()">🏭 توزيع المواقع (حسب الحصة)</button>
+                <button onclick="runSmartOptimizer()" class="primary">⚡ توزيع الشفتات (محسن)</button>
+                <button onclick="fillDepots()">🏭 توزيع المواقع</button>
             </div>
             <div>
                 <button onclick="clearMonth()" class="danger">🗑️ مسح الشهر</button>
-                <button onclick="exportCSV()">📄 تصدير إكسل</button>
+                <button onclick="exportCSV()">📄 Excel</button>
             </div>
         </div>
         <div class="grid-container">
             <table class="schedule-table" id="scheduleGrid"></table>
         </div>
-        <div id="coverageReport" class="report-box"><p>جاري حساب النقص...</p></div>
+        <div id="coverageReport" class="report-box"></div>
     </div>
 
     <div id="view-employees" class="view">
-        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">+ إضافة موظف جديد</button>
+        <button class="primary" onclick="addEmployee()" style="margin-bottom: 15px;">+ موظف جديد</button>
         <div id="employeeList"></div>
     </div>
 
     <div id="view-settings" class="view">
         <div class="emp-card">
             <h3>1. إدارة المواقع (Depots)</h3>
-            <p class="note">افصل بين الأسماء بفاصلة.</p>
-            <input type="text" id="settingDepots" style="width: 100%;" value="Budaiya, IsaTown" onchange="updateDepots()">
+            <input type="text" id="settingDepots" style="width: 100%;" onchange="updateDepots()">
         </div>
         <div class="emp-card">
             <h3>2. العدد المطلوب في كل موقع</h3>
-            <p class="note">حدد كم موظف تحتاج في كل شفت.</p>
             <div id="requirementsContainer"></div>
         </div>
         <div class="emp-card">
             <h3>3. الطوارئ</h3>
-            <button class="danger" onclick="saveData(true)">مسح كافة البيانات</button>
+            <button class="danger" onclick="saveData(true)">⚠️ تصفير قاعدة البيانات (إصلاح شامل)</button>
         </div>
     </div>
 </div>
 
 <script>
     // --- CONFIGURATION ---
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ضع رابط Google Web App هنا
+    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // <--- ⚠️ ضع الرابط هنا
     
-    // --- STATE ---
-    let state = { employees: [], schedule: {}, meta: { requirements: {} } };
-    let appConfig = { depots: ["Main", "North"], year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+    // --- STATE INITIALIZATION (SAFE) ---
+    let state = { 
+        employees: [], 
+        schedule: {}, 
+        meta: { requirements: {}, depots: [] } 
+    };
+    let appConfig = { depots: ["Main"], year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
     const SHIFTS = ["D", "EN", "LN", "OFF", "X"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
 
     // --- HELPER: Shift Flip Check ---
-    function isShiftFlipViolation(previousShift, nextShift) {
-        if (!previousShift || previousShift === 'OFF' || previousShift === 'X') return false;
-        if (nextShift === 'OFF' || nextShift === 'X') return false;
-        // LN -> D or EN
-        if (previousShift === 'LN') return nextShift === 'D' || nextShift === 'EN';
-        // EN -> D
-        if (previousShift === 'EN') return nextShift === 'D';
+    function isShiftFlipViolation(prev, next) {
+        if (!prev || prev === 'OFF' || prev === 'X') return false;
+        if (next === 'OFF' || next === 'X') return false;
+        if (prev === 'LN') return next === 'D' || next === 'EN';
+        if (prev === 'EN') return next === 'D';
         return false;
     }
 
@@ -159,177 +140,185 @@
     function initDateSelectors() {
         const ySel = document.getElementById('selYear');
         const mSel = document.getElementById('selMonth');
-        const currYear = new Date().getFullYear();
-        for(let y = currYear - 1; y <= currYear + 2; y++) ySel.add(new Option(y, y));
-        ySel.value = currYear;
-        const monthsAr = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-        monthsAr.forEach((m, i) => mSel.add(new Option(m, i+1)));
-        mSel.value = new Date().getMonth() + 1;
+        const curr = new Date().getFullYear();
+        for(let i=curr-1; i<=curr+2; i++) ySel.add(new Option(i,i));
+        ySel.value = curr;
+        ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"].forEach((m,i)=>mSel.add(new Option(m,i+1)));
+        mSel.value = new Date().getMonth()+1;
         ySel.onchange = () => { appConfig.year = parseInt(ySel.value); renderSchedule(); };
         mSel.onchange = () => { appConfig.month = parseInt(mSel.value); renderSchedule(); };
     }
 
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    function switchTab(t) {
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
         event.target.classList.add('active');
-        document.getElementById(`view-${tabName}`).classList.add('active');
+        document.getElementById(`view-${t}`).classList.add('active');
     }
 
-    // --- API CALLS ---
+    // --- API & DATA HANDLING ---
     async function loadData() {
         showLoader(true);
         try {
-            const res = await fetch(`${API_URL}?action=load`);
-            const json = await res.json();
-            if (json.ok) {
-                state = json.data;
-                if (state.meta && state.meta.depots) appConfig.depots = state.meta.depots;
-                else appConfig.depots = ["Budaiya", "IsaTown"];
-                if (!state.meta) state.meta = {};
-                if (!state.meta.requirements) state.meta.requirements = {};
+            let res = await fetch(`${API_URL}?action=load`);
+            let json = await res.json();
+            if(json.ok) {
+                // Safe Data Merging
+                let loadedState = json.data || {};
+                state.employees = Array.isArray(loadedState.employees) ? loadedState.employees : [];
+                state.schedule = loadedState.schedule || {};
+                state.meta = loadedState.meta || { requirements: {}, depots: [] };
+                
+                // Depot handling
+                if(state.meta.depots && state.meta.depots.length > 0) {
+                    appConfig.depots = state.meta.depots;
+                } else {
+                    appConfig.depots = ["Budaiya", "IsaTown"];
+                }
                 document.getElementById('settingDepots').value = appConfig.depots.join(', ');
+
+                // Initialize properties for employees if missing
                 state.employees.forEach(emp => {
                     if(!emp.patternType) emp.patternType = 'weekly';
                     if(!emp.flexCounts) emp.flexCounts = { D: 1, EN: 2, LN: 2, OFF: 2 };
                     if(!emp.depotQuotas) emp.depotQuotas = {};
+                    if(!emp.weeklyTemplate) emp.weeklyTemplate = Array(7).fill("D");
                 });
-                renderEmployees(); renderRequirementsTable(); renderSchedule(); updateLastUpdated();
-            } else { alert("خطأ: " + json.error); }
-        } catch (e) { console.error(e); alert("فشل الاتصال."); } finally { showLoader(false); }
-    }
 
-    async function saveData(reset = false) {
-        showLoader(true);
-        if(reset) {
-            if(!confirm("تحذير: سيتم مسح البيانات!")) { showLoader(false); return; }
-            state.employees = []; state.schedule = {}; state.meta = { requirements: {}, depots: [] };
+                renderEmployees(); 
+                renderRequirementsTable(); 
+                renderSchedule();
+                
+                if(state.meta.updatedAt) document.getElementById('lastUpdated').innerText = new Date(state.meta.updatedAt).toLocaleTimeString();
+            } else {
+                alert("خطأ في البيانات: " + json.error);
+            }
+        } catch(e) { 
+            console.error(e); 
+            // Fallback render to avoid empty screen
+            renderEmployees(); 
+            renderRequirementsTable();
+            alert("فشل الاتصال أو البيانات تالفة. جرب 'تصفير قاعدة البيانات' إذا استمرت المشكلة."); 
+        } finally { 
+            showLoader(false); 
         }
+    }
+
+    async function saveData(reset=false) {
+        showLoader(true);
+        if(reset && !confirm("⚠️ تحذير: سيتم مسح جميع البيانات والبدء من جديد. هل أنت متأكد؟")) { showLoader(false); return; }
+        
+        if(reset) {
+            state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
+            appConfig.depots = ["Budaiya", "IsaTown"]; // Reset depots default
+        }
+        
         state.meta.depots = appConfig.depots;
+        
         try {
-            const payload = { action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } };
-            const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-            const json = await res.json();
-            if (json.ok) { state.meta.updatedAt = json.meta.updatedAt; updateLastUpdated(); }
-            else { alert("فشل الحفظ: " + json.error); }
-        } catch (e) { alert("خطأ أثناء الحفظ."); } finally { showLoader(false); }
+            await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "save", payload: state }) });
+            if(reset) {
+                document.getElementById('settingDepots').value = "Budaiya, IsaTown";
+                renderEmployees();
+                renderRequirementsTable();
+                renderSchedule();
+            }
+            document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
+        } catch(e) { alert("خطأ أثناء الحفظ."); } finally { showLoader(false); }
     }
 
-    function updateLastUpdated() {
-        if(state.meta.updatedAt) document.getElementById('lastUpdated').innerText = "آخر مزامنة: " + new Date(state.meta.updatedAt).toLocaleTimeString();
-    }
-
-    // --- UI ---
+    // --- UI RENDERING (SAFE GUARDED) ---
     function renderRequirementsTable() {
         const container = document.getElementById('requirementsContainer');
-        let html = `<table class="req-table"><thead><tr><th>الموقع</th><th>نهار (D)</th><th>أول ليل (EN)</th><th>آخر ليل (LN)</th></tr></thead><tbody>`;
-        appConfig.depots.forEach(depot => {
-            const req = state.meta.requirements[depot] || { D:0, EN:0, LN:0 };
-            html += `<tr><td style="font-weight:bold;">${depot}</td>
-                <td><input type="number" min="0" class="req-input" value="${req.D || 0}" onchange="updateReq('${depot}', 'D', this.value)"></td>
-                <td><input type="number" min="0" class="req-input" value="${req.EN || 0}" onchange="updateReq('${depot}', 'EN', this.value)"></td>
-                <td><input type="number" min="0" class="req-input" value="${req.LN || 0}" onchange="updateReq('${depot}', 'LN', this.value)"></td></tr>`;
+        if(!container) return;
+        
+        // Safety: Ensure meta.requirements exists
+        if(!state.meta) state.meta = {};
+        if(!state.meta.requirements) state.meta.requirements = {};
+
+        let html = `<table class="req-table"><thead><tr><th>الموقع</th><th>D</th><th>EN</th><th>LN</th></tr></thead><tbody>`;
+        appConfig.depots.forEach(d => {
+            // Safety: Use fallback object
+            let r = state.meta.requirements[d] || {D:0,EN:0,LN:0};
+            html += `<tr><td>${d}</td>
+            <td><input type="number" class="req-input" value="${r.D||0}" onchange="updReq('${d}','D',this.value)"></td>
+            <td><input type="number" class="req-input" value="${r.EN||0}" onchange="updReq('${d}','EN',this.value)"></td>
+            <td><input type="number" class="req-input" value="${r.LN||0}" onchange="updReq('${d}','LN',this.value)"></td></tr>`;
         });
-        html += `</tbody></table>`;
-        container.innerHTML = html;
+        container.innerHTML = html + `</tbody></table>`;
     }
-    function updateReq(d, s, v) { if(!state.meta.requirements) state.meta.requirements={}; if(!state.meta.requirements[d]) state.meta.requirements[d]={}; state.meta.requirements[d][s]=parseInt(v)||0; }
+    function updReq(d,s,v) { 
+        if(!state.meta.requirements[d]) state.meta.requirements[d]={}; 
+        state.meta.requirements[d][s]=parseInt(v)||0; 
+    }
 
     function renderEmployees() {
-        const container = document.getElementById('employeeList');
-        container.innerHTML = "";
-        state.employees.forEach(emp => {
-            const div = document.createElement('div'); div.className = "emp-card";
-            let weekHtml = "";
-            WEEKDAYS.forEach((day, i) => {
-                const opts = SHIFTS.map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
-                weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#666;">${day}</label><select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%">${opts}</select></div>`;
-            });
-            let quotasHtml = `<label style="font-weight:bold; margin-bottom:5px; display:block;">توزيع أيام العمل (أسبوعياً):</label><div class="depot-quotas">`;
-            appConfig.depots.forEach(d => {
-                const val = (emp.depotQuotas && emp.depotQuotas[d]) ? emp.depotQuotas[d] : 0;
-                quotasHtml += `<div><label>${d}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${d}', this.value)"></div>`;
-            });
-            quotasHtml += `</div>`;
-            let patternEditorHtml = "";
-            const flex = emp.flexCounts || { D: 1, EN: 2, LN: 2, OFF: 2 };
-            if(emp.patternType === 'rolling') {
-                patternEditorHtml = `
-                    <div class="pattern-editor">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">الحصة الأسبوعية (الأحد-السبت):</label>
-                        <div class="flex-counts">
-                            <div><label>D نهار</label><input type="number" min="0" value="${flex.D}" onchange="updateFlexCount('${emp.id}', 'D', this.value)"></div>
-                            <div><label>EN أول</label><input type="number" min="0" value="${flex.EN}" onchange="updateFlexCount('${emp.id}', 'EN', this.value)"></div>
-                            <div><label>LN آخر</label><input type="number" min="0" value="${flex.LN}" onchange="updateFlexCount('${emp.id}', 'LN', this.value)"></div>
-                            <div><label>OFF</label><input type="number" min="0" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
-                        </div>
-                        <div class="note">✅ يلتزم بهذه الكميات أسبوعياً.</div>
-                    </div>`;
-            } else if (emp.patternType === 'joker') {
-                patternEditorHtml = `<div class="pattern-editor"><div class="note" style="color:#d97706; font-weight:bold;">🃏 الجوكر</div><div class="note">✅ يغطي النقص بشراسة. إجازة واحدة فقط/أسبوع. يفضل الليل.</div></div>`;
-            } else {
-                patternEditorHtml = `<div class="pattern-editor"><label style="font-weight:bold; display:block; margin-bottom:5px;">الأيام الثابتة:</label><div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:5px;">${weekHtml}</div></div>`;
-            }
-            const exc = emp.exceptions || { offDates:"", xDates:"" };
-            div.innerHTML = `
-                <div class="emp-header">
-                    <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:bold; font-size:1.1rem;">
-                    <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem;">
-                        <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>1. أيام أسبوعية ثابتة</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>2. شفت دوار (حصة أسبوعية)</option>
-                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>3. موظف جوكر</option>
-                    </select>
-                    <button class="danger" onclick="deleteEmployee('${emp.id}')">حذف</button>
-                </div>
-                ${quotasHtml} ${patternEditorHtml}
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <div><label style="font-size:0.75rem">إجبار إجازة:</label><input type="text" style="width:95%" value="${exc.offDates || ''}" placeholder="5, 12..." onchange="updateExceptions('${emp.id}', 'offDates', this.value)"></div>
-                    <div><label style="font-size:0.75rem">إجبار غياب:</label><input type="text" style="width:95%" value="${exc.xDates || ''}" placeholder="15..." onchange="updateExceptions('${emp.id}', 'xDates', this.value)"></div>
-                </div>`;
-            container.appendChild(div);
+        const list = document.getElementById('employeeList'); 
+        if(!list) return;
+        list.innerHTML = "";
+        
+        state.employees.forEach(e => {
+            let weekHtml = WEEKDAYS.map((day,i) => `<div><small>${day}</small><select onchange="updEmpWeek('${e.id}',${i},this.value)" style="width:100%">${SHIFTS.map(s=>`<option ${e.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join('')}</select></div>`).join('');
+            
+            let quotas = `<div class="depot-quotas">` + appConfig.depots.map(d => `<div><span>${d}</span><input type="number" style="width:40px" value="${(e.depotQuotas&&e.depotQuotas[d])||0}" onchange="updQuota('${e.id}','${d}',this.value)"></div>`).join('') + `</div>`;
+            
+            let flex = e.flexCounts || {D:1,EN:2,LN:2,OFF:2};
+            let typeHtml = e.patternType === 'rolling' ? 
+                `<div class="pattern-editor"><div class="flex-counts"><div>D <input type="number" style="width:40px" value="${flex.D}" onchange="updFlex('${e.id}','D',this.value)"></div><div>EN <input type="number" style="width:40px" value="${flex.EN}" onchange="updFlex('${e.id}','EN',this.value)"></div><div>LN <input type="number" style="width:40px" value="${flex.LN}" onchange="updFlex('${e.id}','LN',this.value)"></div><div>OFF <input type="number" style="width:40px" value="${flex.OFF}" onchange="updFlex('${e.id}','OFF',this.value)"></div></div></div>` :
+                (e.patternType === 'joker' ? `<div class="pattern-editor">🃏 جوكر (إجازة واحدة أسبوعياً)</div>` : `<div class="pattern-editor" style="display:grid; grid-template-columns:repeat(7,1fr); gap:5px;">${weekHtml}</div>`);
+
+            let div = document.createElement('div'); div.className = "emp-card";
+            div.innerHTML = `<div class="emp-header"><input value="${e.name}" onchange="updEmp('${e.id}','name',this.value)" style="font-weight:bold"><select onchange="updEmp('${e.id}','patternType',this.value)"><option value="weekly" ${e.patternType==='weekly'?'selected':''}>ثابت</option><option value="rolling" ${e.patternType==='rolling'?'selected':''}>دوار</option><option value="joker" ${e.patternType==='joker'?'selected':''}>جوكر</option></select><button class="danger" onclick="delEmp('${e.id}')">X</button></div>${quotas}${typeHtml}`;
+            list.appendChild(div);
         });
     }
-
-    // --- State helpers ---
-    function addEmployee() {
-        const id = "emp_" + Math.random().toString(36).substr(2, 9);
-        state.employees.push({ id: id, name: "موظف جديد", patternType: "weekly", weeklyTemplate: Array(7).fill("D"), flexCounts: { D:1, EN:2, LN:2, OFF:2 }, depotQuotas: {}, exceptions: { offDates: "", xDates: "" } });
-        renderEmployees();
-    }
-    function updateEmployee(id, f, v) { const e = state.employees.find(x=>x.id===id); if(e){e[f]=v; if(f==='patternType') renderEmployees();} }
-    function updateWeeklyTemplate(id, i, v) { const e = state.employees.find(x=>x.id===id); if(e) e.weeklyTemplate[i]=v; }
-    function updateFlexCount(id, t, v) { const e = state.employees.find(x=>x.id===id); if(e){ if(!e.flexCounts) e.flexCounts={}; e.flexCounts[t]=parseInt(v)||0; } }
-    function updateDepotQuota(id, d, v) { const e = state.employees.find(x=>x.id===id); if(e){ if(!e.depotQuotas) e.depotQuotas={}; e.depotQuotas[d]=parseInt(v)||0; } }
+    
+    // UI Helpers (Robust)
+    function updEmp(id,k,v){ let e=state.employees.find(x=>x.id===id); if(e){e[k]=v; if(k==='patternType') renderEmployees();} }
+    function updEmpWeek(id,i,v){ let e=state.employees.find(x=>x.id===id); if(e) e.weeklyTemplate[i]=v; }
+    function updFlex(id,k,v){ let e=state.employees.find(x=>x.id===id); if(e){ if(!e.flexCounts) e.flexCounts={}; e.flexCounts[k]=parseInt(v); } }
+    function updQuota(id,k,v){ let e=state.employees.find(x=>x.id===id); if(e){ if(!e.depotQuotas) e.depotQuotas={}; e.depotQuotas[k]=parseInt(v); } }
     function updateExceptions(id, t, v) { const e = state.employees.find(x=>x.id===id); if(e){ if(!e.exceptions) e.exceptions={}; e.exceptions[t]=v; } }
-    function deleteEmployee(id) { if(confirm("حذف؟")) { state.employees = state.employees.filter(x=>x.id!==id); renderEmployees(); renderSchedule(); saveData(); } }
+    function addEmployee(){ state.employees.push({id:'e'+Math.random().toString(36).substr(2,9), name:'جديد', patternType:'weekly', weeklyTemplate:Array(7).fill('D'), flexCounts:{D:1,EN:2,LN:2,OFF:2}, depotQuotas:{}}); renderEmployees(); }
+    function delEmp(id){ if(confirm('حذف؟')) { state.employees=state.employees.filter(x=>x.id!==id); renderEmployees(); renderSchedule(); saveData(); } }
+    function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderRequirementsTable(); }
+    function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
+    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
+    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+    function clearMonth() { if(confirm('مسح؟')) { state.schedule[getMonthKey()] = {}; renderSchedule(); saveData(); } }
 
     // ==========================================
-    // === OPTIMIZER ENGINE (SAFE MODE) ===
+    // === OPTIMIZER (WITH INIT GUARD) ===
     // ==========================================
     
     function runSmartOptimizer() {
-        if(!confirm("سيقوم النظام بتجربة عدة سيناريوهات لاختيار أفضل جدول يغطي النقص.\n- الجوكر: إجازة واحدة أسبوعياً.\n- منع قلبة الشفت.")) return;
+        if(!confirm("بدء التوزيع الذكي؟")) return;
         
         showLoader(true);
         setTimeout(() => {
-            let bestSched = null;
-            let bestScore = -Infinity; 
+            try {
+                let bestSched = null;
+                let bestScore = -Infinity; 
 
-            // Run 50 iterations
-            for(let i=0; i<50; i++) {
-                let result = generateSingleRun();
-                if(result.score > bestScore) {
-                    bestScore = result.score;
-                    bestSched = result.schedule;
+                for(let i=0; i<30; i++) { // 30 iterations for speed
+                    let result = generateSingleRun();
+                    if(result.score > bestScore) {
+                        bestScore = result.score;
+                        bestSched = result.schedule;
+                    }
                 }
-            }
 
-            const key = getMonthKey();
-            state.schedule[key] = bestSched;
-            renderSchedule();
-            saveData();
-            showLoader(false);
-            alert(`تم إنشاء الجدول بنجاح!`);
+                const key = getMonthKey();
+                state.schedule[key] = bestSched;
+                renderSchedule();
+                saveData();
+                alert(`تم التوزيع بنجاح!`);
+            } catch(e) {
+                console.error(e);
+                alert("حدث خطأ أثناء المعالجة. يرجى التأكد من إدخال الموظفين بشكل صحيح.");
+            } finally {
+                showLoader(false);
+            }
         }, 100);
     }
 
@@ -339,10 +328,9 @@
         const cleanDepots = appConfig.depots.map(d => d.trim());
         
         let tempSched = {};
-        // ✅ FIX: Ensure initialization for ALL employees
+        // ✅ GUARD: Ensure ALL employees have a schedule object initialized
         state.employees.forEach(e => tempSched[e.id] = {});
 
-        // 1. Daily Needs
         let dailyNeeds = {}; 
         for(let d=1; d<=numDays; d++) {
             dailyNeeds[d] = { D:0, EN:0, LN:0 };
@@ -388,7 +376,6 @@
     function processWeeklyBuckets(employees, numDays, sched, dailyNeeds, workStreaks, empPrevShift, type) {
         let currentDay = 1;
         while(currentDay <= numDays) {
-            // Define Week
             let daysInWeek = [];
             let d = currentDay;
             while(d <= numDays) {
@@ -398,23 +385,17 @@
                 d++;
             }
 
-            // Init Buckets
             let buckets = {};
-            let jokerPlannedOff = {}; // Specific for Jokers
+            let jokerPlannedOff = {}; 
 
             if(type === 'joker') {
-                // Pre-distribute OFFs for Jokers to avoid overlap
                 let daysUsage = {};
                 daysInWeek.forEach(day => daysUsage[day] = 0);
-                
-                // Shuffle jokers to assign OFF day randomly but balanced
                 let shuffledEmps = [...employees].sort(() => Math.random() - 0.5);
                 shuffledEmps.forEach(emp => {
-                    // Pick day with min usage
                     let bestDay = daysInWeek.sort((a,b) => daysUsage[a] - daysUsage[b])[0];
                     jokerPlannedOff[emp.id] = bestDay;
                     daysUsage[bestDay]++;
-                    // Bucket: 6 Work, 1 OFF (strictly)
                     buckets[emp.id] = { WORK: 6, OFF: 1 };
                 });
             } else {
@@ -431,8 +412,8 @@
                 let activeEmps = [...employees].sort(() => Math.random() - 0.5);
 
                 activeEmps.forEach(emp => {
-                    // ✅ FIX: Ensure emp object exists in sched
-                    if (!sched[emp.id]) sched[emp.id] = {};
+                    // ✅ GUARD: Ensure scheduling object exists before access
+                    if(!sched[emp.id]) sched[emp.id] = {};
 
                     if(handleExceptionsImproved(emp, dayNum, sched, workStreaks, empPrevShift)) {
                         if(type === 'rolling' && sched[emp.id][dayNum].shift === 'OFF' && buckets[emp.id].OFF > 0) buckets[emp.id].OFF--;
@@ -444,33 +425,27 @@
                     let streak = workStreaks[emp.id];
                     let assigned = "OFF";
 
-                    // Determine Constraint
                     let mustRest = (streak >= 5);
                     let isJokerPlannedOff = (type === 'joker' && jokerPlannedOff[emp.id] === dayNum);
                     
                     if (mustRest || isJokerPlannedOff) {
                         assigned = "OFF";
                     } else {
-                        // Priority logic
                         let canD = !isShiftFlipViolation(prev, 'D') && (type==='joker' ? true : bucket.D > 0);
                         let canEN = !isShiftFlipViolation(prev, 'EN') && (type==='joker' ? true : bucket.EN > 0);
                         let canLN = !isShiftFlipViolation(prev, 'LN') && (type==='joker' ? true : bucket.LN > 0);
 
                         if(type === 'joker') {
-                            // Joker: Aggressive Work
                             if (todaysNeeds.LN > 0 && canLN) { assigned = "LN"; todaysNeeds.LN--; }
                             else if (todaysNeeds.EN > 0 && canEN) { assigned = "EN"; todaysNeeds.EN--; }
                             else if (todaysNeeds.D > 0 && canD) { assigned = "D"; todaysNeeds.D--; }
                             else {
-                                // Must work (it's not their off day)
                                 if(canLN) assigned = "LN";
                                 else if(canEN) assigned = "EN";
                                 else if(canD) assigned = "D";
-                                else assigned = "OFF"; // Stuck
+                                else assigned = "OFF"; 
                             }
-
                         } else {
-                            // Rolling Logic
                             if (todaysNeeds.D > 0 && canD) { assigned = "D"; todaysNeeds.D--; bucket.D--; }
                             else if (todaysNeeds.EN > 0 && canEN) { assigned = "EN"; todaysNeeds.EN--; bucket.EN--; }
                             else if (todaysNeeds.LN > 0 && canLN) { assigned = "LN"; todaysNeeds.LN--; bucket.LN--; }
@@ -501,12 +476,12 @@
     }
     
     function handleExceptionsImproved(emp, d, sched, streaks, prevShifts) {
-        // ✅ FIX: Ensure object exists
-        if (!sched[emp.id]) sched[emp.id] = {};
+        // ✅ GUARD
+        if(!sched[emp.id]) sched[emp.id] = {};
 
         const exc = emp.exceptions || {};
-        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
         
         if (xDates.includes(d)) { 
             sched[emp.id][d] = { shift: "X", depot: "" }; 
@@ -524,12 +499,10 @@
     }
     
     function applyWeeklyImproved(emp, numDays, sched, dailyNeeds, streaks, prevShifts) {
-        // ✅ FIX: Ensure object exists
-        if (!sched[emp.id]) sched[emp.id] = {};
-
+        if(!sched[emp.id]) sched[emp.id] = {};
         const exc = emp.exceptions || {};
-        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        const offDates = (exc.offDates || "").split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
+        const xDates = (exc.xDates || "").split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
         
         for(let d=1; d<=numDays; d++) {
             let shift = sched[emp.id][d] ? sched[emp.id][d].shift : "";
@@ -631,11 +604,9 @@
         renderSchedule(); saveData();
     }
 
-    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
-    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
-    
     function renderSchedule() {
         const grid = document.getElementById('scheduleGrid');
+        if(!grid) return;
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const data = state.schedule[getMonthKey()] || {};
         let html = `<thead><tr><th class="emp-col">الموظف</th>`;
@@ -660,6 +631,7 @@
 
     function analyzeCoverage() {
         const report = document.getElementById('coverageReport');
+        if(!report) return;
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const sched = state.schedule[getMonthKey()] || {};
         const cleanDepots = appConfig.depots.map(d => d.trim());
@@ -718,6 +690,10 @@
         const blob = new Blob([csv], {type:'text/csv'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = 'schedule.csv'; a.click();
+    }
+    
+    function cycleCell(id, d) {
+        alert("التعديل اليدوي معطل لضمان سلامة التوزيع.");
     }
 </script>
 </body>
