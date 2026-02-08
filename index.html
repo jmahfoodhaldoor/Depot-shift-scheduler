@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام قائد الفريق للجدولة</title>
+    <title>نظام قائد الفريق للجدولة (V12.1)</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb; --primary-light: #e0e7ff;
+            --primary: #4f46e5; --primary-light: #e0e7ff;
             --success: #10b981; --success-light: #d1fae5;
             --danger: #ef4444; --danger-light: #fee2e2;
             --warning: #f59e0b; --warning-light: #fef3c7;
@@ -24,7 +24,7 @@
             margin: 0; padding: 0;
             background-color: var(--bg);
             color: var(--text-main);
-            font-size: 13.5px;
+            font-size: 14px;
         }
 
         .app-container { max-width: 1600px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
@@ -72,7 +72,6 @@
         .shift-OFF { background-color: #ecfdf5; color: #047857; }
         .shift-VAC { background-color: #f3e8ff; color: #7e22ce; }
         .shift-X { background-color: #fef2f2; color: #b91c1c; }
-        /* Backup Shift Style */
         .shift-Backup { background-color: #e5e7eb; color: #374151; border: 2px dashed #9ca3af; }
 
         .depot-tag { display: block; font-size: 0.65rem; opacity: 0.8; margin-top: 2px; font-weight: normal; }
@@ -154,7 +153,7 @@
     <div class="header">
         <div class="brand">
             <h1>🗓️ نظام قائد الفريق للجدولة </h1>
-            <p>V13 - صنع خصيصاً للسيدة زينب العلوي</p>
+            <p>V12.1 - صنع خصيصاً للسيدة زينب العلوي</p>
         </div>
         <div class="actions">
             <select id="selYear"></select>
@@ -166,10 +165,10 @@
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('schedule')">📅 جدول الموظفين</div>
+        <div class="tab active" onclick="switchTab('schedule')">📅 الجدول الرئيسي</div>
         <div class="tab" onclick="switchTab('shifts-view')">🏗️ عرض الشفتات</div>
         <div class="tab" onclick="switchTab('dashboard')">📊 الإحصائيات</div>
-        <div class="tab" onclick="switchTab('employees')">👥 إدارة الموظفين</div>
+        <div class="tab" onclick="switchTab('employees')">👥 الموظفين</div>
         <div class="tab" onclick="switchTab('settings')">⚙️ الإعدادات</div>
     </div>
 
@@ -183,7 +182,7 @@
                     </p>
                 </div>
                 <div class="actions">
-                    <button class="btn-primary" onclick="generateScheduleV13()">⚡ توزيع الشفتات (V13)</button>
+                    <button class="btn-primary" onclick="generateScheduleV13()">⚡ توزيع الشفتات </button>
                     <button class="btn-success" onclick="fillDepotsWithBackup()">🏭 توزيع المواقع (+Backup)</button>
                     <button class="btn-danger" onclick="clearMonth()">🗑️ مسح</button>
                     <button class="btn-ghost" onclick="exportCSV()">📄 اكسل</button>
@@ -243,7 +242,7 @@
     // ==========================================
     // === CONFIGURATION ===
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️⚠️ ضع رابط السكربت هنا
+    const API_URL = "PASTE_YOUR_WEB_APP_URL_HERE"; // ⬅️⚠️ ضع رابط السكربت هنا
     
     // ==========================================
     // === STATE & CONSTANTS ===
@@ -251,7 +250,6 @@
     let state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
     let appConfig = { depots: ["Budaiya", "IsaTown"], year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
     
-    // ✅ ADDED 'Backup' to shifts
     const SHIFTS = ["M", "A", "N", "OFF", "VAC", "X", "Backup"];
     const WORK_SHIFTS = ["M", "A", "N"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
@@ -264,11 +262,8 @@
     // === SAFETY RULES ===
     // ==========================================
     function isShiftFlipViolation(prev, next) {
-        // Backup counts as OFF for safety rules
-        let safePrev = prev;
-        if(prev === 'Backup') safePrev = 'OFF';
-        let safeNext = next;
-        if(next === 'Backup') safeNext = 'OFF';
+        let safePrev = (prev === 'Backup') ? 'OFF' : prev;
+        let safeNext = (next === 'Backup') ? 'OFF' : next;
 
         if (!safePrev || ['OFF', 'X', 'VAC'].includes(safePrev)) return false;
         if (['OFF', 'X', 'VAC'].includes(safeNext)) return false;
@@ -335,6 +330,7 @@
                     if(!emp.vacationDates) emp.vacationDates = "";
                 });
 
+                // Fix Req
                 const reqs = state.meta.requirements;
                 for(let d in reqs) {
                     if(reqs[d].D !== undefined) {
@@ -363,7 +359,105 @@
     }
 
     // ==========================================
-    // === UI RENDERERS ===
+    // === MANUAL EDITOR LOGIC ===
+    // ==========================================
+    function openCellEditor(empId, day) {
+        ceContext = { empId, day };
+        const emp = state.employees.find(e => e.id === empId);
+        const key = getMonthKey();
+        
+        if(!state.schedule[key]) state.schedule[key] = {};
+        if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
+        
+        const cell = state.schedule[key][empId][day] || { shift: "OFF", depot: "" };
+        const dayName = WEEKDAYS[new Date(appConfig.year, appConfig.month - 1, day).getDay()];
+        document.getElementById('ceTitle').innerText = `تعديل: ${emp.name} | يوم ${day} (${dayName})`;
+        
+        const shiftSel = document.getElementById('ceShift');
+        shiftSel.innerHTML = SHIFTS.map(s => `<option value="${s}">${s}</option>`).join('');
+        shiftSel.value = cell.shift || 'OFF';
+        
+        const depotSel = document.getElementById('ceDepot');
+        depotSel.innerHTML = `<option value="">--</option>` + appConfig.depots.map(d => `<option value="${d}">${d}</option>`).join('');
+        depotSel.value = cell.depot || '';
+
+        document.getElementById('cellEditorOverlay').style.display = 'flex';
+    }
+
+    function closeCellEditor(e) {
+        if (e && e.target.id !== 'cellEditorOverlay') return; 
+        document.getElementById('cellEditorOverlay').style.display = 'none';
+        ceContext = { empId: null, day: null };
+    }
+
+    function saveCellEdit() {
+        const { empId, day } = ceContext;
+        if (!empId) return;
+        
+        const shift = document.getElementById('ceShift').value;
+        const depot = document.getElementById('ceDepot').value;
+        const key = getMonthKey();
+        
+        state.schedule[key][empId][day] = { shift: shift, depot: (WORK_SHIFTS.includes(shift) ? depot : "") };
+        
+        renderAllViews();
+        closeCellEditor(); 
+        saveData(); 
+    }
+
+    function clearCellEdit() {
+        const { empId, day } = ceContext;
+        if (!empId) return;
+        const key = getMonthKey();
+        state.schedule[key][empId][day] = { shift: "OFF", depot: "" };
+        renderAllViews();
+        closeCellEditor();
+        saveData();
+    }
+
+    function applyWeekdayForward() {
+        const { empId, day } = ceContext;
+        if (!empId) return;
+        const shift = document.getElementById('ceShift').value;
+        const depot = document.getElementById('ceDepot').value;
+        const key = getMonthKey();
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const targetWeekday = new Date(appConfig.year, appConfig.month - 1, day).getDay();
+
+        for(let d = day; d <= numDays; d++) {
+            const currentWeekday = new Date(appConfig.year, appConfig.month - 1, d).getDay();
+            if(currentWeekday === targetWeekday) {
+                const currentCell = state.schedule[key][empId][d];
+                if(currentCell && currentCell.shift === 'VAC') continue;
+                state.schedule[key][empId][d] = { shift: shift, depot: (WORK_SHIFTS.includes(shift) ? depot : "") };
+            }
+        }
+        renderAllViews(); closeCellEditor(); saveData();
+    }
+
+    function applyWeekdayEntireMonth() {
+        const { empId, day } = ceContext;
+        if (!empId) return;
+        const shift = document.getElementById('ceShift').value;
+        const depot = document.getElementById('ceDepot').value;
+        const key = getMonthKey();
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const targetWeekday = new Date(appConfig.year, appConfig.month - 1, day).getDay();
+
+        for(let d = 1; d <= numDays; d++) {
+            const currentWeekday = new Date(appConfig.year, appConfig.month - 1, d).getDay();
+            if(currentWeekday === targetWeekday) {
+                const currentCell = state.schedule[key][empId] && state.schedule[key][empId][d];
+                if(currentCell && currentCell.shift === 'VAC') continue;
+                if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
+                state.schedule[key][empId][d] = { shift: shift, depot: (WORK_SHIFTS.includes(shift) ? depot : "") };
+            }
+        }
+        renderAllViews(); closeCellEditor(); saveData();
+    }
+
+    // ==========================================
+    // === VIEW RENDERERS ===
     // ==========================================
     function renderRequirementsTable() {
         const container = document.getElementById('requirementsContainer');
@@ -391,6 +485,7 @@
         state.employees.forEach(e => {
             const div = document.createElement('div'); div.className = "card";
             
+            // Weekly Selects
             let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:5px;'>";
             WEEKDAYS.forEach((day,i) => {
                 const opts = SHIFTS.filter(x=>!['VAC','X','Backup'].includes(x)).map(s=>`<option ${e.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join('');
@@ -465,9 +560,6 @@
     function delEmp(id){ if(confirm('حذف؟')) { state.employees=state.employees.filter(x=>x.id!==id); renderAllViews(); saveData(); } }
     function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderRequirementsTable(); renderEmployees(); }
 
-    // ==========================================
-    // === VIEW RENDERERS ===
-    // ==========================================
     function renderSchedule() {
         const grid = document.getElementById('scheduleGrid');
         if(!grid) return;
@@ -581,8 +673,31 @@
     }
 
     // ==========================================
-    // === ALGORITHM V13: BACKUP SYSTEM ===
+    // === ALGORITHM (V13 + Missing Helpers) ===
     // ==========================================
+    
+    // ⚠️ FIXED: Added missing Helpers HERE ⚠️
+    function setOff(emp, day, sched, streaks, prevs) {
+        sched[emp.id][day] = { shift: 'OFF', depot: "" };
+        prevs[emp.id] = 'OFF';
+        streaks[emp.id] = 0;
+    }
+
+    function isAssigned(emp, d, sched) { 
+        return !!(sched[emp.id] && sched[emp.id][d]); 
+    }
+
+    function assignShift(emp, d, s, sched, prevs) {
+        sched[emp.id][d] = { shift: s, depot: "" };
+        prevs[emp.id] = s;
+    }
+
+    function applyVacations(numDays, sched) {
+        state.employees.forEach(emp => {
+            if(emp.vacationDates) emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => { if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' }; });
+        });
+    }
+
     function generateScheduleV13() {
         if(!confirm("🚀 بدء التوزيع (V13 - نظام الاحتياط)؟\n\n1. توزيع المراحل\n2. تشتيت الإجازات\n3. تحويل الفائض إلى Backup")) return;
         showLoader(true);
@@ -602,10 +717,8 @@
                 const empPrevShift = {};
                 state.employees.forEach(emp => { workStreaks[emp.id] = 0; empPrevShift[emp.id] = 'OFF'; });
 
-                // 2. Fixed
                 applyFixedEmployees(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
 
-                // 3. Staggering
                 const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
                 const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
 
@@ -627,7 +740,6 @@
                     for(let x=d1; x<=numDays; x+=7) jokerOffMap[e.id].push(x);
                 });
 
-                // 4. Weekly Loop
                 let currentDay = 1;
                 while(currentDay <= numDays) {
                     let weekEnd = Math.min(currentDay + 6 - new Date(appConfig.year, appConfig.month-1, currentDay).getDay(), numDays);
@@ -646,7 +758,6 @@
                         let rollingList = [...rollingEmps].sort(() => Math.random() - 0.5);
                         let jokerList = [...jokerEmps].sort(() => Math.random() - 0.5);
 
-                        // Rolling
                         rollingList.forEach(emp => {
                             if(isAssigned(emp, d, sched)) return;
                             let prev = empPrevShift[emp.id];
@@ -681,7 +792,6 @@
                             assignShift(emp, d, assigned, sched, empPrevShift);
                         });
 
-                        // Joker
                         jokerList.forEach(emp => {
                             if(isAssigned(emp, d, sched)) return;
                             let prev = empPrevShift[emp.id];
@@ -714,7 +824,6 @@
                     currentDay = daysInWeek[daysInWeek.length-1] + 1;
                 }
 
-                // Final Clean
                 state.employees.forEach(e => {
                     let p = 'OFF';
                     for(let d=1; d<=numDays; d++) {
@@ -744,52 +853,39 @@
             const reqs = state.meta.requirements || {};
             const depots = appConfig.depots.map(d=>d.trim());
 
-            // 1. Clear existing depots & backups
             for(let d=1; d<=numDays; d++) {
                 state.employees.forEach(e => { 
                     if(sched[e.id][d]) {
                         if(['M','A','N'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = "";
-                        if(sched[e.id][d].shift === 'Backup') sched[e.id][d].shift = 'OFF'; // Reset backup to recalc
+                        if(sched[e.id][d].shift === 'Backup') sched[e.id][d].shift = 'OFF';
                     }
                 });
             }
 
-            // 2. Identify Surplus & Convert to Backup
             for(let d=1; d<=numDays; d++) {
-                // Calculate Total Needed for this day across all depots
                 let totalNeeded = { M:0, A:0, N:0 };
                 depots.forEach(dep => {
                     let r = reqs[dep] || {};
                     totalNeeded.M += (r.M||0); totalNeeded.A += (r.A||0); totalNeeded.N += (r.N||0);
                 });
 
-                // Identify workers
                 let workers = { M:[], A:[], N:[] };
                 state.employees.forEach(e => {
                     let s = sched[e.id][d]?.shift;
                     if(['M','A','N'].includes(s)) workers[s].push(e);
                 });
 
-                // Check Surplus for each shift type
                 ['M','A','N'].forEach(s => {
                     let assigned = workers[s];
                     let needed = totalNeeded[s];
                     
                     if(assigned.length > needed) {
                         let surplusCount = assigned.length - needed;
-                        // Sort by priority to be moved to Backup (Joker > Rolling > Fixed)
-                        // Or reverse: Keep Fixed, then Rolling, then Joker.
-                        // Priority to STAY: Fixed(1) > Rolling(2) > Joker(3)
-                        // So sort ascending: Joker(3) first to be removed? No.
-                        // We want to remove Jokers first. 
-                        // Let's define rank: Fixed=3, Rolling=2, Joker=1.
-                        // Sort ascending by rank: Joker comes first.
                         assigned.sort((a,b) => {
                             let rank = (p) => { if(p==='weekly') return 3; if(p==='rolling') return 2; return 1; };
                             return rank(a.patternType) - rank(b.patternType);
                         });
 
-                        // Convert the first 'surplusCount' employees to Backup
                         for(let i=0; i<surplusCount; i++) {
                             let emp = assigned[i];
                             sched[emp.id][d].shift = 'Backup';
@@ -799,7 +895,6 @@
                 });
             }
 
-            // 3. Fill Depots (Standard)
             for(let d=1; d<=numDays; d++) {
                 const counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
                 const workers = {M:[],A:[],N:[]};
@@ -809,7 +904,6 @@
                 });
                 ['M','A','N'].forEach(s => {
                     let list = workers[s];
-                    // Sort by quota preference
                     list.sort((a,b) => ((b.depotQuotas[depots[0]]||0) - (a.depotQuotas[depots[0]]||0))); 
                     depots.forEach(dep => {
                         let need = (reqs[dep]||{})[s] || 0;
@@ -834,83 +928,32 @@
         }, 100);
     }
 
-    // --- MANUAL EDITOR ---
-    function openCellEditor(empId, day) {
-        ceContext = { empId, day };
-        const emp = state.employees.find(e => e.id === empId);
-        const key = getMonthKey();
-        if(!state.schedule[key]) state.schedule[key] = {};
-        if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
-        const cell = state.schedule[key][empId][day] || { shift: "OFF", depot: "" };
-        
-        document.getElementById('ceTitle').innerText = `تعديل: ${emp.name}`;
-        
-        const shiftSel = document.getElementById('ceShift');
-        shiftSel.innerHTML = SHIFTS.map(s => `<option value="${s}">${s}</option>`).join('');
-        shiftSel.value = cell.shift || 'OFF';
-        
-        const depotSel = document.getElementById('ceDepot');
-        depotSel.innerHTML = `<option value="">--</option>` + appConfig.depots.map(d => `<option value="${d}">${d}</option>`).join('');
-        depotSel.value = cell.depot || '';
-
-        document.getElementById('cellEditorOverlay').style.display = 'flex';
-    }
-    function closeCellEditor(e) { if (e && e.target.id !== 'cellEditorOverlay') return; document.getElementById('cellEditorOverlay').style.display = 'none'; ceContext = { empId: null, day: null }; }
-    function saveCellEdit() {
-        const { empId, day } = ceContext;
-        const shift = document.getElementById('ceShift').value;
-        const depot = document.getElementById('ceDepot').value;
-        const key = getMonthKey();
-        state.schedule[key][empId][day] = { shift: shift, depot: (WORK_SHIFTS.includes(shift) ? depot : "") };
-        renderAllViews(); closeCellEditor(); saveData();
-    }
-    function clearCellEdit() {
-        const { empId, day } = ceContext;
-        const key = getMonthKey();
-        state.schedule[key][empId][day] = { shift: "OFF", depot: "" };
-        renderAllViews(); closeCellEditor(); saveData();
-    }
-    function applyWeekdayForward() {
-        const { empId, day } = ceContext;
-        const shift = document.getElementById('ceShift').value;
-        const depot = document.getElementById('ceDepot').value;
-        const key = getMonthKey();
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const targetWeekday = new Date(appConfig.year, appConfig.month - 1, day).getDay();
-        for(let d = day; d <= numDays; d++) {
-            const wd = new Date(appConfig.year, appConfig.month - 1, d).getDay();
-            if(wd === targetWeekday) {
-                const cur = state.schedule[key][empId][d];
-                if(cur && cur.shift === 'VAC') continue;
-                state.schedule[key][empId][d] = { shift: shift, depot: (WORK_SHIFTS.includes(shift) ? depot : "") };
-            }
+    function calculateDailyNeeds(numDays) {
+        const needs = {};
+        const depots = appConfig.depots.map(d=>d.trim());
+        const reqs = state.meta.requirements || {};
+        for(let d=1; d<=numDays; d++) {
+            needs[d] = { M:0, A:0, N:0 };
+            depots.forEach(dep => { const r = reqs[dep] || {}; needs[d].M += (r.M||0); needs[d].A += (r.A||0); needs[d].N += (r.N||0); });
         }
-        renderAllViews(); closeCellEditor(); saveData();
-    }
-    function applyWeekdayEntireMonth() {
-        const { empId, day } = ceContext;
-        const shift = document.getElementById('ceShift').value;
-        const depot = document.getElementById('ceDepot').value;
-        const key = getMonthKey();
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const targetWeekday = new Date(appConfig.year, appConfig.month - 1, day).getDay();
-        for(let d = 1; d <= numDays; d++) {
-            const wd = new Date(appConfig.year, appConfig.month - 1, d).getDay();
-            if(wd === targetWeekday) {
-                const cur = state.schedule[key][empId] && state.schedule[key][empId][d];
-                if(cur && cur.shift === 'VAC') continue;
-                if(!state.schedule[key][empId]) state.schedule[key][empId] = {};
-                state.schedule[key][empId][d] = { shift: shift, depot: (WORK_SHIFTS.includes(shift) ? depot : "") };
-            }
-        }
-        renderAllViews(); closeCellEditor(); saveData();
+        return needs;
     }
 
-    // UTILS
-    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
-    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
-    function clearMonth() { if(confirm('مسح؟')) { state.schedule[getMonthKey()] = {}; renderAllViews(); saveData(); } }
-    function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
+    function applyFixedEmployees(numDays, sched, dailyNeeds, streaks, prevs) {
+        state.employees.filter(e => e.patternType === 'weekly').forEach(emp => {
+            for(let d=1; d<=numDays; d++) {
+                if(isAssigned(emp, d, sched)) { prevs[emp.id]='VAC'; streaks[emp.id]=0; continue; }
+                const dayOfWeek = new Date(appConfig.year, appConfig.month-1, d).getDay();
+                let shift = emp.weeklyTemplate[dayOfWeek];
+                const prev = prevs[emp.id];
+                if(isShiftFlipViolation(prev, shift) || (streaks[emp.id] >= MAX_CONSECUTIVE && ['M','A','N'].includes(shift))) shift = 'OFF';
+                assignShift(emp, d, shift, sched, prevs);
+                if(['M','A','N'].includes(shift) && dailyNeeds[d][shift]>0) dailyNeeds[d][shift]--;
+                if(['M','A','N'].includes(shift)) streaks[emp.id]++; else streaks[emp.id]=0;
+            }
+        });
+    }
+
     function exportCSV() {
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         let csv = "\uFEFFM,";
