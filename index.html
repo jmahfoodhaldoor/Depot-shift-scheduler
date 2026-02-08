@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام قائد الفريق للجدولة (V12.1)</title>
+    <title>نظام قائد الفريق للجدولة (V12)</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -27,16 +27,53 @@
             font-size: 14px;
         }
 
-        .app-container { max-width: 1600px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        /* Layout */
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
 
         /* Header */
-        .header { background: var(--surface); padding: 15px 20px; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header {
+            background: var(--surface);
+            padding: 15px 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
         .brand h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--primary); }
         .brand p { margin: 0; font-size: 0.85rem; color: var(--text-sub); }
+
         .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         
-        select, input { padding: 10px 15px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Tajawal'; font-weight: 600; background: #f9fafb; color: var(--text-main); }
-        button { padding: 10px 20px; border: none; border-radius: 8px; font-family: 'Tajawal'; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        select, input {
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Tajawal';
+            font-weight: 600;
+            background: #f9fafb;
+            color: var(--text-main);
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Tajawal';
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
         button:hover { transform: translateY(-2px); }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
@@ -45,75 +82,99 @@
         .btn-ghost:hover { background: var(--bg); color: var(--text-main); }
 
         /* Tabs */
-        .tabs { display: flex; gap: 10px; background: var(--surface); padding: 10px; border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
-        .tab { padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--text-sub); transition: 0.2s; white-space: nowrap; }
+        .tabs {
+            display: flex; gap: 10px;
+            background: var(--surface); padding: 10px;
+            border-radius: var(--radius); box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 25px; border-radius: 8px; cursor: pointer;
+            font-weight: 700; color: var(--text-sub); transition: 0.2s; white-space: nowrap;
+        }
         .tab.active { background: var(--primary-light); color: var(--primary); }
         .tab:hover:not(.active) { background: var(--bg); }
 
+        /* Views */
         .view { display: none; animation: fadeIn 0.3s ease; }
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Tables */
-        .table-wrapper { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; border: 1px solid var(--border); }
+        .table-wrapper {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
         table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-        th, td { padding: 8px; text-align: center; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); height: 45px; }
+        th, td {
+            padding: 10px; text-align: center;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            height: 50px;
+        }
         th { background: #f8fafc; color: var(--text-main); font-weight: 800; position: sticky; top: 0; z-index: 20; }
-        th:first-child, td:first-child { position: sticky; right: 0; z-index: 30; background: var(--surface); border-left: 2px solid var(--border); width: 200px; min-width: 200px; text-align: right; padding-right: 15px; }
+        
+        /* Sticky First Column */
+        th:first-child, td:first-child {
+            position: sticky; right: 0; z-index: 30;
+            background: var(--surface); border-left: 2px solid var(--border);
+            width: 200px; min-width: 200px; text-align: right; padding-right: 15px;
+        }
         th:first-child { z-index: 40; background: #f8fafc; }
 
         /* Shift Cells */
         .cell { font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: 0.2s; }
         .cell:hover { opacity: 0.8; box-shadow: inset 0 0 0 2px var(--primary); }
-        
         .shift-M { background-color: #fff7ed; color: #c2410c; }
         .shift-A { background-color: #eff6ff; color: #1d4ed8; }
         .shift-N { background-color: #1e293b; color: #f8fafc; }
         .shift-OFF { background-color: #ecfdf5; color: #047857; }
         .shift-VAC { background-color: #f3e8ff; color: #7e22ce; }
         .shift-X { background-color: #fef2f2; color: #b91c1c; }
-        .shift-Backup { background-color: #e5e7eb; color: #374151; border: 2px dashed #9ca3af; }
-
         .depot-tag { display: block; font-size: 0.65rem; opacity: 0.8; margin-top: 2px; font-weight: normal; }
+
+        /* Shift View Table Specifics */
         .names-cell { font-size: 0.85rem; line-height: 1.4; font-weight: 600; text-align: center; }
         .name-tag { display: inline-block; background: rgba(255,255,255,0.7); border-radius: 4px; padding: 2px 5px; margin: 1px; border: 1px solid rgba(0,0,0,0.05); }
 
-        /* Dashboard */
+        /* Dashboard Stats Table */
         .stats-table th { background: var(--primary-light); color: var(--primary); }
         .stats-val { font-weight: 800; font-size: 1rem; }
+        .stats-sub { font-size: 0.9rem; color: var(--text-sub); }
 
-        /* Panels & Cards */
+        /* Config Panels */
         .config-panel { background: var(--surface); padding: 20px; border-radius: var(--radius); margin-bottom: 20px; border: 1px solid var(--border); }
         .config-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 15px; }
+
+        /* Employee Cards */
         .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border: 1px solid var(--border); }
         
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
         .badge-rolling { background: var(--success-light); color: var(--success); }
         .badge-joker { background: var(--warning-light); color: var(--warning); }
         .badge-weekly { background: var(--primary-light); color: var(--primary); }
 
-        /* Manual Editor */
-        #cellEditorOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); }
-        #cellEditor { width: min(500px, 90vw); background: #fff; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); padding: 24px; }
-        .ce-row { display: flex; gap: 15px; margin-bottom: 20px; } .ce-row > div { flex: 1; }
-        .ce-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; } .ce-actions button { width: 100%; justify-content: center; }
-        .ce-divider { height: 1px; background: var(--border); margin: 5px 0; }
-
         /* Loader */
         #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.95); display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 3000; }
         .spinner { width: 50px; height: 50px; border: 5px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Report */
-        .report-ok { background: var(--success-light); color: var(--success); padding: 15px; border-radius: 8px; text-align: center; font-weight: 700; }
-        .report-err { background: var(--danger-light); color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;}
+        /* Manual Editor */
+        #cellEditorOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); }
+        #cellEditor { width: min(500px, 90vw); background: #fff; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); padding: 24px; }
         
+        /* Flex Utils */
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .ce-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .ce-row > div { flex: 1; }
+        .ce-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         .small-input { width: 60px; text-align: center; }
         .flex-counts { display: flex; gap: 10px; justify-content: center; background: #f0fdf4; padding: 10px; border-radius: 8px; }
         .flex-counts div { display: flex; flex-direction: column; align-items: center; }
-        .alert-box { background: #dbeafe; border: 1px solid #93c5fd; padding: 12px; border-radius: 8px; margin: 10px 0; color: #1e40af; font-weight: 600; font-size: 0.9rem; text-align: center; }
     </style>
 </head>
 <body>
@@ -129,21 +190,21 @@
         <div class="ce-row">
             <div>
                 <label style="display:block;margin-bottom:5px;font-weight:700;">الشفت</label>
-                <select id="ceShift" class="w-full" style="width:100%"></select>
+                <select id="ceShift" style="width:100%"></select>
             </div>
             <div>
                 <label style="display:block;margin-bottom:5px;font-weight:700;">الموقع (Depot)</label>
-                <select id="ceDepot" class="w-full" style="width:100%"></select>
+                <select id="ceDepot" style="width:100%"></select>
             </div>
         </div>
         <div class="ce-actions">
-            <button class="btn-primary" onclick="saveCellEdit()">حفظ (يوم واحد)</button>
-            <div class="ce-divider"></div>
-            <button class="btn-ghost" style="color:var(--primary); border-color:var(--primary-light);" onclick="applyWeekdayForward()">📌 تثبيت (من اليوم وطالع)</button>
-            <button class="btn-ghost" style="color:var(--success); border-color:var(--success-light); background:var(--success-light);" onclick="applyWeekdayEntireMonth()">✅ تثبيت (كل الشهر)</button>
-            <div class="ce-divider"></div>
-            <button class="btn-ghost" onclick="closeCellEditor()">إلغاء</button>
-            <button class="btn-danger" onclick="clearCellEdit()">مسح الشفت</button>
+            <button class="btn-primary" style="justify-content:center;" onclick="saveCellEdit()">حفظ (يوم واحد)</button>
+            <div style="height:1px; background:#eee; margin:5px 0;"></div>
+            <button class="btn-ghost" style="justify-content:center; color:var(--primary); border-color:var(--primary-light);" onclick="applyWeekdayForward()">📌 تثبيت (من اليوم وطالع)</button>
+            <button class="btn-ghost" style="justify-content:center; color:var(--success); border-color:var(--success-light); background:var(--success-light);" onclick="applyWeekdayEntireMonth()">✅ تثبيت (كل الشهر)</button>
+            <div style="height:1px; background:#eee; margin:5px 0;"></div>
+            <button class="btn-ghost" style="justify-content:center;" onclick="closeCellEditor()">إلغاء</button>
+            <button class="btn-danger" style="justify-content:center;" onclick="clearCellEdit()">مسح الشفت</button>
         </div>
     </div>
 </div>
@@ -153,7 +214,7 @@
     <div class="header">
         <div class="brand">
             <h1>🗓️ نظام قائد الفريق للجدولة </h1>
-            <p>V12.1 - صنع خصيصاً للسيدة زينب العلوي</p>
+            <p>V12 - صنع خصيصاً للسيدة زينب العلوي</p>
         </div>
         <div class="actions">
             <select id="selYear"></select>
@@ -165,7 +226,7 @@
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('schedule')">📅 الجدول الرئيسي</div>
+        <div class="tab active" onclick="switchTab('schedule')">📅 جدول الموظفين</div>
         <div class="tab" onclick="switchTab('shifts-view')">🏗️ عرض الشفتات</div>
         <div class="tab" onclick="switchTab('dashboard')">📊 الإحصائيات</div>
         <div class="tab" onclick="switchTab('employees')">👥 الموظفين</div>
@@ -177,13 +238,11 @@
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div>
                     <h3 style="margin:0; color:var(--primary);">الجدول الرئيسي</h3>
-                    <p style="margin:5px 0 0 0; font-size:0.9rem; color:var(--text-sub);">
-                       التوزيع، التعديل اليدوي، والتصدير.
-                    </p>
+                    <p style="margin:5px 0 0 0; font-size:0.9rem; color:var(--text-sub);">التوزيع، التعديل اليدوي، والتصدير.</p>
                 </div>
                 <div class="actions">
-                    <button class="btn-primary" onclick="generateScheduleV13()">⚡ توزيع الشفتات </button>
-                    <button class="btn-success" onclick="fillDepotsWithBackup()">🏭 توزيع المواقع (+Backup)</button>
+                    <button class="btn-primary" onclick="generateScheduleV11()">⚡ توزيع الشفتات</button>
+                    <button class="btn-success" onclick="fillDepots()">🏭 توزيع المواقع</button>
                     <button class="btn-danger" onclick="clearMonth()">🗑️ مسح</button>
                     <button class="btn-ghost" onclick="exportCSV()">📄 اكسل</button>
                 </div>
@@ -198,7 +257,7 @@
     <div id="view-shifts-view" class="view">
         <div class="config-panel">
             <h3 class="config-title">🏗️ الجدول حسب الشفت والموقع</h3>
-            <p style="color:var(--text-sub);">من يداوم في كل موقع؟</p>
+            <p style="color:var(--text-sub);">يظهر هذا العرض من يعمل في كل موقع وشفت يومياً لكشف العجز بوضوح.</p>
         </div>
         <div class="table-wrapper">
             <table id="shiftsGrid"></table>
@@ -207,7 +266,7 @@
 
     <div id="view-dashboard" class="view">
         <div class="config-panel">
-            <h3 class="config-title">📊 إحصائيات الشهر</h3>
+            <h3 class="config-title">📊 إحصائيات الشهر للموظفين</h3>
             <div class="table-wrapper" style="box-shadow:none; border:none;">
                 <table id="statsGrid" class="stats-table"></table>
             </div>
@@ -250,7 +309,7 @@
     let state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
     let appConfig = { depots: ["Budaiya", "IsaTown"], year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
     
-    const SHIFTS = ["M", "A", "N", "OFF", "VAC", "X", "Backup"];
+    const SHIFTS = ["M", "A", "N", "OFF", "VAC", "X"];
     const WORK_SHIFTS = ["M", "A", "N"];
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
     const MAX_CONSECUTIVE = 6; 
@@ -262,14 +321,10 @@
     // === SAFETY RULES ===
     // ==========================================
     function isShiftFlipViolation(prev, next) {
-        let safePrev = (prev === 'Backup') ? 'OFF' : prev;
-        let safeNext = (next === 'Backup') ? 'OFF' : next;
-
-        if (!safePrev || ['OFF', 'X', 'VAC'].includes(safePrev)) return false;
-        if (['OFF', 'X', 'VAC'].includes(safeNext)) return false;
-        
-        if (safePrev === 'N') return (safeNext === 'M' || safeNext === 'A');
-        if (safePrev === 'A') return (safeNext === 'M');
+        if (!prev || ['OFF', 'X', 'VAC'].includes(prev)) return false;
+        if (next === 'OFF' || next === 'X' || next === 'VAC') return false;
+        if (prev === 'N') return (next === 'M' || next === 'A');
+        if (prev === 'A') return (next === 'M');
         return false;
     }
 
@@ -299,8 +354,8 @@
 
     function renderAllViews() {
         renderSchedule();
-        renderShiftsView();
-        renderDashboard();
+        renderShiftsView(); // New
+        renderDashboard();  // New
         renderEmployees();
         renderRequirementsTable();
     }
@@ -321,6 +376,7 @@
                 if(state.meta.depots && state.meta.depots.length) appConfig.depots = state.meta.depots;
                 document.getElementById('settingDepots').value = appConfig.depots.join(', ');
 
+                // Normalize Data
                 state.employees.forEach(emp => {
                     if(!emp.id) emp.id = 'emp_' + Math.random().toString(36).substr(2, 9);
                     if(!emp.patternType) emp.patternType = 'weekly';
@@ -457,138 +513,8 @@
     }
 
     // ==========================================
-    // === VIEW RENDERERS ===
+    // === VIEW 2: SHIFTS VIEW (New) ===
     // ==========================================
-    function renderRequirementsTable() {
-        const container = document.getElementById('requirementsContainer');
-        if(!container) return;
-        if(!state.meta.requirements) state.meta.requirements = {};
-        
-        let html = `<table style="width:100%; border-collapse:collapse;">
-            <tr style="background:#f3f4f6;"><th style="text-align:right;">الموقع</th><th>M (نهار)</th><th>A (عصر)</th><th>N (ليل)</th></tr>`;
-        
-        appConfig.depots.forEach(d => {
-            let r = (state.meta.requirements && state.meta.requirements[d]) || {M:0,A:0,N:0};
-            html += `<tr>
-                <td style="font-weight:700; padding:10px;">${d}</td>
-                <td style="text-align:center;"><input type="number" class="small-input" value="${r.M||0}" onchange="updReq('${d}','M',this.value)"></td>
-                <td style="text-align:center;"><input type="number" class="small-input" value="${r.A||0}" onchange="updReq('${d}','A',this.value)"></td>
-                <td style="text-align:center;"><input type="number" class="small-input" value="${r.N||0}" onchange="updReq('${d}','N',this.value)"></td>
-            </tr>`;
-        });
-        container.innerHTML = html + `</table>`;
-    }
-    function updReq(d,s,v) { if(!state.meta.requirements[d]) state.meta.requirements[d]={}; state.meta.requirements[d][s]=parseInt(v)||0; }
-
-    function renderEmployees() {
-        const list = document.getElementById('employeeList'); list.innerHTML = "";
-        state.employees.forEach(e => {
-            const div = document.createElement('div'); div.className = "card";
-            
-            // Weekly Selects
-            let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:5px;'>";
-            WEEKDAYS.forEach((day,i) => {
-                const opts = SHIFTS.filter(x=>!['VAC','X','Backup'].includes(x)).map(s=>`<option ${e.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join('');
-                weekHtml += `<div style="text-align:center;"><small>${day}</small><select style="width:100%; padding:5px;" onchange="updEmpWeek('${e.id}',${i},this.value)">${opts}</select></div>`;
-            });
-            weekHtml += "</div>";
-
-            let patternHtml = "";
-            let badgeClass = "";
-            let patternName = "";
-
-            if(e.patternType === 'rolling') {
-                badgeClass = "badge-rolling"; patternName = "شفت دوار";
-                patternHtml = `<div class="flex-counts">
-                        <div><label>M</label><input class="small-input" type="number" value="${e.flexCounts.M}" onchange="updFlex('${e.id}','M',this.value)"></div>
-                        <div><label>A</label><input class="small-input" type="number" value="${e.flexCounts.A}" onchange="updFlex('${e.id}','A',this.value)"></div>
-                        <div><label>N</label><input class="small-input" type="number" value="${e.flexCounts.N}" onchange="updFlex('${e.id}','N',this.value)"></div>
-                        <div><label>OFF</label><input class="small-input" type="number" value="${e.flexCounts.OFF}" onchange="updFlex('${e.id}','OFF',this.value)"></div>
-                    </div>`;
-            } else if(e.patternType === 'joker') {
-                badgeClass = "badge-joker"; patternName = "جوكر";
-                patternHtml = `<div style="text-align:center; color:#d97706; font-weight:700; background:#fffbeb; padding:10px; border-radius:8px;">🃏 6 عمل + 1 راحة</div>`;
-            } else {
-                badgeClass = "badge-weekly"; patternName = "شفت ثابت";
-                patternHtml = weekHtml;
-            }
-
-            let quotasHtml = `<div style="display:flex; gap:10px; flex-wrap:wrap;">`;
-            appConfig.depots.forEach(d => {
-                quotasHtml += `<div style="display:flex; flex-direction:column; align-items:center;"><small>${d}</small><input class="small-input" type="number" value="${(e.depotQuotas&&e.depotQuotas[d])||0}" onchange="updQuota('${e.id}','${d}',this.value)"></div>`;
-            });
-            quotasHtml += `</div>`;
-
-            div.innerHTML = `
-                <div class="card-header">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="text" value="${e.name}" onchange="updEmp('${e.id}','name',this.value)" style="border:none; font-size:1.1rem; font-weight:800; width:150px;">
-                        <span class="badge ${badgeClass}">${patternName}</span>
-                    </div>
-                    <button class="btn-ghost" style="color:var(--danger);" onclick="delEmp('${e.id}')">✕</button>
-                </div>
-                <div class="card-body">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <label>نوع الدوام:</label>
-                        <select onchange="updEmp('${e.id}','patternType',this.value)">
-                            <option value="weekly" ${e.patternType==='weekly'?'selected':''}>ثابت</option>
-                            <option value="rolling" ${e.patternType==='rolling'?'selected':''}>دوار</option>
-                            <option value="joker" ${e.patternType==='joker'?'selected':''}>جوكر</option>
-                        </select>
-                    </div>
-                    <div style="border-top:1px solid #eee; padding-top:10px;">${patternHtml}</div>
-                    <div style="border-top:1px solid #eee; padding-top:10px;">
-                        <label style="display:block; margin-bottom:5px; font-size:0.8rem; color:var(--text-sub);">حصص المواقع:</label>
-                        ${quotasHtml}
-                    </div>
-                    <div style="border-top:1px solid #eee; padding-top:10px;">
-                        <label style="display:block; margin-bottom:5px; font-size:0.8rem; color:var(--text-sub);">إجازات محددة (VAC):</label>
-                        <input type="text" style="width:100%;" placeholder="أرقام الأيام: 5, 12" value="${e.vacationDates||''}" onchange="updVac('${e.id}',this.value)">
-                    </div>
-                </div>
-            `;
-            list.appendChild(div);
-        });
-    }
-
-    function updEmp(id,k,v){ let e=state.employees.find(x=>x.id===id); if(e){e[k]=v; if(k==='patternType') renderEmployees();} }
-    function updEmpWeek(id,i,v){ state.employees.find(x=>x.id===id).weeklyTemplate[i]=v; }
-    function updFlex(id,k,v){ let e=state.employees.find(x=>x.id===id); if(!e.flexCounts) e.flexCounts={}; e.flexCounts[k]=parseInt(v); }
-    function updQuota(id,k,v){ let e=state.employees.find(x=>x.id===id); if(!e.depotQuotas) e.depotQuotas={}; e.depotQuotas[k]=parseInt(v); }
-    function updVac(id,v){ state.employees.find(x=>x.id===id).vacationDates=v; }
-    function addEmployee(){ state.employees.push({id:'e'+Math.random().toString(36).substr(2,9), name:'جديد', patternType:'weekly', weeklyTemplate:Array(7).fill('M'), flexCounts:{M:1,A:2,N:2,OFF:2}, depotQuotas:{}, vacationDates:""}); renderEmployees(); }
-    function delEmp(id){ if(confirm('حذف؟')) { state.employees=state.employees.filter(x=>x.id!==id); renderAllViews(); saveData(); } }
-    function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderRequirementsTable(); renderEmployees(); }
-
-    function renderSchedule() {
-        const grid = document.getElementById('scheduleGrid');
-        if(!grid) return;
-        const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const data = state.schedule[getMonthKey()] || {};
-        let html = `<thead><tr><th class="emp-col">الموظف</th>`;
-        for(let d=1; d<=numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month-1, d);
-            const isWeekend = (date.getDay()===5 || date.getDay()===6);
-            html += `<th style="${isWeekend?'background:#f1f5f9;':''}">${d}<br><small>${WEEKDAYS[date.getDay()]}</small></th>`;
-        }
-        html += `</tr></thead><tbody>`;
-        state.employees.forEach(e => {
-            let row = `<tr><td class="emp-col">${e.name}</td>`;
-            let prev='OFF';
-            for(let d=1; d<=numDays; d++) {
-                let c = (data[e.id] && data[e.id][d]) || {shift:''};
-                let s = c.shift||'';
-                let v = isShiftFlipViolation(prev, s) ? 'violation' : '';
-                row += `<td class="cell shift-${s} ${v}" onclick="openCellEditor('${e.id}', ${d})">
-                    ${s}${c.depot?`<span class="depot-tag">${c.depot}</span>`:''}</td>`;
-                if(['M','A','N','VAC','X'].includes(s)) prev=s; else prev='OFF';
-            }
-            html += row + `</tr>`;
-        });
-        grid.innerHTML = html + `</tbody>`;
-        analyzeCoverage();
-    }
-
     function renderShiftsView() {
         const grid = document.getElementById('shiftsGrid');
         if (!grid) return;
@@ -597,6 +523,7 @@
         const sched = state.schedule[key] || {};
         const depots = appConfig.depots;
 
+        // Build Header
         let html = `<thead><tr><th>الشفت - الموقع</th>`;
         for (let d = 1; d <= numDays; d++) {
             const date = new Date(appConfig.year, appConfig.month - 1, d);
@@ -605,12 +532,15 @@
         }
         html += `</tr></thead><tbody>`;
 
+        // Build Rows: For each Shift (M, A, N), iterate depots
         WORK_SHIFTS.forEach(shift => {
             depots.forEach(depot => {
                 let rowHtml = `<tr><td style="font-weight:700; text-align:right;">
                     <span class="cell shift-${shift}" style="padding:2px 6px; border-radius:4px;">${shift}</span> ${depot}
                 </td>`;
+                
                 for (let d = 1; d <= numDays; d++) {
+                    // Find employees working this Shift & Depot
                     let workers = [];
                     state.employees.forEach(emp => {
                         let cell = sched[emp.id] && sched[emp.id][d];
@@ -618,15 +548,22 @@
                             workers.push(emp.name);
                         }
                     });
+                    
                     let cellContent = workers.map(w => `<span class="name-tag">${w}</span>`).join('<br>');
-                    rowHtml += `<td class="names-cell">${cellContent}</td>`;
+                    let bg = (workers.length > 0) ? `shift-${shift}` : '';
+                    rowHtml += `<td class="names-cell ${bg}" style="vertical-align:top;">${cellContent}</td>`;
                 }
-                html += rowHtml + `</tr>`;
+                rowHtml += `</tr>`;
+                html += rowHtml;
             });
         });
-        grid.innerHTML = html + `</tbody>`;
+        html += `</tbody>`;
+        grid.innerHTML = html;
     }
 
+    // ==========================================
+    // === VIEW 3: DASHBOARD (New) ===
+    // ==========================================
     function renderDashboard() {
         const grid = document.getElementById('statsGrid');
         if (!grid) return;
@@ -635,12 +572,17 @@
         const sched = state.schedule[key] || {};
         const depots = appConfig.depots;
 
-        let html = `<thead><tr><th>الموظف</th><th>مجموع العمل</th><th>M</th><th>A</th><th>N</th><th>Backup</th><th>OFF</th><th>VAC</th>`;
+        // Header
+        let html = `<thead><tr>
+            <th>الموظف</th>
+            <th>مجموع العمل</th>
+            <th>M</th><th>A</th><th>N</th>
+            <th>OFF</th><th>VAC</th>`;
         depots.forEach(d => html += `<th>${d}</th>`);
         html += `</tr></thead><tbody>`;
 
         state.employees.forEach(emp => {
-            let stats = { work: 0, M: 0, A: 0, N: 0, OFF: 0, VAC: 0, X: 0, Backup: 0 };
+            let stats = { work: 0, M: 0, A: 0, N: 0, OFF: 0, VAC: 0, X: 0 };
             let depotStats = {};
             depots.forEach(d => depotStats[d] = 0);
 
@@ -662,44 +604,23 @@
                 <td>${stats.M}</td>
                 <td>${stats.A}</td>
                 <td>${stats.N}</td>
-                <td>${stats.Backup}</td>
                 <td>${stats.OFF}</td>
                 <td>${stats.VAC}</td>`;
             
-            depots.forEach(d => html += `<td>${depotStats[d]}</td>`);
+            depots.forEach(d => {
+                html += `<td>${depotStats[d]}</td>`;
+            });
             html += `</tr>`;
         });
-        grid.innerHTML = html + `</tbody>`;
+        html += `</tbody>`;
+        grid.innerHTML = html;
     }
 
     // ==========================================
-    // === ALGORITHM (V13 + Missing Helpers) ===
+    // === ALGORITHM (V11.5) ===
     // ==========================================
-    
-    // ⚠️ FIXED: Added missing Helpers HERE ⚠️
-    function setOff(emp, day, sched, streaks, prevs) {
-        sched[emp.id][day] = { shift: 'OFF', depot: "" };
-        prevs[emp.id] = 'OFF';
-        streaks[emp.id] = 0;
-    }
-
-    function isAssigned(emp, d, sched) { 
-        return !!(sched[emp.id] && sched[emp.id][d]); 
-    }
-
-    function assignShift(emp, d, s, sched, prevs) {
-        sched[emp.id][d] = { shift: s, depot: "" };
-        prevs[emp.id] = s;
-    }
-
-    function applyVacations(numDays, sched) {
-        state.employees.forEach(emp => {
-            if(emp.vacationDates) emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => { if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' }; });
-        });
-    }
-
-    function generateScheduleV13() {
-        if(!confirm("🚀 بدء التوزيع (V13 - نظام الاحتياط)؟\n\n1. توزيع المراحل\n2. تشتيت الإجازات\n3. تحويل الفائض إلى Backup")) return;
+    function generateScheduleV11() {
+        if(!confirm("🚀 بدء التوزيع (V11.5)؟\nسيتم استخدام الخوارزمية الذكية مع تشتيت الإجازات.")) return;
         showLoader(true);
         setTimeout(() => {
             try {
@@ -763,6 +684,7 @@
                             let prev = empPrevShift[emp.id];
                             let bucket = emp._bucket;
                             let streak = workStreaks[emp.id] || 0;
+                            
                             let isScheduledOff = rollingOffMap[emp.id].includes(d);
                             let assigned = 'OFF';
                             let canM = !isShiftFlipViolation(prev, 'M');
@@ -785,7 +707,7 @@
                             }
 
                             if(assigned !== 'OFF') {
-                                if(todaysNeeds[assigned]>0) todaysNeeds[assigned]--;
+                                if(todaysNeeds[assigned] > 0) todaysNeeds[assigned]--;
                                 workStreaks[emp.id]++;
                             } else workStreaks[emp.id]=0;
                             
@@ -815,9 +737,10 @@
                             }
 
                             if(assigned !== 'OFF') {
-                                if(todaysNeeds[assigned]>0) todaysNeeds[assigned]--;
+                                if(todaysNeeds[assigned] > 0) todaysNeeds[assigned]--;
                                 workStreaks[emp.id]++;
                             } else workStreaks[emp.id]=0;
+                            
                             assignShift(emp, d, assigned, sched, empPrevShift);
                         });
                     });
@@ -836,98 +759,22 @@
                 });
 
                 renderAllViews(); saveData(); showLoader(false);
-                alert("✅ تم التوزيع بنجاح! اضغط 'توزيع المواقع' الآن لمعالجة الاحتياط.");
+                alert("✅ تم التوزيع بنجاح!");
             } catch(e) { console.error(e); showLoader(false); alert("خطأ: " + e.message); }
         }, 100);
     }
 
-    // --- DEPOT FILL + BACKUP LOGIC ---
-    function fillDepotsWithBackup() {
-        const key = getMonthKey();
-        const sched = state.schedule[key];
-        if(!sched || !confirm("توزيع المواقع + تفعيل الاحتياط (Backup) للفائض؟")) return;
-        
-        showLoader(true);
-        setTimeout(() => {
-            const numDays = daysInMonth(appConfig.year, appConfig.month);
-            const reqs = state.meta.requirements || {};
-            const depots = appConfig.depots.map(d=>d.trim());
-
-            for(let d=1; d<=numDays; d++) {
-                state.employees.forEach(e => { 
-                    if(sched[e.id][d]) {
-                        if(['M','A','N'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = "";
-                        if(sched[e.id][d].shift === 'Backup') sched[e.id][d].shift = 'OFF';
-                    }
-                });
-            }
-
-            for(let d=1; d<=numDays; d++) {
-                let totalNeeded = { M:0, A:0, N:0 };
-                depots.forEach(dep => {
-                    let r = reqs[dep] || {};
-                    totalNeeded.M += (r.M||0); totalNeeded.A += (r.A||0); totalNeeded.N += (r.N||0);
-                });
-
-                let workers = { M:[], A:[], N:[] };
-                state.employees.forEach(e => {
-                    let s = sched[e.id][d]?.shift;
-                    if(['M','A','N'].includes(s)) workers[s].push(e);
-                });
-
-                ['M','A','N'].forEach(s => {
-                    let assigned = workers[s];
-                    let needed = totalNeeded[s];
-                    
-                    if(assigned.length > needed) {
-                        let surplusCount = assigned.length - needed;
-                        assigned.sort((a,b) => {
-                            let rank = (p) => { if(p==='weekly') return 3; if(p==='rolling') return 2; return 1; };
-                            return rank(a.patternType) - rank(b.patternType);
-                        });
-
-                        for(let i=0; i<surplusCount; i++) {
-                            let emp = assigned[i];
-                            sched[emp.id][d].shift = 'Backup';
-                            sched[emp.id][d].depot = '';
-                        }
-                    }
-                });
-            }
-
-            for(let d=1; d<=numDays; d++) {
-                const counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
-                const workers = {M:[],A:[],N:[]};
-                state.employees.forEach(e => {
-                    let s = sched[e.id][d].shift;
-                    if(['M','A','N'].includes(s)) workers[s].push(e);
-                });
-                ['M','A','N'].forEach(s => {
-                    let list = workers[s];
-                    list.sort((a,b) => ((b.depotQuotas[depots[0]]||0) - (a.depotQuotas[depots[0]]||0))); 
-                    depots.forEach(dep => {
-                        let need = (reqs[dep]||{})[s] || 0;
-                        let i = 0;
-                        while(i<list.length && counts[dep][s] < need) {
-                            let e = list[i];
-                            if(!sched[e.id][d].depot) { sched[e.id][d].depot = dep; counts[dep][s]++; }
-                            i++;
-                        }
-                    });
-                    list.forEach(e => {
-                        if(!sched[e.id][d].depot) {
-                            let target = depots.reduce((a,b)=>counts[a][s]<counts[b][s]?a:b);
-                            sched[e.id][d].depot = target; counts[target][s]++;
-                        }
-                    });
-                });
-            }
-
-            renderAllViews(); saveData(); showLoader(false);
-            alert("✅ تم معالجة الفائض وتوزيع المواقع!");
-        }, 100);
+    // --- HELPERS ---
+    function isAssigned(emp, d, sched) { return !!(sched[emp.id] && sched[emp.id][d]); }
+    function assignShift(emp, d, s, sched, prevs) {
+        sched[emp.id][d] = { shift: s, depot: "" };
+        prevs[emp.id] = s;
     }
-
+    function applyVacations(numDays, sched) {
+        state.employees.forEach(emp => {
+            if(emp.vacationDates) emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => { if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' }; });
+        });
+    }
     function calculateDailyNeeds(numDays) {
         const needs = {};
         const depots = appConfig.depots.map(d=>d.trim());
@@ -938,7 +785,6 @@
         }
         return needs;
     }
-
     function applyFixedEmployees(numDays, sched, dailyNeeds, streaks, prevs) {
         state.employees.filter(e => e.patternType === 'weekly').forEach(emp => {
             for(let d=1; d<=numDays; d++) {
@@ -954,6 +800,183 @@
         });
     }
 
+    function fillDepots() {
+        const key = getMonthKey();
+        const sched = state.schedule[key];
+        if(!sched || !confirm("توزيع المواقع؟")) return;
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const reqs = state.meta.requirements || {};
+        const depots = appConfig.depots.map(d=>d.trim());
+
+        for(let d=1; d<=numDays; d++) {
+            state.employees.forEach(e => { if(sched[e.id][d] && ['M','A','N'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = ""; });
+        }
+
+        for(let d=1; d<=numDays; d++) {
+            const counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
+            const workers = {M:[],A:[],N:[]};
+            state.employees.forEach(e => {
+                let s = sched[e.id][d].shift;
+                if(['M','A','N'].includes(s)) workers[s].push(e);
+            });
+            ['M','A','N'].forEach(s => {
+                let list = workers[s];
+                list.sort((a,b) => ((b.depotQuotas[depots[0]]||0) - (a.depotQuotas[depots[0]]||0))); 
+                depots.forEach(dep => {
+                    let need = (reqs[dep]||{})[s] || 0;
+                    let i = 0;
+                    while(i<list.length && counts[dep][s] < need) {
+                        let e = list[i];
+                        if(!sched[e.id][d].depot) { sched[e.id][d].depot = dep; counts[dep][s]++; }
+                        i++;
+                    }
+                });
+                list.forEach(e => {
+                    if(!sched[e.id][d].depot) {
+                        let target = depots.reduce((a,b)=>counts[a][s]<counts[b][s]?a:b);
+                        sched[e.id][d].depot = target; counts[target][s]++;
+                    }
+                });
+            });
+        }
+        renderAllViews(); saveData();
+    }
+
+    // --- OTHER RENDERS ---
+    function renderRequirementsTable() {
+        const container = document.getElementById('requirementsContainer');
+        if(!container) return;
+        if(!state.meta.requirements) state.meta.requirements = {};
+        
+        let html = `<table style="width:100%; border-collapse:collapse;">
+            <tr style="background:#f3f4f6;"><th style="text-align:right;">الموقع</th><th>M</th><th>A</th><th>N</th></tr>`;
+        
+        appConfig.depots.forEach(d => {
+            let r = (state.meta.requirements && state.meta.requirements[d]) || {M:0,A:0,N:0};
+            html += `<tr>
+                <td style="font-weight:700; padding:10px;">${d}</td>
+                <td style="text-align:center;"><input type="number" class="small-input" value="${r.M||0}" onchange="updReq('${d}','M',this.value)"></td>
+                <td style="text-align:center;"><input type="number" class="small-input" value="${r.A||0}" onchange="updReq('${d}','A',this.value)"></td>
+                <td style="text-align:center;"><input type="number" class="small-input" value="${r.N||0}" onchange="updReq('${d}','N',this.value)"></td>
+            </tr>`;
+        });
+        container.innerHTML = html + `</table>`;
+    }
+    function updReq(d,s,v) { if(!state.meta.requirements[d]) state.meta.requirements[d]={}; state.meta.requirements[d][s]=parseInt(v)||0; }
+
+    function renderEmployees() {
+        const list = document.getElementById('employeeList'); list.innerHTML = "";
+        state.employees.forEach(e => {
+            const div = document.createElement('div'); div.className = "card";
+            
+            // Generate Weekly Selects
+            let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:5px;'>";
+            WEEKDAYS.forEach((day,i) => {
+                const opts = SHIFTS.filter(x=>!['VAC','X'].includes(x)).map(s=>`<option ${e.weeklyTemplate[i]===s?'selected':''}>${s}</option>`).join('');
+                weekHtml += `<div style="text-align:center;"><small>${day}</small><select style="width:100%; padding:5px;" onchange="updEmpWeek('${e.id}',${i},this.value)">${opts}</select></div>`;
+            });
+            weekHtml += "</div>";
+
+            let patternHtml = "";
+            let badgeClass = "";
+            let patternName = "";
+
+            if(e.patternType === 'rolling') {
+                badgeClass = "badge-rolling"; patternName = "شفت دوار";
+                patternHtml = `<div class="flex-counts">
+                        <div><label>M</label><input class="small-input" type="number" value="${e.flexCounts.M}" onchange="updFlex('${e.id}','M',this.value)"></div>
+                        <div><label>A</label><input class="small-input" type="number" value="${e.flexCounts.A}" onchange="updFlex('${e.id}','A',this.value)"></div>
+                        <div><label>N</label><input class="small-input" type="number" value="${e.flexCounts.N}" onchange="updFlex('${e.id}','N',this.value)"></div>
+                        <div><label>OFF</label><input class="small-input" type="number" value="${e.flexCounts.OFF}" onchange="updFlex('${e.id}','OFF',this.value)"></div>
+                    </div>`;
+            } else if(e.patternType === 'joker') {
+                badgeClass = "badge-joker"; patternName = "جوكر";
+                patternHtml = `<div style="text-align:center; color:#d97706; font-weight:700; background:#fffbeb; padding:10px; border-radius:8px;">🃏 6 عمل + 1 راحة</div>`;
+            } else {
+                badgeClass = "badge-weekly"; patternName = "شفت ثابت";
+                patternHtml = weekHtml;
+            }
+
+            let quotasHtml = `<div style="display:flex; gap:10px; flex-wrap:wrap;">`;
+            appConfig.depots.forEach(d => {
+                quotasHtml += `<div style="display:flex; flex-direction:column; align-items:center;"><small>${d}</small><input class="small-input" type="number" value="${(e.depotQuotas&&e.depotQuotas[d])||0}" onchange="updQuota('${e.id}','${d}',this.value)"></div>`;
+            });
+            quotasHtml += `</div>`;
+
+            div.innerHTML = `
+                <div class="card-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="text" value="${e.name}" onchange="updEmp('${e.id}','name',this.value)" style="border:none; font-size:1.1rem; font-weight:800; width:150px;">
+                        <span class="badge ${badgeClass}">${patternName}</span>
+                    </div>
+                    <button class="btn-ghost" style="color:var(--danger);" onclick="delEmp('${e.id}')">✕</button>
+                </div>
+                <div class="card-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label>نوع الدوام:</label>
+                        <select onchange="updEmp('${e.id}','patternType',this.value)">
+                            <option value="weekly" ${e.patternType==='weekly'?'selected':''}>ثابت</option>
+                            <option value="rolling" ${e.patternType==='rolling'?'selected':''}>دوار</option>
+                            <option value="joker" ${e.patternType==='joker'?'selected':''}>جوكر</option>
+                        </select>
+                    </div>
+                    <div style="border-top:1px solid #eee; padding-top:10px;">${patternHtml}</div>
+                    <div style="border-top:1px solid #eee; padding-top:10px;">
+                        <label style="display:block; margin-bottom:5px; font-size:0.8rem; color:var(--text-sub);">حصص المواقع:</label>
+                        ${quotasHtml}
+                    </div>
+                    <div style="border-top:1px solid #eee; padding-top:10px;">
+                        <label style="display:block; margin-bottom:5px; font-size:0.8rem; color:var(--text-sub);">إجازات محددة (VAC):</label>
+                        <input type="text" style="width:100%;" placeholder="أرقام الأيام: 5, 12" value="${e.vacationDates||''}" onchange="updVac('${e.id}',this.value)">
+                    </div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function renderSchedule() {
+        const grid = document.getElementById('scheduleGrid');
+        if(!grid) return;
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const data = state.schedule[getMonthKey()] || {};
+        let html = `<thead><tr><th class="emp-col">الموظف</th>`;
+        for(let d=1; d<=numDays; d++) {
+            const date = new Date(appConfig.year, appConfig.month-1, d);
+            const isWeekend = (date.getDay()===5 || date.getDay()===6);
+            html += `<th style="${isWeekend?'background:#f1f5f9;':''}">${d}<br><small>${WEEKDAYS[date.getDay()]}</small></th>`;
+        }
+        html += `</tr></thead><tbody>`;
+        state.employees.forEach(e => {
+            let row = `<tr><td class="emp-col">${e.name}</td>`;
+            let prev='OFF';
+            for(let d=1; d<=numDays; d++) {
+                let c = (data[e.id] && data[e.id][d]) || {shift:''};
+                let s = c.shift||'';
+                let v = isShiftFlipViolation(prev, s) ? 'violation' : '';
+                row += `<td class="cell shift-${s} ${v}" onclick="openCellEditor('${e.id}', ${d})">
+                    ${s}${c.depot?`<span class="depot-tag">${c.depot}</span>`:''}</td>`;
+                if(['M','A','N','VAC','X'].includes(s)) prev=s; else prev='OFF';
+            }
+            html += row + `</tr>`;
+        });
+        grid.innerHTML = html + `</tbody>`;
+        analyzeCoverage();
+    }
+
+    // --- UTILS ---
+    function updEmp(id,k,v){ let e=state.employees.find(x=>x.id===id); if(e){e[k]=v; if(k==='patternType') renderEmployees();} }
+    function updEmpWeek(id,i,v){ state.employees.find(x=>x.id===id).weeklyTemplate[i]=v; }
+    function updFlex(id,k,v){ let e=state.employees.find(x=>x.id===id); if(!e.flexCounts) e.flexCounts={}; e.flexCounts[k]=parseInt(v); }
+    function updQuota(id,k,v){ let e=state.employees.find(x=>x.id===id); if(!e.depotQuotas) e.depotQuotas={}; e.depotQuotas[k]=parseInt(v); }
+    function updVac(id,v){ state.employees.find(x=>x.id===id).vacationDates=v; }
+    function addEmployee(){ state.employees.push({id:'e'+Math.random().toString(36).substr(2,9), name:'جديد', patternType:'weekly', weeklyTemplate:Array(7).fill('M'), flexCounts:{M:1,A:2,N:2,OFF:2}, depotQuotas:{}, vacationDates:""}); renderEmployees(); }
+    function delEmp(id){ if(confirm('حذف؟')) { state.employees=state.employees.filter(x=>x.id!==id); renderAllViews(); saveData(); } }
+    function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderAllViews(); }
+    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
+    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+    function clearMonth() { if(confirm('مسح؟')) { state.schedule[getMonthKey()] = {}; renderAllViews(); saveData(); } }
+    function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
     function exportCSV() {
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         let csv = "\uFEFFM,";
@@ -1003,8 +1026,5 @@
 </script>
 </body>
 </html>
-
-
-
 
 
