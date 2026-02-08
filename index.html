@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام السيدة زينب للجداول</title>
+    <title>نظام السيدة زينب للجداول (الإصدار الاحترافي)</title>
     <style>
         :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --border: #cbd5e1; }
         * { box-sizing: border-box; }
@@ -31,16 +31,18 @@
         .schedule-table td.emp-col { position: sticky; right: 0; z-index: 5; background: white; text-align: right; padding-right: 12px; font-weight: 600; border-left: 2px solid #cbd5e1; }
         .cell { cursor: pointer; user-select: none; transition: all 0.15s; font-weight: 500; }
         .cell:hover { transform: scale(1.05); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.1); }
+        
+        /* New Shift Colors */
         .cell.shift-M { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1e40af; } 
         .cell.shift-A { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; } 
         .cell.shift-N { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: #f8fafc; } 
         .cell.shift-OFF { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; } 
         .cell.shift-VAC { background: linear-gradient(135deg, #fae8ff 0%, #f3e8ff 100%); color: #7e22ce; font-weight: 700; } 
         .cell.shift-X { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; font-weight: 700; } 
-        .violation { border: 3px solid var(--danger) !important; animation: pulse 1s infinite; position: relative; }
-        .violation::after { content: '⚠️'; position: absolute; top: 1px; right: 2px; font-size: 0.7rem; animation: shake 0.5s infinite; }
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+        
+        .violation { border: 3px solid var(--danger) !important; position: relative; }
+        .violation::after { content: '⚠️'; position: absolute; top: 1px; right: 2px; font-size: 0.7rem; }
+        
         .emp-card { border: 1px solid var(--border); background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .emp-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #f1f5f9; margin-bottom: 12px; }
         .pattern-editor { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 12px; border-radius: 8px; border: 1px dashed var(--border); margin-top: 10px; }
@@ -52,22 +54,24 @@
         .depot-quotas > div { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); padding: 8px; border: 1px solid #fed7aa; border-radius: 6px; }
         .depot-quotas label { font-size: 0.75rem; font-weight: 700; color: #9a3412; display: block; margin-bottom: 4px; }
         .depot-quotas input { width: 100%; text-align: center; font-weight: 600; }
+        
+        /* VACATION INPUT STYLE */
         .vacation-input { background: linear-gradient(135deg, #fae8ff 0%, #f3e8ff 100%); padding: 10px; border-radius: 6px; border: 1px solid #e9d5ff; margin-top: 10px; }
         .vacation-input label { font-size: 0.75rem; font-weight: 700; color: #7e22ce; display: block; margin-bottom: 4px; }
         .vacation-input input { width: 100%; padding: 6px; border: 1px solid #e9d5ff; border-radius: 4px; }
+
         #loader { position: fixed; inset: 0; background: rgba(255,255,255,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .loader-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         .report-box { margin-top: 20px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
         .report-item { margin-bottom: 6px; padding: 8px 12px; background: #fff1f2; color: #9f1239; border-radius: 6px; border-left: 3px solid var(--danger); font-size: 0.9rem; }
         .report-ok { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; padding: 16px; text-align: center; font-weight: 700; border-radius: 8px; font-size: 1.1rem; }
+        
         .alert-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid var(--warning); padding: 14px; border-radius: 8px; margin: 12px 0; color: #92400e; font-weight: 600; display: flex; align-items: center; gap: 10px; }
         .alert-box.success { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: var(--success); color: #065f46; }
-        .alert-box.danger { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-color: var(--danger); color: #991b1b; }
         .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
         .badge.success { background: var(--success); color: white; }
-        .badge.warning { background: var(--warning); color: white; }
-        .badge.danger { background: var(--danger); color: white; }
         .badge.info { background: #8b5cf6; color: white; }
         .stat-box { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
         .depot-tag { font-size: 0.65rem; display: block; opacity: 0.7; margin-top: 2px; }
@@ -105,16 +109,16 @@
     <div id="view-schedule" class="view active">
         <div class="alert-box success">
             <div>
-                <strong>✅ التحسينات الجديدة:</strong>
+                <strong>✅ تم تفعيل القواعد الجديدة:</strong>
                 <span class="badge success">منع قلبة الشفت 100%</span>
-                <span class="badge success">دلو أسبوعي دقيق</span>
-                <span class="badge success">توزيع ذكي للإجازات</span>
-                <span class="badge info">VAC للإجازات</span>
+                <span class="badge success">تشتيت إجازات الجوكر</span>
+                <span class="badge info">نظام M-A-N</span>
+                <span class="badge info">نظام الإجازات VAC</span>
             </div>
         </div>
         <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
             <div>
-                <button onclick="generateScheduleOptimized()" class="primary">⚡ توزيع الشفتات (ذكي)</button>
+                <button onclick="generateScheduleOptimized()" class="primary">⚡ توزيع الشفتات (النسخة الاحترافية)</button>
                 <button onclick="fillDepots()" class="success">🏭 توزيع المواقع</button>
             </div>
             <div>
@@ -136,11 +140,11 @@
     <div id="view-settings" class="view">
         <div class="emp-card">
             <h3>1️⃣ إدارة المواقع (Depots)</h3>
-            <p style="font-size:0.85rem; color:#64748b; margin:8px 0;">افصل بين الأسماء بفاصلة (مثال: Budaiya, IsaTown, Main)</p>
+            <p style="font-size:0.85rem; color:#64748b; margin:8px 0;">افصل بين الأسماء بفاصلة</p>
             <input type="text" id="settingDepots" style="width: 100%;" onchange="updateDepots()">
         </div>
         <div class="emp-card">
-            <h3>2️⃣ العدد المطلوب في كل موقع (يومياً)</h3>
+            <h3>2️⃣ العدد المطلوب (M, A, N)</h3>
             <div id="requirementsContainer"></div>
         </div>
         <div class="emp-card">
@@ -154,10 +158,10 @@
     // ==========================================
     // === CONFIGURATION ===
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️ ضع رابط Google Web App هنا
+    const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️⚠️ ضع الرابط هنا ⚠️
     
     // ==========================================
-    // === STATE MANAGEMENT ===
+    // === STATE & CONSTANTS ===
     // ==========================================
     let state = { 
         employees: [], 
@@ -170,37 +174,23 @@
         month: new Date().getMonth() + 1 
     };
     
-    // ✅ تغيير أسماء الشفتات
+    // New Shift Names
     const SHIFTS = ["M", "A", "N", "OFF", "VAC", "X"];
-    const SHIFT_NAMES = {
-        "M": "Morning (نهار)",
-        "A": "Afternoon (أول ليل)", 
-        "N": "Night (آخر ليل)",
-        "OFF": "Off (راحة)",
-        "VAC": "Vacation (إجازة)",
-        "X": "Absent (غياب)"
-    };
     const WEEKDAYS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
-    const MAX_CONSECUTIVE_DAYS = 5;
+    const MAX_CONSECUTIVE_DAYS = 6; // Relaxed slightly to allow 6 days work
 
     // ==========================================
-    // === SHIFT FLIP PREVENTION (STRICT) ===
+    // === STRICT RULES ===
     // ==========================================
     function isShiftFlipViolation(previousShift, nextShift) {
-        // ✅ تجاهل الإجازات والغياب
-        if (!previousShift || previousShift === 'OFF' || previousShift === 'X' || previousShift === 'VAC') return false;
+        if (!previousShift || ['OFF', 'X', 'VAC'].includes(previousShift)) return false;
         if (nextShift === 'OFF' || nextShift === 'X' || nextShift === 'VAC') return false;
         
-        // ✅ منع تام لقلبة الشفت
-        // N → M (ليل إلى نهار) ممنوع
-        if (previousShift === 'N') {
-            return nextShift === 'M' || nextShift === 'A';
-        }
+        // N -> M/A Forbidden
+        if (previousShift === 'N') return (nextShift === 'M' || nextShift === 'A');
         
-        // A → M (عصر إلى نهار) ممنوع
-        if (previousShift === 'A') {
-            return nextShift === 'M';
-        }
+        // A -> M Forbidden (Quick Turnaround)
+        if (previousShift === 'A') return (nextShift === 'M');
         
         return false;
     }
@@ -218,9 +208,7 @@
         const mSel = document.getElementById('selMonth');
         const currYear = new Date().getFullYear();
         
-        for(let y = currYear - 1; y <= currYear + 2; y++) {
-            ySel.add(new Option(y, y));
-        }
+        for(let y = currYear - 1; y <= currYear + 2; y++) ySel.add(new Option(y, y));
         ySel.value = currYear;
         
         const monthsAr = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
@@ -239,7 +227,7 @@
     }
 
     // ==========================================
-    // === API & DATA HANDLING ===
+    // === API & DATA MIGRATION ===
     // ==========================================
     async function loadData() {
         showLoader(true);
@@ -258,15 +246,46 @@
                 }
                 document.getElementById('settingDepots').value = appConfig.depots.join(', ');
 
-                // Initialize employee properties
+                // ✅ Auto-Migrate Old Data (D->M, EN->A, LN->N)
                 state.employees.forEach(emp => {
                     if(!emp.id) emp.id = 'emp_' + Math.random().toString(36).substr(2, 9);
                     if(!emp.patternType) emp.patternType = 'weekly';
                     if(!emp.weeklyTemplate) emp.weeklyTemplate = Array(7).fill("M");
-                    if(!emp.flexCounts) emp.flexCounts = { M: 1, A: 2, N: 2, OFF: 2 };
+                    
+                    // Fix old flex counts
+                    if(emp.flexCounts && emp.flexCounts.D !== undefined) {
+                        emp.flexCounts = { 
+                            M: emp.flexCounts.D || 1, 
+                            A: emp.flexCounts.EN || 2, 
+                            N: emp.flexCounts.LN || 2, 
+                            OFF: emp.flexCounts.OFF || 2 
+                        };
+                    } else if (!emp.flexCounts) {
+                        emp.flexCounts = { M: 1, A: 2, N: 2, OFF: 2 };
+                    }
+
+                    // Migrate Weekly Template if needed
+                    emp.weeklyTemplate = emp.weeklyTemplate.map(s => {
+                        if(s==='D') return 'M';
+                        if(s==='EN') return 'A';
+                        if(s==='LN') return 'N';
+                        return s;
+                    });
+
                     if(!emp.depotQuotas) emp.depotQuotas = {};
-                    if(!emp.vacationDates) emp.vacationDates = ""; // ✅ إضافة دعم الإجازات
+                    if(!emp.vacationDates) emp.vacationDates = "";
                 });
+
+                // Migrate Requirements
+                const reqs = state.meta.requirements;
+                for(let depot in reqs) {
+                    if(reqs[depot].D !== undefined) {
+                        reqs[depot].M = reqs[depot].D;
+                        reqs[depot].A = reqs[depot].EN;
+                        reqs[depot].N = reqs[depot].LN;
+                        delete reqs[depot].D; delete reqs[depot].EN; delete reqs[depot].LN;
+                    }
+                }
 
                 renderEmployees(); 
                 renderRequirementsTable(); 
@@ -276,11 +295,13 @@
                     document.getElementById('lastUpdated').innerText = "آخر تحديث: " + new Date(state.meta.updatedAt).toLocaleTimeString();
                 }
             } else {
-                alert("خطأ في تحميل البيانات: " + json.error);
+                alert("خطأ: " + json.error);
             }
         } catch(e) { 
             console.error(e); 
-            alert("فشل الاتصال. تحقق من رابط API أو اتصال الإنترنت."); 
+            // Render UI even if load fails to allow resets
+            renderEmployees(); renderRequirementsTable();
+            alert("فشل الاتصال. تحقق من الرابط."); 
         } finally { 
             showLoader(false); 
         }
@@ -288,12 +309,8 @@
 
     async function saveData(reset = false) {
         showLoader(true);
-        
         if(reset) {
-            if(!confirm("⚠️ تحذير: سيتم مسح جميع البيانات! هل أنت متأكد؟")) { 
-                showLoader(false); 
-                return; 
-            }
+            if(!confirm("⚠️ سيتم مسح جميع البيانات!")) { showLoader(false); return; }
             state = { employees: [], schedule: {}, meta: { requirements: {}, depots: [] } };
             appConfig.depots = ["Budaiya", "IsaTown"];
         }
@@ -302,34 +319,15 @@
         state.meta.updatedAt = new Date().toISOString();
         
         try {
-            const payload = { 
-                action: "save", 
-                payload: { 
-                    employees: state.employees, 
-                    schedule: state.schedule, 
-                    meta: state.meta 
-                } 
-            };
-            
-            const res = await fetch(API_URL, { 
-                method: "POST", 
-                body: JSON.stringify(payload) 
-            });
-            const json = await res.json();
-            
-            if(json.ok) {
-                document.getElementById('lastUpdated').innerText = "آخر تحديث: " + new Date().toLocaleTimeString();
-                if(reset) {
-                    renderEmployees();
-                    renderRequirementsTable();
-                    renderSchedule();
-                }
-            } else {
-                alert("فشل الحفظ: " + json.error);
+            const payload = { action: "save", payload: { employees: state.employees, schedule: state.schedule, meta: state.meta } };
+            await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+            if(reset) {
+                renderEmployees(); renderRequirementsTable(); renderSchedule();
+                document.getElementById('settingDepots').value = "Budaiya, IsaTown";
             }
+            document.getElementById('lastUpdated').innerText = "آخر تحديث: " + new Date().toLocaleTimeString();
         } catch(e) { 
-            console.error(e);
-            alert("خطأ أثناء الحفظ. تحقق من اتصال الإنترنت."); 
+            alert("خطأ أثناء الحفظ."); 
         } finally { 
             showLoader(false); 
         }
@@ -342,19 +340,10 @@
         const container = document.getElementById('requirementsContainer');
         if(!container) return;
         
-        if(!state.meta) state.meta = {};
         if(!state.meta.requirements) state.meta.requirements = {};
 
         let html = `<table class="req-table">
-            <thead>
-                <tr>
-                    <th>الموقع</th>
-                    <th>Morning (M)</th>
-                    <th>Afternoon (A)</th>
-                    <th>Night (N)</th>
-                </tr>
-            </thead>
-            <tbody>`;
+            <thead><tr><th>الموقع</th><th>M</th><th>A</th><th>N</th></tr></thead><tbody>`;
         
         appConfig.depots.forEach(depot => {
             const req = state.meta.requirements[depot] || { M:0, A:0, N:0 };
@@ -365,7 +354,6 @@
                 <td><input type="number" min="0" class="req-input" value="${req.N || 0}" onchange="updateReq('${depot}', 'N', this.value)"></td>
             </tr>`;
         });
-        
         html += `</tbody></table>`;
         container.innerHTML = html;
     }
@@ -377,808 +365,447 @@
 
     function renderEmployees() {
         const container = document.getElementById('employeeList'); 
-        if(!container) return;
         container.innerHTML = "";
         
         state.employees.forEach(emp => {
             const div = document.createElement('div');
             div.className = "emp-card";
             
-            // Weekly Template Editor
             let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:6px;'>";
             WEEKDAYS.forEach((day, i) => {
                 const opts = SHIFTS.filter(s => s !== 'VAC' && s !== 'X').map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
-                weekHtml += `<div style="text-align:center;">
-                    <label style="font-size:0.7rem; color:#64748b; display:block; margin-bottom:2px;">${day}</label>
-                    <select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%; font-size:0.85rem;">${opts}</select>
-                </div>`;
+                weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#64748b;">${day}</label><select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%; font-size:0.85rem;">${opts}</select></div>`;
             });
             weekHtml += "</div>";
             
-            // Depot Quotas
             let quotasHtml = `<div class="depot-quotas">`;
             appConfig.depots.forEach(depot => {
                 const val = (emp.depotQuotas && emp.depotQuotas[depot]) || 0;
-                quotasHtml += `<div>
-                    <label>${depot}</label>
-                    <input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${depot}', this.value)">
-                </div>`;
+                quotasHtml += `<div><label>${depot}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${depot}', this.value)"></div>`;
             });
             quotasHtml += `</div>`;
             
-            // ✅ إضافة حقل الإجازات
-            let vacationHtml = `<div class="vacation-input">
-                <label>🏖️ الإجازات (أرقام الأيام مفصولة بفاصلة):</label>
-                <input type="text" placeholder="مثال: 5, 12, 20" value="${emp.vacationDates || ''}" 
-                       onchange="updateVacationDates('${emp.id}', this.value)">
-                <p style="font-size:0.7rem; color:#7e22ce; margin:4px 0 0 0;">سيتم وضع VAC في هذه الأيام تلقائياً</p>
-            </div>`;
+            let vacationHtml = `<div class="vacation-input"><label>🏖️ أيام الإجازات (مثال: 5, 6, 7)</label><input type="text" value="${emp.vacationDates || ''}" onchange="updateVacationDates('${emp.id}', this.value)"></div>`;
             
-            // Pattern Type Editor
             const flex = emp.flexCounts || { M: 1, A: 2, N: 2, OFF: 2 };
             let patternHtml = "";
             
             if(emp.patternType === 'rolling') {
-                patternHtml = `<div class="pattern-editor">
-                    <label style="font-weight:700; display:block; margin-bottom:8px;">الحصة الأسبوعية (الأحد-السبت):</label>
-                    <div class="flex-counts">
-                        <div>
-                            <label>Morning M</label>
-                            <input type="number" min="0" max="7" value="${flex.M}" onchange="updateFlexCount('${emp.id}', 'M', this.value)">
-                        </div>
-                        <div>
-                            <label>Afternoon A</label>
-                            <input type="number" min="0" max="7" value="${flex.A}" onchange="updateFlexCount('${emp.id}', 'A', this.value)">
-                        </div>
-                        <div>
-                            <label>Night N</label>
-                            <input type="number" min="0" max="7" value="${flex.N}" onchange="updateFlexCount('${emp.id}', 'N', this.value)">
-                        </div>
-                        <div>
-                            <label>Off</label>
-                            <input type="number" min="0" max="7" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)">
-                        </div>
-                    </div>
-                    <p style="font-size:0.75rem; color:#059669; margin:8px 0 0 0; font-weight:600;">✅ يُصفّر العداد كل يوم أحد</p>
-                </div>`;
+                patternHtml = `<div class="pattern-editor"><div class="flex-counts">
+                        <div><label>M</label><input type="number" value="${flex.M}" onchange="updateFlexCount('${emp.id}', 'M', this.value)"></div>
+                        <div><label>A</label><input type="number" value="${flex.A}" onchange="updateFlexCount('${emp.id}', 'A', this.value)"></div>
+                        <div><label>N</label><input type="number" value="${flex.N}" onchange="updateFlexCount('${emp.id}', 'N', this.value)"></div>
+                        <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
+                    </div></div>`;
             } else if(emp.patternType === 'joker') {
-                patternHtml = `<div class="pattern-editor">
-                    <div style="display:flex; align-items:center; gap:8px; color:#d97706; font-weight:700; font-size:1rem;">
-                        🃏 موظف جوكر
-                    </div>
-                    <p style="font-size:0.8rem; color:#92400e; margin:8px 0 0 0;">
-                        ✅ يغطي النقص تلقائياً<br>
-                        ✅ أولوية: N → A → M<br>
-                        ✅ 6 أيام عمل + 1 يوم راحة أسبوعياً<br>
-                        ✅ لا يمكن لجميع الجواكر الراحة في نفس اليوم
-                    </p>
-                </div>`;
+                patternHtml = `<div class="pattern-editor"><div style="color:#d97706; font-weight:700;">🃏 جوكر</div><p style="font-size:0.8rem;">6 عمل / 1 راحة. يوزع بالتساوي.</p></div>`;
             } else {
-                patternHtml = `<div class="pattern-editor">
-                    <label style="font-weight:700; display:block; margin-bottom:8px;">النمط الأسبوعي الثابت:</label>
-                    ${weekHtml}
-                </div>`;
+                patternHtml = `<div class="pattern-editor">${weekHtml}</div>`;
             }
             
             div.innerHTML = `
                 <div class="emp-header">
-                    <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" 
-                           style="font-weight:700; font-size:1.1rem; border:none; background:transparent; flex:1;">
-                    <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="font-size:0.9rem; margin:0 10px;">
-                        <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>ثابت (Weekly)</option>
-                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>دوار (Rolling)</option>
-                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>جوكر (Joker)</option>
+                    <input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;">
+                    <select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="margin:0 10px;">
+                        <option value="weekly" ${emp.patternType === 'weekly' ? 'selected' : ''}>ثابت</option>
+                        <option value="rolling" ${emp.patternType === 'rolling' ? 'selected' : ''}>دوار</option>
+                        <option value="joker" ${emp.patternType === 'joker' ? 'selected' : ''}>جوكر</option>
                     </select>
-                    <button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️ حذف</button>
+                    <button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️</button>
                 </div>
                 ${vacationHtml}
-                <div style="margin:10px 0;">
-                    <strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>
-                    ${quotasHtml}
-                </div>
+                <div style="margin:10px 0;"><strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>${quotasHtml}</div>
                 ${patternHtml}
             `;
-            
             container.appendChild(div);
         });
     }
 
-    // ==========================================
-    // === EMPLOYEE MANAGEMENT ===
-    // ==========================================
+    // --- STATE HELPERS ---
     function addEmployee() {
         const id = 'emp_' + Math.random().toString(36).substr(2, 9);
-        state.employees.push({ 
-            id: id, 
-            name: "موظف جديد", 
-            patternType: "weekly", 
-            weeklyTemplate: Array(7).fill("M"), 
-            flexCounts: { M:1, A:2, N:2, OFF:2 }, 
-            depotQuotas: {},
-            vacationDates: ""
-        });
+        state.employees.push({ id: id, name: "جديد", patternType: "weekly", weeklyTemplate: Array(7).fill("M"), flexCounts: { M:1, A:2, N:2, OFF:2 }, depotQuotas: {}, vacationDates: "" });
         renderEmployees();
     }
-
-    function updateEmployee(id, field, value) { 
-        const emp = state.employees.find(e => e.id === id); 
-        if(emp) {
-            emp[field] = value; 
-            if(field === 'patternType') renderEmployees();
-        }
-    }
-
-    function updateWeeklyTemplate(id, dayIndex, shift) { 
-        const emp = state.employees.find(e => e.id === id); 
-        if(emp) emp.weeklyTemplate[dayIndex] = shift;
-    }
-
-    function updateFlexCount(id, shift, value) { 
-        const emp = state.employees.find(e => e.id === id); 
-        if(emp) {
-            if(!emp.flexCounts) emp.flexCounts = {};
-            emp.flexCounts[shift] = parseInt(value) || 0;
-        }
-    }
-
-    function updateDepotQuota(id, depot, value) { 
-        const emp = state.employees.find(e => e.id === id); 
-        if(emp) {
-            if(!emp.depotQuotas) emp.depotQuotas = {};
-            emp.depotQuotas[depot] = parseInt(value) || 0;
-        }
-    }
-
-    function updateVacationDates(id, value) {
-        const emp = state.employees.find(e => e.id === id);
-        if(emp) {
-            emp.vacationDates = value;
-        }
-    }
-
-    function deleteEmployee(id) { 
-        if(confirm('هل أنت متأكد من حذف هذا الموظف؟')) { 
-            state.employees = state.employees.filter(e => e.id !== id); 
-            renderEmployees(); 
-            renderSchedule(); 
-            saveData(); 
-        }
-    }
-
+    function updateEmployee(id, field, value) { const emp = state.employees.find(e => e.id === id); if(emp) { emp[field] = value; if(field === 'patternType') renderEmployees(); } }
+    function updateWeeklyTemplate(id, i, v) { const emp = state.employees.find(e => e.id === id); if(emp) emp.weeklyTemplate[i] = v; }
+    function updateFlexCount(id, s, v) { const emp = state.employees.find(e => e.id === id); if(emp) { if(!emp.flexCounts) emp.flexCounts={}; emp.flexCounts[s] = parseInt(v)||0; } }
+    function updateDepotQuota(id, d, v) { const emp = state.employees.find(e => e.id === id); if(emp) { if(!emp.depotQuotas) emp.depotQuotas={}; emp.depotQuotas[d] = parseInt(v)||0; } }
+    function updateVacationDates(id, v) { const emp = state.employees.find(e => e.id === id); if(emp) emp.vacationDates = v; }
+    function deleteEmployee(id) { if(confirm('حذف؟')) { state.employees = state.employees.filter(e => e.id !== id); renderEmployees(); renderSchedule(); saveData(); } }
     function updateDepots() { 
         const val = document.getElementById('settingDepots').value;
         appConfig.depots = val.split(',').map(s => s.trim()).filter(s => s);
-        renderRequirementsTable();
-        renderEmployees();
+        renderRequirementsTable(); renderEmployees();
     }
 
     // ==========================================
-    // === SCHEDULE GENERATOR (OPTIMIZED) ===
+    // === OPTIMIZED GENERATOR (CORE LOGIC) ===
     // ==========================================
     function generateScheduleOptimized() {
-        if(!confirm("🚀 بدء التوزيع الذكي؟\n\n✅ منع قلبة الشفت 100%\n✅ دلو أسبوعي دقيق\n✅ توزيع ذكي للإجازات\n✅ الجوكر: 6 أيام عمل + 1 راحة")) {
-            return;
-        }
-        
+        if(!confirm("🚀 بدء التوزيع؟")) return;
         showLoader(true);
-        
         setTimeout(() => {
             try {
                 const key = getMonthKey();
                 const numDays = daysInMonth(appConfig.year, appConfig.month);
-                
                 if(!state.schedule[key]) state.schedule[key] = {};
                 const sched = state.schedule[key];
                 
-                // Initialize all employees
-                state.employees.forEach(emp => {
-                    if(!sched[emp.id]) sched[emp.id] = {};
-                });
+                // Initialize
+                state.employees.forEach(emp => { if(!sched[emp.id]) sched[emp.id] = {}; });
                 
-                // ✅ المرحلة 0: تطبيق الإجازات أولاً
+                // 0. Apply Vacations
                 applyVacations(numDays, sched);
                 
-                // Calculate daily needs
+                // 1. Calculate Needs
                 const dailyNeeds = calculateDailyNeeds(numDays);
-                
-                // Tracking
                 const workStreaks = {};
                 const empPrevShift = {};
-                state.employees.forEach(emp => {
-                    workStreaks[emp.id] = 0;
-                    empPrevShift[emp.id] = 'OFF';
-                });
-                
-                // Phase 1: Fixed Weekly Employees
+                state.employees.forEach(emp => { workStreaks[emp.id] = 0; empPrevShift[emp.id] = 'OFF'; });
+
+                // 2. Fixed Employees
                 applyFixedEmployees(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
-                
-                // Phase 2: Rolling Employees (with smart off distribution)
-                applyRollingEmployeesWithSmartOffs(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
-                
-                // Phase 3: Handle Day Shift Deficit
+
+                // 3. Rolling
+                applyRolling(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
+
+                // 4. Handle Day Deficit (Try to flip A -> M if safe)
                 handleDayShiftDeficit(numDays, sched, dailyNeeds, empPrevShift);
-                
-                // Phase 4: Joker Employees (with distributed offs)
-                applyJokerEmployeesWithDistributedOffs(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
-                
+
+                // 5. Jokers (Staggered Offs)
+                applyJokers(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
+
                 renderSchedule();
                 saveData();
-                
                 showLoader(false);
-                alert("✅ تم التوزيع بنجاح!\n\nتحقق من التقرير التشخيصي أسفل الجدول.");
-                
-            } catch(error) {
-                console.error(error);
+                alert("✅ تم التوزيع!");
+            } catch(e) {
+                console.error(e);
                 showLoader(false);
-                alert("❌ حدث خطأ أثناء التوزيع:\n" + error.message);
+                alert("❌ خطأ: " + e.message);
             }
         }, 100);
     }
 
-    // ✅ تطبيق الإجازات
     function applyVacations(numDays, sched) {
         state.employees.forEach(emp => {
-            if(!emp.vacationDates || emp.vacationDates.trim() === '') return;
-            
-            const vacDays = emp.vacationDates.split(',')
-                .map(d => parseInt(d.trim()))
-                .filter(d => !isNaN(d) && d >= 1 && d <= numDays);
-            
-            vacDays.forEach(day => {
-                sched[emp.id][day] = { shift: 'VAC', depot: '' };
+            if(!emp.vacationDates) return;
+            emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => {
+                if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' };
             });
         });
     }
 
     function calculateDailyNeeds(numDays) {
-        const dailyNeeds = {};
-        const cleanDepots = appConfig.depots.map(d => d.trim());
+        const needs = {};
+        const depots = appConfig.depots.map(d=>d.trim());
         const reqs = state.meta.requirements || {};
-        
-        for(let d = 1; d <= numDays; d++) {
-            dailyNeeds[d] = { M: 0, A: 0, N: 0 };
-            cleanDepots.forEach(depot => {
-                const req = reqs[depot] || {};
-                dailyNeeds[d].M += (req.M || 0);
-                dailyNeeds[d].A += (req.A || 0);
-                dailyNeeds[d].N += (req.N || 0);
+        for(let d=1; d<=numDays; d++) {
+            needs[d] = { M:0, A:0, N:0 };
+            depots.forEach(dep => {
+                const r = reqs[dep] || {};
+                needs[d].M += (r.M||0); needs[d].A += (r.A||0); needs[d].N += (r.N||0);
             });
         }
-        
-        return dailyNeeds;
+        return needs;
     }
 
-    function applyFixedEmployees(numDays, sched, dailyNeeds, workStreaks, empPrevShift) {
-        const fixedEmps = state.employees.filter(e => e.patternType === 'weekly' || !e.patternType);
-        
-        for(let d = 1; d <= numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month - 1, d);
-            const dayOfWeek = date.getDay();
-            
-            fixedEmps.forEach(emp => {
-                // ✅ تخطي إذا كان في إجازة
-                if(sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') {
-                    empPrevShift[emp.id] = 'VAC';
-                    workStreaks[emp.id] = 0;
-                    return;
-                }
+    function applyFixedEmployees(numDays, sched, dailyNeeds, streaks, prevs) {
+        state.employees.filter(e => e.patternType === 'weekly').forEach(emp => {
+            for(let d=1; d<=numDays; d++) {
+                if(sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') { prevs[emp.id]='VAC'; streaks[emp.id]=0; continue; }
+                const dayOfWeek = new Date(appConfig.year, appConfig.month-1, d).getDay();
+                let shift = emp.weeklyTemplate[dayOfWeek];
                 
-                const patternShift = emp.weeklyTemplate[dayOfWeek];
-                if(!patternShift || patternShift === '') return;
-                
-                let shift = patternShift;
-                const prev = empPrevShift[emp.id];
-                const streak = workStreaks[emp.id] || 0;
-                
-                // Force break after 5 days
-                if(streak >= MAX_CONSECUTIVE_DAYS && ['M','A','N'].includes(shift)) {
+                const prev = prevs[emp.id];
+                if(isShiftFlipViolation(prev, shift) || (streaks[emp.id] >= MAX_CONSECUTIVE_DAYS && ['M','A','N'].includes(shift))) {
                     shift = 'OFF';
                 }
                 
-                // ✅ Check shift flip (STRICT)
-                if(isShiftFlipViolation(prev, shift)) {
-                    // Find alternative
-                    if(!isShiftFlipViolation(prev, 'N')) shift = 'N';
-                    else if(!isShiftFlipViolation(prev, 'A')) shift = 'A';
-                    else shift = 'OFF';
-                }
-                
-                sched[emp.id][d] = { shift: shift, depot: "" };
-                empPrevShift[emp.id] = shift;
-                updateStreak(emp.id, shift, workStreaks);
-                
-                if(['M','A','N'].includes(shift) && dailyNeeds[d][shift] > 0) {
-                    dailyNeeds[d][shift]--;
-                }
-            });
-        }
-    }
-
-    // ✅ موظفو الدوار مع توزيع ذكي للراحة
-    function applyRollingEmployeesWithSmartOffs(numDays, sched, dailyNeeds, workStreaks, empPrevShift) {
-        const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
-        if(rollingEmps.length === 0) return;
-        
-        // ✅ تخطيط الإجازات الأسبوعية لتوزيعها
-        const rollingOffPlan = {};
-        
-        for(let d = 1; d <= numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month - 1, d);
-            const dayOfWeek = date.getDay();
-            const isWeekStart = (dayOfWeek === 0);
-            
-            // Reset buckets on Sunday
-            if(isWeekStart) {
-                rollingEmps.forEach(emp => {
-                    emp._weeklyBucketUsed = { M: 0, A: 0, N: 0, OFF: 0 };
-                    
-                    // ✅ تخطيط يوم راحة عشوائي لهذا الأسبوع
-                    const weekDays = [];
-                    for(let i = 0; i < 7 && (d + i) <= numDays; i++) {
-                        weekDays.push(d + i);
-                    }
-                    
-                    if(weekDays.length > 0) {
-                        // اختيار يوم عشوائي للراحة
-                        const randomOffDay = weekDays[Math.floor(Math.random() * weekDays.length)];
-                        if(!rollingOffPlan[randomOffDay]) rollingOffPlan[randomOffDay] = [];
-                        rollingOffPlan[randomOffDay].push(emp.id);
-                    }
-                });
-            }
-            
-            // Initialize if not exists
-            rollingEmps.forEach(emp => {
-                if(!emp._weeklyBucketUsed) {
-                    emp._weeklyBucketUsed = { M: 0, A: 0, N: 0, OFF: 0 };
-                }
-            });
-            
-            const shuffled = [...rollingEmps].sort(() => Math.random() - 0.5);
-            
-            shuffled.forEach(emp => {
-                // ✅ تخطي إذا في إجازة
-                if(sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') {
-                    empPrevShift[emp.id] = 'VAC';
-                    workStreaks[emp.id] = 0;
-                    return;
-                }
-                
-                const flex = emp.flexCounts || { M:1, A:2, N:2, OFF:2 };
-                const used = emp._weeklyBucketUsed;
-                const prev = empPrevShift[emp.id];
-                const streak = workStreaks[emp.id] || 0;
-                
-                // ✅ تحقق إذا كان هذا يوم الراحة المخطط
-                const isPlannedOff = rollingOffPlan[d] && rollingOffPlan[d].includes(emp.id);
-                
-                let assigned = "OFF";
-                
-                // Force break after 5 days or if planned off
-                if(streak >= MAX_CONSECUTIVE_DAYS || isPlannedOff) {
-                    assigned = "OFF";
-                } else {
-                    // Check bucket and shift flip
-                    const canM = (used.M < flex.M) && !isShiftFlipViolation(prev, 'M');
-                    const canA = (used.A < flex.A) && !isShiftFlipViolation(prev, 'A');
-                    const canN = (used.N < flex.N) && !isShiftFlipViolation(prev, 'N');
-                    
-                    // Fill by need priority
-                    if(dailyNeeds[d].N > 0 && canN) {
-                        assigned = "N"; dailyNeeds[d].N--; used.N++;
-                    } else if(dailyNeeds[d].A > 0 && canA) {
-                        assigned = "A"; dailyNeeds[d].A--; used.A++;
-                    } else if(dailyNeeds[d].M > 0 && canM) {
-                        assigned = "M"; dailyNeeds[d].M--; used.M++;
-                    } else {
-                        // Empty bucket or no need
-                        if(canN) { assigned = "N"; used.N++; }
-                        else if(canA) { assigned = "A"; used.A++; }
-                        else if(canM) { assigned = "M"; used.M++; }
-                        else if(used.OFF < flex.OFF) { assigned = "OFF"; used.OFF++; }
-                        else assigned = "OFF";
-                    }
-                }
-                
-                sched[emp.id][d] = { shift: assigned, depot: "" };
-                empPrevShift[emp.id] = assigned;
-                updateStreak(emp.id, assigned, workStreaks);
-            });
-        }
-    }
-
-    function handleDayShiftDeficit(numDays, sched, dailyNeeds, empPrevShift) {
-        for(let d = 1; d <= numDays; d++) {
-            if(dailyNeeds[d].M <= 0) continue;
-            
-            // Find employees on A shift
-            const candidates = state.employees.filter(emp => {
-                const cell = sched[emp.id] && sched[emp.id][d];
-                return cell && cell.shift === 'A' && 
-                       (emp.patternType === 'weekly' || emp.patternType === 'rolling');
-            });
-            
-            let converted = 0;
-            const deficit = dailyNeeds[d].M;
-            
-            for(let emp of candidates) {
-                if(converted >= deficit) break;
-                
-                const prevShift = empPrevShift[emp.id];
-                
-                // ✅ Check if we can convert A→M
-                if(!isShiftFlipViolation(prevShift, 'M')) {
-                    sched[emp.id][d].shift = 'M';
-                    dailyNeeds[d].M--;
-                    dailyNeeds[d].A++;
-                    converted++;
-                }
-            }
-        }
-    }
-
-    // ✅ الجوكر مع توزيع ذكي للراحة (1 يوم كل 7 أيام)
-    function applyJokerEmployeesWithDistributedOffs(numDays, sched, dailyNeeds, workStreaks, empPrevShift) {
-        const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-        if(jokerEmps.length === 0) return;
-        
-        // ✅ تخطيط الراحة: كل جوكر يأخذ يوم واحد كل 7 أيام
-        const jokerOffSchedule = {};
-        
-        jokerEmps.forEach((emp, index) => {
-            jokerOffSchedule[emp.id] = [];
-            let dayCounter = index; // توزيع مبدئي
-            
-            while(dayCounter <= numDays) {
-                if(dayCounter >= 1) {
-                    jokerOffSchedule[emp.id].push(dayCounter);
-                }
-                dayCounter += 7; // كل 7 أيام
+                sched[emp.id][d] = { shift: shift, depot: '' };
+                prevs[emp.id] = shift;
+                if(['M','A','N'].includes(shift)) {
+                    if(dailyNeeds[d][shift]>0) dailyNeeds[d][shift]--;
+                    streaks[emp.id]++;
+                } else streaks[emp.id]=0;
             }
         });
-        
-        for(let d = 1; d <= numDays; d++) {
-            // Recalculate needs
-            const currentNeeds = {...dailyNeeds[d]};
+    }
+
+    function applyRolling(numDays, sched, dailyNeeds, streaks, prevs) {
+        const emps = state.employees.filter(e => e.patternType === 'rolling');
+        for(let d=1; d<=numDays; d++) {
+            const isMonthStart = (d === 1);
+            const isWeekStart = (new Date(appConfig.year, appConfig.month-1, d).getDay() === 0);
             
-            state.employees.forEach(emp => {
-                const cell = sched[emp.id] && sched[emp.id][d];
-                if(cell && cell.shift && ['M','A','N'].includes(cell.shift)) {
-                    if(currentNeeds[cell.shift] > 0) currentNeeds[cell.shift]--;
-                }
-            });
+            if(isMonthStart || isWeekStart) {
+                emps.forEach(e => e._bucket = { ...e.flexCounts });
+            }
             
-            const shuffled = [...jokerEmps].sort(() => Math.random() - 0.5);
+            // Check how many are OFF to avoid all-off
+            let currentOffs = emps.filter(e => sched[e.id][d] && sched[e.id][d].shift === 'VAC').length;
             
+            const shuffled = [...emps].sort(() => Math.random()-0.5);
             shuffled.forEach(emp => {
-                // ✅ تخطي إذا في إجازة
-                if(sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') {
-                    empPrevShift[emp.id] = 'VAC';
-                    workStreaks[emp.id] = 0;
-                    return;
-                }
+                if(sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') { prevs[emp.id]='VAC'; streaks[emp.id]=0; return; }
                 
-                const prev = empPrevShift[emp.id];
-                const streak = workStreaks[emp.id] || 0;
-                
-                // ✅ تحقق إذا كان هذا يوم الراحة المجدول
-                const isScheduledOff = jokerOffSchedule[emp.id] && jokerOffSchedule[emp.id].includes(d);
-                
-                let assigned = "OFF";
-                
-                if(streak >= MAX_CONSECUTIVE_DAYS || isScheduledOff) {
-                    assigned = "OFF";
-                } else {
-                    // ✅ Priority: N → A → M (with strict shift flip check)
-                    if(currentNeeds.N > 0 && !isShiftFlipViolation(prev, 'N')) {
-                        assigned = "N"; currentNeeds.N--;
-                    } else if(currentNeeds.A > 0 && !isShiftFlipViolation(prev, 'A')) {
-                        assigned = "A"; currentNeeds.A--;
-                    } else if(currentNeeds.M > 0 && !isShiftFlipViolation(prev, 'M')) {
-                        assigned = "M"; currentNeeds.M--;
-                    } else {
-                        // Fill with what's not blocked
-                        if(!isShiftFlipViolation(prev, 'N')) assigned = "N";
-                        else if(!isShiftFlipViolation(prev, 'A')) assigned = "A";
-                        else if(!isShiftFlipViolation(prev, 'M')) assigned = "M";
-                        else assigned = "OFF";
+                let bucket = emp._bucket || {M:0,A:0,N:0,OFF:0};
+                let prev = prevs[emp.id];
+                let streak = streaks[emp.id];
+                let assigned = 'OFF';
+
+                if(streak < MAX_CONSECUTIVE_DAYS) {
+                    const canM = bucket.M>0 && !isShiftFlipViolation(prev,'M');
+                    const canA = bucket.A>0 && !isShiftFlipViolation(prev,'A');
+                    const canN = bucket.N>0 && !isShiftFlipViolation(prev,'N');
+
+                    if(dailyNeeds[d].N>0 && canN) { assigned='N'; dailyNeeds[d].N--; bucket.N--; }
+                    else if(dailyNeeds[d].A>0 && canA) { assigned='A'; dailyNeeds[d].A--; bucket.A--; }
+                    else if(dailyNeeds[d].M>0 && canM) { assigned='M'; dailyNeeds[d].M--; bucket.M--; }
+                    else {
+                        // Fill bucket or take OFF
+                        if(bucket.OFF > 0) {
+                            assigned='OFF'; bucket.OFF--; 
+                        } else {
+                            if(canN) { assigned='N'; bucket.N--; }
+                            else if(canA) { assigned='A'; bucket.A--; }
+                            else if(canM) { assigned='M'; bucket.M--; }
+                        }
                     }
                 }
                 
-                sched[emp.id][d] = { shift: assigned, depot: "" };
-                empPrevShift[emp.id] = assigned;
-                updateStreak(emp.id, assigned, workStreaks);
+                sched[emp.id][d] = { shift: assigned, depot: '' };
+                prevs[emp.id] = assigned;
+                if(['M','A','N'].includes(assigned)) streaks[emp.id]++; else streaks[emp.id]=0;
             });
         }
     }
 
-    function updateStreak(empId, shift, streaks) {
-        if(shift === 'OFF' || shift === 'X' || shift === 'VAC' || shift === '') {
-            streaks[empId] = 0;
-        } else {
-            streaks[empId] = (streaks[empId] || 0) + 1;
+    function handleDayShiftDeficit(numDays, sched, dailyNeeds, prevs) {
+        for(let d=1; d<=numDays; d++) {
+            if(dailyNeeds[d].M <= 0) continue;
+            const candidates = state.employees.filter(e => {
+                const c = sched[e.id] && sched[e.id][d];
+                return c && c.shift === 'A' && (e.patternType === 'weekly' || e.patternType === 'rolling');
+            });
+            for(let emp of candidates) {
+                if(dailyNeeds[d].M <= 0) break;
+                if(!isShiftFlipViolation(prevs[emp.id], 'M')) {
+                    sched[emp.id][d].shift = 'M';
+                    dailyNeeds[d].M--; dailyNeeds[d].A++;
+                }
+            }
         }
     }
 
-    // ==========================================
-    // === DEPOT DISTRIBUTION ===
-    // ==========================================
+    function applyJokers(numDays, sched, dailyNeeds, streaks, prevs) {
+        const emps = state.employees.filter(e => e.patternType === 'joker');
+        
+        // ✅ Pre-calculate Staggered Off Days based on Index
+        // Joker 0 -> Day 1, 8... | Joker 1 -> Day 2, 9...
+        const offPlan = {};
+        emps.forEach((emp, idx) => {
+            offPlan[emp.id] = [];
+            // Corrected Staggering Logic: (idx % 7) + 1 gives 1..7 range
+            let startDay = (idx % 7) + 1; 
+            for(let day = startDay; day <= numDays; day += 7) {
+                offPlan[emp.id].push(day);
+            }
+        });
+
+        for(let d=1; d<=numDays; d++) {
+            const shuffled = [...emps].sort(() => Math.random()-0.5);
+            shuffled.forEach(emp => {
+                if(sched[emp.id][d] && sched[emp.id][d].shift === 'VAC') { prevs[emp.id]='VAC'; streaks[emp.id]=0; return; }
+                
+                let prev = prevs[emp.id];
+                let streak = streaks[emp.id];
+                let assigned = 'OFF';
+                
+                // Check if today is the designated OFF day
+                let isDesignatedOff = offPlan[emp.id].includes(d);
+
+                if(!isDesignatedOff && streak < 6) { // Allow 6 days work
+                    const canM = !isShiftFlipViolation(prev,'M');
+                    const canA = !isShiftFlipViolation(prev,'A');
+                    const canN = !isShiftFlipViolation(prev,'N');
+
+                    if(dailyNeeds[d].N>0 && canN) { assigned='N'; dailyNeeds[d].N--; }
+                    else if(dailyNeeds[d].A>0 && canA) { assigned='A'; dailyNeeds[d].A--; }
+                    else if(dailyNeeds[d].M>0 && canM) { assigned='M'; dailyNeeds[d].M--; }
+                    else {
+                        // Force Work to meet 6-day quota if possible
+                        if(canN) assigned='N'; else if(canA) assigned='A'; else if(canM) assigned='M';
+                    }
+                }
+
+                sched[emp.id][d] = { shift: assigned, depot: '' };
+                prevs[emp.id] = assigned;
+                if(['M','A','N'].includes(assigned)) streaks[emp.id]++; else streaks[emp.id]=0;
+            });
+        }
+    }
+
+    // --- DEPOT FILL ---
     function fillDepots() {
         const key = getMonthKey();
         const sched = state.schedule[key];
-        if(!sched) {
-            alert("⚠️ يجب توزيع الشفتات أولاً!");
-            return;
+        if(!sched || !confirm("توزيع المواقع؟")) return;
+        const numDays = daysInMonth(appConfig.year, appConfig.month);
+        const reqs = state.meta.requirements || {};
+        const depots = appConfig.depots.map(d=>d.trim());
+
+        // Clear
+        for(let d=1; d<=numDays; d++) {
+            state.employees.forEach(e => { if(sched[e.id][d] && ['M','A','N'].includes(sched[e.id][d].shift)) sched[e.id][d].depot = ""; });
         }
-        
-        if(!confirm("هل تريد توزيع المواقع حسب حصص الموظفين؟")) return;
-        
-        showLoader(true);
-        
-        setTimeout(() => {
-            const numDays = daysInMonth(appConfig.year, appConfig.month);
-            const reqs = state.meta.requirements || {};
-            const cleanDepots = appConfig.depots.map(d => d.trim());
-            
-            // Reset depots
-            for(let d = 1; d <= numDays; d++) {
-                state.employees.forEach(emp => {
-                    if(sched[emp.id] && sched[emp.id][d] && ['M','A','N'].includes(sched[emp.id][d].shift)) {
-                        sched[emp.id][d].depot = "";
+
+        const usage = {}; state.employees.forEach(e=>usage[e.id]={});
+
+        for(let d=1; d<=numDays; d++) {
+            const counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
+            const workers = {M:[],A:[],N:[]};
+            state.employees.forEach(e => {
+                let s = sched[e.id][d].shift;
+                if(['M','A','N'].includes(s)) workers[s].push(e);
+            });
+
+            ['M','A','N'].forEach(s => {
+                let list = workers[s];
+                // Sort by quota priority
+                list.sort((a,b) => {
+                    const qA = (a.depotQuotas && a.depotQuotas[depots[0]]) || 0;
+                    const qB = (b.depotQuotas && b.depotQuotas[depots[0]]) || 0;
+                    return qB - qA; 
+                });
+
+                depots.forEach(dep => {
+                    let r = reqs[dep] || {};
+                    let need = r[s] || 0;
+                    let i = 0;
+                    while(i<list.length && counts[dep][s] < need) {
+                        let e = list[i];
+                        if(!sched[e.id][d].depot) {
+                            sched[e.id][d].depot = dep;
+                            counts[dep][s]++;
+                        }
+                        i++;
                     }
                 });
-            }
-            
-            const empDepotUsage = {};
-            state.employees.forEach(emp => empDepotUsage[emp.id] = {});
-            
-            for(let d = 1; d <= numDays; d++) {
-                const currentCounts = {};
-                cleanDepots.forEach(depot => {
-                    currentCounts[depot] = { M:0, A:0, N:0 };
-                });
-                
-                const workersByShift = { M:[], A:[], N:[] };
-                
-                state.employees.forEach(emp => {
-                    const cell = sched[emp.id] && sched[emp.id][d];
-                    if(cell && ['M','A','N'].includes(cell.shift)) {
-                        workersByShift[cell.shift].push(emp);
+
+                // Overflow
+                list.forEach(e => {
+                    if(!sched[e.id][d].depot) {
+                        let target = depots.reduce((a,b) => counts[a][s] < counts[b][s] ? a : b);
+                        sched[e.id][d].depot = target;
+                        counts[target][s]++;
                     }
                 });
-                
-                ['M', 'A', 'N'].forEach(shiftType => {
-                    const workers = workersByShift[shiftType];
-                    if(workers.length === 0) return;
-                    
-                    cleanDepots.forEach(depot => {
-                        const req = reqs[depot] || {};
-                        const needed = req[shiftType] || 0;
-                        
-                        workers.sort((a, b) => {
-                            const quotaA = (a.depotQuotas && a.depotQuotas[depot]) || 0;
-                            const quotaB = (b.depotQuotas && b.depotQuotas[depot]) || 0;
-                            const usedA = empDepotUsage[a.id][depot] || 0;
-                            const usedB = empDepotUsage[b.id][depot] || 0;
-                            return (quotaB - usedB) - (quotaA - usedA);
-                        });
-                        
-                        let assigned = 0;
-                        for(let emp of workers) {
-                            if(assigned >= needed) break;
-                            if(!sched[emp.id][d].depot) {
-                                sched[emp.id][d].depot = depot;
-                                currentCounts[depot][shiftType]++;
-                                empDepotUsage[emp.id][depot] = (empDepotUsage[emp.id][depot] || 0) + 1;
-                                assigned++;
-                            }
-                        }
-                    });
-                    
-                    workers.forEach(emp => {
-                        if(!sched[emp.id][d].depot) {
-                            const target = cleanDepots.reduce((a, b) => 
-                                currentCounts[a][shiftType] < currentCounts[b][shiftType] ? a : b
-                            );
-                            sched[emp.id][d].depot = target;
-                            currentCounts[target][shiftType]++;
-                        }
-                    });
-                });
-            }
-            
-            renderSchedule();
-            saveData();
-            showLoader(false);
-            alert("✅ تم توزيع المواقع بنجاح!");
-            
-        }, 100);
+            });
+        }
+        renderSchedule(); saveData();
     }
 
-    // ==========================================
-    // === SCHEDULE RENDERING ===
-    // ==========================================
+    // --- RENDER & EXPORT ---
     function renderSchedule() {
         const grid = document.getElementById('scheduleGrid');
         if(!grid) return;
-        
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const data = state.schedule[getMonthKey()] || {};
         
         let html = `<thead><tr><th class="emp-col">الموظف</th>`;
-        
-        for(let d = 1; d <= numDays; d++) {
-            const date = new Date(appConfig.year, appConfig.month - 1, d);
-            const dayName = WEEKDAYS[date.getDay()];
-            const isWeekend = (date.getDay() === 5 || date.getDay() === 6);
-            html += `<th style="${isWeekend ? 'background:linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);' : ''}">${d}<br><small>${dayName}</small></th>`;
+        for(let d=1; d<=numDays; d++) {
+            const date = new Date(appConfig.year, appConfig.month-1, d);
+            const isWeekend = (date.getDay()===5 || date.getDay()===6);
+            html += `<th style="${isWeekend?'background:#e2e8f0':''}">${d}<br>${WEEKDAYS[date.getDay()]}</th>`;
         }
-        
         html += `</tr></thead><tbody>`;
         
         state.employees.forEach(emp => {
-            const empData = data[emp.id] || {};
-            const counts = { M:0, A:0, N:0, OFF:0, VAC:0, X:0 };
-            
-            let rowHtml = `<tr><td class="emp-col">
-                <div>${emp.name}</div>
-                <div class="stat-box" id="stats-${emp.id}"></div>
-            </td>`;
-            
-            let prevShift = 'OFF';
-            
-            for(let d = 1; d <= numDays; d++) {
-                const cell = empData[d] || { shift: "" };
-                const shift = cell.shift || "";
-                const depot = cell.depot || "";
-                
-                if(counts[shift] !== undefined) counts[shift]++;
-                
-                // ✅ كشف قلبة الشفت
-                const violation = isShiftFlipViolation(prevShift, shift) ? "violation" : "";
-                
-                if(shift && shift !== 'OFF' && shift !== 'X' && shift !== 'VAC') prevShift = shift;
-                else if(shift) prevShift = shift;
-                
-                const display = (shift === "OFF" || shift === "X" || shift === "VAC" || shift === "") ? shift : 
-                    `${shift}${depot ? `<span class="depot-tag">${depot}</span>` : ''}`;
-                
-                rowHtml += `<td class="cell shift-${shift} ${violation}">${display}</td>`;
+            let row = `<tr><td class="emp-col">${emp.name}</td>`;
+            let prev = 'OFF';
+            for(let d=1; d<=numDays; d++) {
+                let c = (data[emp.id] && data[emp.id][d]) || {shift:''};
+                let s = c.shift || '';
+                let v = isShiftFlipViolation(prev, s) ? 'violation' : '';
+                row += `<td class="cell shift-${s} ${v}">${s}${c.depot?`<span class="depot-tag">${c.depot}</span>`:''}</td>`;
+                if(['M','A','N','VAC','X'].includes(s)) prev=s; else prev='OFF';
             }
-            
-            rowHtml += `</tr>`;
-            html += rowHtml;
-            
-            setTimeout(() => { 
-                const statsEl = document.getElementById(`stats-${emp.id}`);
-                if(statsEl) {
-                    statsEl.innerText = `M:${counts.M} A:${counts.A} N:${counts.N} VAC:${counts.VAC}`;
-                }
-            }, 0);
+            html += row + `</tr>`;
         });
-        
-        html += `</tbody>`;
-        grid.innerHTML = html;
-        
+        grid.innerHTML = html + `</tbody>`;
         analyzeCoverage();
     }
 
-    // ==========================================
-    // === COVERAGE ANALYSIS ===
-    // ==========================================
     function analyzeCoverage() {
         const report = document.getElementById('coverageReport');
         if(!report) return;
-        
         const numDays = daysInMonth(appConfig.year, appConfig.month);
         const sched = state.schedule[getMonthKey()] || {};
+        const depots = appConfig.depots.map(d=>d.trim());
         const reqs = state.meta.requirements || {};
-        const cleanDepots = appConfig.depots.map(d => d.trim());
-        
-        const issues = [];
-        let violationCount = 0;
-        
-        // ✅ فحص قلبات الشفت
+        let issues = [];
+        let flips = 0;
+
         state.employees.forEach(emp => {
             let prev = 'OFF';
-            for(let d = 1; d <= numDays; d++) {
-                const cell = sched[emp.id] && sched[emp.id][d];
-                if(cell && cell.shift) {
-                    if(isShiftFlipViolation(prev, cell.shift)) {
-                        violationCount++;
-                        issues.push(`🚨 <strong>قلبة شفت:</strong> ${emp.name} - يوم ${d} (${prev} → ${cell.shift})`);
+            for(let d=1; d<=numDays; d++) {
+                let s = (sched[emp.id] && sched[emp.id][d]) ? sched[emp.id][d].shift : '';
+                if(s) {
+                    if(isShiftFlipViolation(prev, s)) {
+                        flips++;
+                        issues.push(`🚨 قلبة شفت: ${emp.name} يوم ${d} (${prev}->${s})`);
                     }
-                    prev = cell.shift;
+                    if(['M','A','N','VAC','X'].includes(s)) prev=s; else prev='OFF';
                 }
             }
         });
-        
-        // ✅ فحص النقص في التغطية
-        for(let d = 1; d <= numDays; d++) {
-            const counts = {};
-            cleanDepots.forEach(depot => counts[depot] = { M:0, A:0, N:0 });
-            
-            state.employees.forEach(emp => {
-                const cell = sched[emp.id] && sched[emp.id][d];
-                if(cell && cell.depot && ['M','A','N'].includes(cell.shift)) {
-                    const depot = cell.depot.trim();
-                    if(counts[depot]) counts[depot][cell.shift]++;
-                }
+
+        for(let d=1; d<=numDays; d++) {
+            let counts = {}; depots.forEach(dp=>counts[dp]={M:0,A:0,N:0});
+            state.employees.forEach(e => {
+                let c = sched[e.id] && sched[e.id][d];
+                if(c && c.depot && ['M','A','N'].includes(c.shift)) counts[c.depot.trim()][c.shift]++;
             });
-            
-            cleanDepots.forEach(depot => {
-                const req = reqs[depot] || {};
-                ['M','A','N'].forEach(shift => {
-                    const required = req[shift] || 0;
-                    const actual = counts[depot][shift] || 0;
-                    if(actual < required) {
-                        issues.push(`📊 يوم ${d}: <strong>${depot}</strong> (${shift}) - مطلوب ${required}، موجود ${actual} <span class="badge danger">نقص ${required - actual}</span>`);
-                    }
+            depots.forEach(dep => {
+                let r = reqs[dep] || {};
+                ['M','A','N'].forEach(s => {
+                    let req = r[s]||0;
+                    let act = counts[dep][s]||0;
+                    if(act < req) issues.push(`يوم ${d} ${dep} (${s}): مطلوب ${req}، موجود ${act}`);
                 });
             });
         }
-        
-        if(issues.length === 0) {
-            report.innerHTML = `<div class="report-ok">✅ الجدول مثالي! لا توجد قلبات شفت ولا نقص في التغطية</div>`;
-        } else {
-            let header = violationCount > 0 ? 
-                `<div class="alert-box danger">
-                    🚨 <strong>تحذير:</strong> تم اكتشاف ${violationCount} قلبة شفت! 
-                    <span class="badge danger">${violationCount}</span>
-                </div>` : '';
-            
-            report.innerHTML = header + 
-                `<h4 style="margin:10px 0; color:#64748b;">📋 تقرير التشخيص:</h4>` + 
-                issues.map(issue => `<div class="report-item">${issue}</div>`).join('');
-        }
+
+        let html = "";
+        if(flips > 0) html += `<div class="alert-box danger">⚠️ يوجد ${flips} قلبة شفت!</div>`;
+        if(issues.length === 0) html += `<div class="report-ok">✅ الجدول ممتاز!</div>`;
+        else html += issues.map(i=>`<div class="report-item">${i}</div>`).join('');
+        report.innerHTML = html;
     }
 
-    // ==========================================
-    // === UTILITIES ===
-    // ==========================================
-    function getMonthKey() { 
-        return `${appConfig.year}-${appConfig.month}`; 
-    }
-
-    function daysInMonth(year, month) { 
-        return new Date(year, month, 0).getDate(); 
-    }
-
-    function clearMonth() { 
-        if(!confirm('هل أنت متأكد من مسح جدول هذا الشهر؟')) return;
-        state.schedule[getMonthKey()] = {}; 
-        renderSchedule(); 
-        saveData(); 
-    }
-
-    function showLoader(show) { 
-        document.getElementById('loader').style.display = show ? 'flex' : 'none'; 
-    }
-
+    // UTILS
+    function getMonthKey() { return `${appConfig.year}-${appConfig.month}`; }
+    function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+    function clearMonth() { if(confirm('مسح؟')) { state.schedule[getMonthKey()] = {}; renderSchedule(); saveData(); } }
+    function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
     function exportCSV() {
         const numDays = daysInMonth(appConfig.year, appConfig.month);
-        const data = state.schedule[getMonthKey()] || {};
-        
         let csv = "\uFEFF,";
-        for(let d = 1; d <= numDays; d++) csv += `${d},`;
-        csv += "\n";
-        
-        state.employees.forEach(emp => {
-            csv += `"${emp.name}",`;
-            for(let d = 1; d <= numDays; d++) {
-                const cell = (data[emp.id] && data[emp.id][d]) || {};
-                const val = cell.shift ? `${cell.shift}${cell.depot ? ' ('+cell.depot+')' : ''}` : '';
-                csv += `"${val}",`;
+        for(let d=1; d<=numDays; d++) csv += `${d},`; csv += "\n";
+        const data = state.schedule[getMonthKey()] || {};
+        state.employees.forEach(e => {
+            csv += `"${e.name}",`;
+            for(let d=1; d<=numDays; d++) {
+                let c = (data[e.id] && data[e.id][d]) || {};
+                csv += `"${c.shift||''} ${c.depot||''}",`;
             }
             csv += "\n";
         });
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([csv], {type:'text/csv'});
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Schedule_${getMonthKey()}.csv`;
-        link.click();
+        const a = document.createElement('a'); a.href = url; a.download = 'schedule.csv'; a.click();
     }
 </script>
 </body>
