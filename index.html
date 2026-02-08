@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجدولة (V11 - تشتيت الإجازات الصارم)</title>
+    <title>نظام الجدولة (V10 - الطوابير الصارمة)</title>
     <style>
         :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; --border: #cbd5e1; }
         * { box-sizing: border-box; }
@@ -66,13 +66,13 @@
 <body>
 
 <div id="loader">
-    <div style="font-size: 2.5rem;">✨</div>
-    <div style="margin-top: 10px; font-weight: 700; color: #334155;">جاري التشتيت الذكي للإجازات...</div>
+    <div style="font-size: 2.5rem;">🏗️</div>
+    <div style="margin-top: 10px; font-weight: 700; color: #334155;">جاري تطبيق نظام الطوابير...</div>
 </div>
 
 <div class="app-container">
     <div class="toolbar">
-        <h1>🗓️ نظام السيدة زينب (V11 - الإجازات المشتتة)</h1>
+        <h1>🗓️ نظام السيدة زينب (V10 - الأولويات الصارمة)</h1>
         <select id="selYear"></select>
         <select id="selMonth"></select>
         <button onclick="loadData()">🔄 تحديث</button>
@@ -90,11 +90,11 @@
 
     <div id="view-schedule" class="view active">
         <div class="alert-box">
-            💎 <strong>النسخة الماسية:</strong> إجبار الشفت الدوار على العمل في أيام غير إجازاتهم المجدولة (لمنع التكدس).
+            🚧 <strong>نظام الطوابير:</strong> الأولوية المطلقة للشفت الدوار في النهار. تشتيت إجازات إجباري.
         </div>
         <div class="toolbar" style="background:transparent; padding:0; box-shadow:none; justify-content:space-between;">
             <div>
-                <button onclick="generateScheduleV11()" class="primary">⚡ توزيع (مع تشتيت الإجازات)</button>
+                <button onclick="generateScheduleV10()" class="primary">⚡ توزيع (نظام الطوابير)</button>
                 <button onclick="fillDepots()" class="success">🏭 توزيع المواقع</button>
             </div>
             <div>
@@ -136,7 +136,7 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbz_Ax4qk6l7tmebex2kP9e2KCz4twS960mH5D2JxF8RIa0h_OeiAC96uTNSMunQrvha/exec"; // ⬅️⚠️ ضع الرابط هنا ⚠️
     
     // ==========================================
-    // === STATE MANAGEMENT ===
+    // === STATE & CONSTANTS ===
     // ==========================================
     let state = { 
         employees: [], 
@@ -253,40 +253,40 @@
 
     function renderEmployees() {
         const container = document.getElementById('employeeList'); container.innerHTML = "";
-        state.employees.forEach(e => {
+        state.employees.forEach(emp => {
             const div = document.createElement('div'); div.className = "emp-card";
             let weekHtml = "<div style='display:grid; grid-template-columns:repeat(7,1fr); gap:6px;'>";
             WEEKDAYS.forEach((day, i) => {
-                const opts = SHIFTS.filter(x=>!['VAC','X'].includes(x)).map(s => `<option value="${s}" ${e.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
-                weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#64748b;">${day}</label><select onchange="updateWeeklyTemplate('${e.id}', ${i}, this.value)" style="width:100%; font-size:0.85rem;">${opts}</select></div>`;
+                const opts = SHIFTS.filter(s => s !== 'VAC' && s !== 'X').map(s => `<option value="${s}" ${emp.weeklyTemplate[i] === s ? 'selected' : ''}>${s}</option>`).join('');
+                weekHtml += `<div style="text-align:center;"><label style="font-size:0.7rem; color:#64748b;">${day}</label><select onchange="updateWeeklyTemplate('${emp.id}', ${i}, this.value)" style="width:100%; font-size:0.85rem;">${opts}</select></div>`;
             });
             weekHtml += "</div>";
             
             let quotasHtml = `<div class="depot-quotas">`;
             appConfig.depots.forEach(depot => {
-                const val = (e.depotQuotas && e.depotQuotas[depot]) || 0;
-                quotasHtml += `<div><label>${depot}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${e.id}', '${depot}', this.value)"></div>`;
+                const val = (emp.depotQuotas && emp.depotQuotas[depot]) || 0;
+                quotasHtml += `<div><label>${depot}</label><input type="number" min="0" value="${val}" onchange="updateDepotQuota('${emp.id}', '${depot}', this.value)"></div>`;
             });
             quotasHtml += `</div>`;
             
-            let vacationHtml = `<div class="vacation-input"><label>🏖️ أيام الإجازات (مثال: 5, 6)</label><input type="text" value="${e.vacationDates || ''}" onchange="updateVacationDates('${e.id}', this.value)"></div>`;
-            const flex = e.flexCounts || { M: 1, A: 2, N: 2, OFF: 2 };
+            let vacationHtml = `<div class="vacation-input"><label>🏖️ أيام الإجازات (مثال: 5, 6)</label><input type="text" value="${emp.vacationDates || ''}" onchange="updateVacationDates('${emp.id}', this.value)"></div>`;
+            const flex = emp.flexCounts || { M: 1, A: 2, N: 2, OFF: 2 };
             let patternHtml = "";
             
-            if(e.patternType === 'rolling') {
+            if(emp.patternType === 'rolling') {
                 patternHtml = `<div class="pattern-editor"><div class="flex-counts">
-                        <div><label>M</label><input type="number" value="${flex.M}" onchange="updateFlexCount('${e.id}', 'M', this.value)"></div>
-                        <div><label>A</label><input type="number" value="${flex.A}" onchange="updateFlexCount('${e.id}', 'A', this.value)"></div>
-                        <div><label>N</label><input type="number" value="${flex.N}" onchange="updateFlexCount('${e.id}', 'N', this.value)"></div>
-                        <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${e.id}', 'OFF', this.value)"></div>
+                        <div><label>M</label><input type="number" value="${flex.M}" onchange="updateFlexCount('${emp.id}', 'M', this.value)"></div>
+                        <div><label>A</label><input type="number" value="${flex.A}" onchange="updateFlexCount('${emp.id}', 'A', this.value)"></div>
+                        <div><label>N</label><input type="number" value="${flex.N}" onchange="updateFlexCount('${emp.id}', 'N', this.value)"></div>
+                        <div><label>OFF</label><input type="number" value="${flex.OFF}" onchange="updateFlexCount('${emp.id}', 'OFF', this.value)"></div>
                     </div></div>`;
-            } else if(e.patternType === 'joker') {
-                patternHtml = `<div class="pattern-editor"><div style="color:#d97706; font-weight:700;">🃏 جوكر</div><p style="font-size:0.8rem;">يغطي النقص. 6 عمل + 1 راحة.</p></div>`;
+            } else if(emp.patternType === 'joker') {
+                patternHtml = `<div class="pattern-editor"><div style="color:#d97706; font-weight:700;">🃏 جوكر</div><p style="font-size:0.8rem;">يغطي النقص في الليل. آخر خيار للنهار.</p></div>`;
             } else {
                 patternHtml = `<div class="pattern-editor">${weekHtml}</div>`;
             }
             
-            div.innerHTML = `<div class="emp-header"><input type="text" value="${e.name}" onchange="updateEmployee('${e.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${e.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${e.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${e.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${e.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${e.id}')">🗑️</button></div>${vacationHtml}<div style="margin:10px 0;"><strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>${quotasHtml}</div>${patternHtml}`;
+            div.innerHTML = `<div class="emp-header"><input type="text" value="${emp.name}" onchange="updateEmployee('${emp.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${emp.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${e.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${e.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${e.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${emp.id}')">🗑️</button></div>${vacationHtml}<div style="margin:10px 0;"><strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>${quotasHtml}</div>${patternHtml}`;
             container.appendChild(div);
         });
     }
@@ -302,10 +302,10 @@
     function updateDepots() { appConfig.depots = document.getElementById('settingDepots').value.split(',').map(s=>s.trim()).filter(s=>s); renderRequirementsTable(); renderEmployees(); }
 
     // ==========================================
-    // === GENERATOR: V11 STRICT STAGGERING ===
+    // === GENERATOR: V10 STRICT QUEUE ===
     // ==========================================
-    function generateScheduleV11() {
-        if(!confirm("🚀 بدء التوزيع (V11)؟\n\n1. تثبيت الثابت\n2. تشتيت إجازات الدوار والجوكر (جبري)\n3. إجبار العمل لسد العجز")) return;
+    function generateScheduleV10() {
+        if(!confirm("🚀 بدء التوزيع (نظام الطوابير V10)؟\n\n1. الثابت\n2. الدوار (إجبار M/A)\n3. الجوكر (N أولاً)")) return;
         showLoader(true);
         setTimeout(() => {
             try {
@@ -315,54 +315,56 @@
                 const sched = state.schedule[key];
                 
                 state.employees.forEach(e => { if(!sched[e.id]) sched[e.id] = {}; });
+                
+                // 0. Apply Vacations
                 applyVacations(numDays, sched);
                 
+                // 1. Calculate Needs
                 const dailyNeeds = calculateDailyNeeds(numDays);
                 const workStreaks = {};
                 const empPrevShift = {};
                 state.employees.forEach(emp => { workStreaks[emp.id] = 0; empPrevShift[emp.id] = 'OFF'; });
 
-                // 2. FIXED
+                // 2. Fixed Employees
                 applyFixedEmployees(numDays, sched, dailyNeeds, workStreaks, empPrevShift);
 
-                // 3. STAGGERING MAPS (ROUND ROBIN)
+                // 3. Prepare Rolling & Joker
                 const rollingEmps = state.employees.filter(e => e.patternType === 'rolling');
                 const jokerEmps = state.employees.filter(e => e.patternType === 'joker');
-                
-                const rollingOffMap = {};
+
+                // --- STAGGER OFF DAYS (ROUND ROBIN) ---
+                // Assign fixed OFF days for the month to avoid clustering
+                // Rolling: Needs approx 2 days off. Joker: 1 day off.
+                const rollingOffPlan = {};
                 rollingEmps.forEach((e, idx) => {
-                    rollingOffMap[e.id] = [];
-                    // Distribute 2 OFFs spacing by 3-4 days
-                    let base = (idx % 7) + 1;
+                    rollingOffPlan[e.id] = [];
+                    let base1 = (idx % 7) + 1;
                     let base2 = ((idx + 3) % 7) + 1;
                     for(let x=1; x<=numDays; x++) {
                         let dw = (x-1)%7 + 1;
-                        if(dw === base || dw === base2) rollingOffMap[e.id].push(x);
+                        if(dw === base1 || dw === base2) rollingOffMapAdd(rollingOffPlan, e.id, x);
                     }
                 });
 
-                const jokerOffMap = {};
+                const jokerOffPlan = {};
                 jokerEmps.forEach((e, idx) => {
-                    jokerOffMap[e.id] = [];
+                    jokerOffPlan[e.id] = [];
                     let base = (idx % 7) + 1;
-                    for(let x=base; x<=numDays; x+=7) jokerOffMap[e.id].push(x);
+                    for(let x=base; x<=numDays; x+=7) jokerOffPlan[e.id].push(x);
                 });
 
-                // 4. WEEKLY LOOP
                 let currentDay = 1;
                 while(currentDay <= numDays) {
                     let weekEnd = Math.min(currentDay + 6 - new Date(appConfig.year, appConfig.month-1, currentDay).getDay(), numDays);
                     let daysInWeek = [];
                     for(let i=currentDay; i<=weekEnd; i++) daysInWeek.push(i);
 
-                    // RESET BUCKETS
+                    // Reset Work Credit Buckets
                     if(new Date(appConfig.year, appConfig.month-1, currentDay).getDay() === 0 || currentDay === 1) {
                         rollingEmps.forEach(e => {
                             let f = e.flexCounts || {M:1,A:2,N:2,OFF:2};
-                            e._bucket = { ...f };
-                            // If total bucket working days < 5, boost N to ensure they work enough
-                            let totalWork = f.M + f.A + f.N;
-                            if(totalWork < 5) e._bucket.N += (5 - totalWork); // Force minimum work
+                            // Convert to TOTAL WORK CREDITS
+                            e._workCredits = f.M + f.A + f.N;
                         });
                     }
 
@@ -371,90 +373,124 @@
                         let rollingList = [...rollingEmps].sort(() => Math.random() - 0.5);
                         let jokerList = [...jokerEmps].sort(() => Math.random() - 0.5);
 
-                        // --- ROLLING: STRICT STAGGERING + FORCE WORK ---
+                        // --- QUEUE 1: ROLLING FORCE (M / A) ---
                         rollingList.forEach(emp => {
                             if(isAssigned(emp, d, sched)) return;
                             let prev = empPrevShift[emp.id];
-                            let bucket = emp._bucket;
-                            let streak = workStreaks[emp.id] || 0;
                             
-                            // Check scheduled OFF
-                            let isScheduledOff = rollingOffMap[emp.id].includes(d);
-                            
+                            // Check Forced OFF
+                            if(isForcedOff(emp, d, rollingOffPlan, workStreaks)) {
+                                setOff(emp, d, sched, workStreaks, empPrevShift);
+                                return;
+                            }
+
+                            // Try to fill M or A
                             let assigned = 'OFF';
                             let canM = !isShiftFlipViolation(prev, 'M');
                             let canA = !isShiftFlipViolation(prev, 'A');
-                            let canN = !isShiftFlipViolation(prev, 'N');
 
-                            if(streak >= MAX_CONSECUTIVE || (isScheduledOff && bucket.OFF > 0)) {
-                                assigned = 'OFF';
-                                if(isScheduledOff && bucket.OFF > 0) bucket.OFF--;
-                            } else {
-                                // MUST WORK (It's not an OFF day)
-                                // Priority: Fill Need -> Fill Bucket -> Force Any
-                                
-                                // 1. Needs
-                                if(todaysNeeds.M > 0 && canM) { assigned = 'M'; bucket.M--; }
-                                else if(todaysNeeds.A > 0 && canA) { assigned = 'A'; bucket.A--; }
-                                else if(todaysNeeds.N > 0 && canN) { assigned = 'N'; bucket.N--; }
-                                // 2. Bucket (No Need)
-                                else if(bucket.M > 0 && canM) { assigned = 'M'; bucket.M--; }
-                                else if(bucket.A > 0 && canA) { assigned = 'A'; bucket.A--; }
-                                else if(bucket.N > 0 && canN) { assigned = 'N'; bucket.N--; }
-                                // 3. Forced Work (Empty Bucket or Mismatched Bucket)
-                                else {
-                                    if(canN) assigned='N';
-                                    else if(canA) assigned='A';
-                                    else if(canM) assigned='M';
-                                    else assigned='OFF'; // Locked out
-                                }
-                            }
-
+                            if(todaysNeeds.M > 0 && canM) assigned = 'M';
+                            else if(todaysNeeds.A > 0 && canA) assigned = 'A';
+                            
                             if(assigned !== 'OFF') {
-                                if(todaysNeeds[assigned] > 0) todaysNeeds[assigned]--;
-                                workStreaks[emp.id]++;
-                            } else {
-                                workStreaks[emp.id] = 0;
+                                assignShift(emp, d, assigned, sched, todaysNeeds, workStreaks, empPrevShift);
+                                emp._workCredits--;
                             }
-                            assignShift(emp, d, assigned, sched, empPrevShift);
                         });
 
-                        // --- JOKER: STRICT STAGGERING ---
+                        // --- QUEUE 2: JOKER FORCE (N) ---
                         jokerList.forEach(emp => {
                             if(isAssigned(emp, d, sched)) return;
                             let prev = empPrevShift[emp.id];
-                            let streak = workStreaks[emp.id] || 0;
-                            let isScheduledOff = jokerOffMap[emp.id].includes(d);
-                            let assigned = 'OFF';
-
-                            if(isScheduledOff || streak >= MAX_CONSECUTIVE) {
-                                assigned = 'OFF';
-                            } else {
-                                let canM = !isShiftFlipViolation(prev, 'M');
-                                let canA = !isShiftFlipViolation(prev, 'A');
-                                let canN = !isShiftFlipViolation(prev, 'N');
-
-                                // Priority N -> A -> M
-                                if(todaysNeeds.N > 0 && canN) assigned = 'N';
-                                else if(todaysNeeds.A > 0 && canA) assigned = 'A';
-                                else if(todaysNeeds.M > 0 && canM) assigned = 'M';
-                                else {
-                                    if(canN) assigned='N'; else if(canA) assigned='A'; else if(canM) assigned='M';
-                                }
+                            
+                            // Joker OFF check
+                            if(jokerOffPlan[emp.id].includes(d) || workStreaks[emp.id] >= MAX_CONSECUTIVE) {
+                                setOff(emp, d, sched, workStreaks, empPrevShift);
+                                return;
                             }
+
+                            let assigned = 'OFF';
+                            let canN = !isShiftFlipViolation(prev, 'N');
+                            
+                            if(todaysNeeds.N > 0 && canN) assigned = 'N';
 
                             if(assigned !== 'OFF') {
-                                if(todaysNeeds[assigned] > 0) todaysNeeds[assigned]--;
-                                workStreaks[emp.id]++;
-                            } else {
-                                workStreaks[emp.id] = 0;
+                                assignShift(emp, d, assigned, sched, todaysNeeds, workStreaks, empPrevShift);
                             }
-                            assignShift(emp, d, assigned, sched, empPrevShift);
                         });
+
+                        // --- QUEUE 3: CLEANUP (ROLLING -> N, JOKER -> M/A) ---
+                        // Only if needed
+                        
+                        // Rolling take remaining N
+                        if(todaysNeeds.N > 0) {
+                            rollingList.forEach(emp => {
+                                if(isAssigned(emp, d, sched)) return;
+                                let prev = empPrevShift[emp.id];
+                                if(!isShiftFlipViolation(prev, 'N')) {
+                                    assignShift(emp, d, 'N', sched, todaysNeeds, workStreaks, empPrevShift);
+                                    emp._workCredits--;
+                                }
+                            });
+                        }
+
+                        // Joker take remaining M/A (Desperate)
+                        if(todaysNeeds.M > 0 || todaysNeeds.A > 0) {
+                            jokerList.forEach(emp => {
+                                if(isAssigned(emp, d, sched)) return;
+                                let prev = empPrevShift[emp.id];
+                                let assigned = 'OFF';
+                                
+                                if(todaysNeeds.A > 0 && !isShiftFlipViolation(prev, 'A')) assigned='A';
+                                else if(todaysNeeds.M > 0 && !isShiftFlipViolation(prev, 'M')) assigned='M';
+                                
+                                if(assigned !== 'OFF') assignShift(emp, d, assigned, sched, todaysNeeds, workStreaks, empPrevShift);
+                            });
+                        }
+
+                        // --- QUEUE 4: IDLE WORKERS (ANTI-SLACK) ---
+                        // If Rolling still has credits and isn't working today, give them something if safe
+                        rollingList.forEach(emp => {
+                            if(isAssigned(emp, d, sched)) return;
+                            
+                            // If they have worked enough for week, give OFF
+                            if(emp._workCredits <= 0) {
+                                setOff(emp, d, sched, workStreaks, empPrevShift);
+                                return;
+                            }
+
+                            // Must work
+                            let prev = empPrevShift[emp.id];
+                            let assigned = 'OFF';
+                            
+                            // Prefer N -> A -> M to avoid taking M from needy days later? No, just work.
+                            if(!isShiftFlipViolation(prev, 'N')) assigned='N';
+                            else if(!isShiftFlipViolation(prev, 'A')) assigned='A';
+                            else if(!isShiftFlipViolation(prev, 'M')) assigned='M';
+                            
+                            if(assigned !== 'OFF') {
+                                assignShift(emp, d, assigned, sched, todaysNeeds, workStreaks, empPrevShift); // Might decrement needs below 0, fine
+                                emp._workCredits--;
+                            } else {
+                                setOff(emp, d, sched, workStreaks, empPrevShift);
+                            }
+                        });
+
+                        // Finish Jokers
+                        jokerList.forEach(emp => {
+                            if(!isAssigned(emp, d, sched)) {
+                                // If not forced off, try to work N
+                                let prev = empPrevShift[emp.id];
+                                if(!isShiftFlipViolation(prev, 'N')) assignShift(emp, d, 'N', sched, todaysNeeds, workStreaks, empPrevShift);
+                                else setOff(emp, d, sched, workStreaks, empPrevShift);
+                            }
+                        });
+
                     });
                     currentDay = daysInWeek[daysInWeek.length-1] + 1;
                 }
 
+                // Final Auto-Correct
                 state.employees.forEach(e => {
                     let p = 'OFF';
                     for(let d=1; d<=numDays; d++) {
@@ -467,17 +503,38 @@
                 });
 
                 renderSchedule(); saveData(); showLoader(false);
-                alert("✅ تم التوزيع (تشتيت إجازات إجباري)!");
+                alert("✅ تم التوزيع (نظام الطوابير الصارم)!");
             } catch(e) { console.error(e); showLoader(false); alert("خطأ: " + e.message); }
         }, 100);
     }
 
     // --- HELPERS ---
     function isAssigned(emp, d, sched) { return !!(sched[emp.id] && sched[emp.id][d]); }
-    function assignShift(emp, d, s, sched, prevs) {
+    
+    function assignShift(emp, d, s, sched, needs, streaks, prevs) {
         sched[emp.id][d] = { shift: s, depot: "" };
         prevs[emp.id] = s;
+        if(needs[s] > 0) needs[s]--;
+        if(s === 'OFF' || s === 'X' || s === 'VAC') streaks[emp.id] = 0; else streaks[emp.id]++;
     }
+    
+    function setOff(emp, d, sched, streaks, prevs) {
+        sched[emp.id][d] = { shift: 'OFF', depot: "" };
+        prevs[emp.id] = 'OFF';
+        streaks[emp.id] = 0;
+    }
+
+    function rollingOffMapAdd(map, id, day) {
+        if(!map[id]) map[id] = [];
+        map[id].push(day);
+    }
+
+    function isForcedOff(emp, d, plan, streaks) {
+        if(streaks[emp.id] >= MAX_CONSECUTIVE) return true;
+        if(plan[emp.id] && plan[emp.id].includes(d)) return true;
+        return false;
+    }
+
     function applyVacations(numDays, sched) {
         state.employees.forEach(emp => {
             if(emp.vacationDates) emp.vacationDates.split(',').map(d=>parseInt(d.trim())).filter(d=>!isNaN(d)).forEach(d => { if(d<=numDays) sched[emp.id][d] = { shift: 'VAC', depot: '' }; });
@@ -501,12 +558,7 @@
                 let shift = emp.weeklyTemplate[dayOfWeek];
                 const prev = prevs[emp.id];
                 if(isShiftFlipViolation(prev, shift) || (streaks[emp.id] >= MAX_CONSECUTIVE && ['M','A','N'].includes(shift))) shift = 'OFF';
-                sched[emp.id][d] = { shift: shift, depot: "" };
-                prevs[emp.id] = shift;
-                if(['M','A','N'].includes(shift)) {
-                    if(dailyNeeds[d][shift]>0) dailyNeeds[d][shift]--;
-                    streaks[emp.id]++;
-                } else streaks[emp.id] = 0;
+                assignShift(emp, d, shift, sched, dailyNeeds, streaks, prevs);
             }
         });
     }
@@ -580,7 +632,9 @@
                 (e.patternType === 'joker' ? `<div class="pattern-editor" style="color:#d97706;font-weight:700;">🃏 جوكر</div>` : `<div class="pattern-editor">${weekHtml}</div>`);
             
             let div = document.createElement('div'); div.className = "emp-card";
-            div.innerHTML = `<div class="emp-header"><input type="text" value="${e.name}" onchange="updateEmployee('${e.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${e.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${e.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${e.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${e.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${e.id}')">🗑️</button></div>${vacationHtml}<div style="margin:10px 0;"><strong style="font-size:0.85rem; color:#64748b;">توزيع المواقع:</strong>${quotasHtml}</div>${patternHtml}`;
+            div.innerHTML = `<div class="emp-header"><input type="text" value="${e.name}" onchange="updateEmployee('${e.id}', 'name', this.value)" style="font-weight:700; flex:1; border:none;"><select onchange="updateEmployee('${e.id}', 'patternType', this.value)" style="margin:0 10px;"><option value="weekly" ${e.patternType === 'weekly' ? 'selected' : ''}>ثابت</option><option value="rolling" ${e.patternType === 'rolling' ? 'selected' : ''}>دوار</option><option value="joker" ${e.patternType === 'joker' ? 'selected' : ''}>جوكر</option></select><button class="danger" onclick="deleteEmployee('${e.id}')">🗑️</button></div>
+            <div class="vacation-input"><label>🏖️ إجازات:</label><input type="text" value="${e.vacationDates||''}" onchange="updateVacationDates('${e.id}',this.value)"></div>
+            <div style="margin:10px 0;">${quotas}</div>${typeHtml}`;
             list.appendChild(div);
         });
     }
@@ -662,4 +716,3 @@
 </script>
 </body>
 </html>
-
